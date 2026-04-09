@@ -1,4 +1,10 @@
 <?php
+/**
+ * Mock Lihi API client for development and testing.
+ *
+ * Returns stub data without making real HTTP requests.
+ * login() generates a structurally valid JWT with a 60-second expiry.
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -6,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Lihi_Client_Mock implements Lihi_Client_Interface {
 
+    /** Returns a mock JWT token expiring in 60 seconds. */
     public function login( string $email, string $api_key ): array {
         $b64 = fn( $data ) => rtrim( strtr( base64_encode( json_encode( $data ) ), '+/', '-_' ), '=' );
 

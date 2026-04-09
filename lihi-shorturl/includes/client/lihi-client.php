@@ -1,4 +1,10 @@
 <?php
+/**
+ * Production Lihi API client.
+ *
+ * Sends HTTP requests to the Lihi API using WordPress's wp_remote_request().
+ * The base URL is read from the LIHI_API_DOMAIN constant.
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -66,6 +72,14 @@ class Lihi_Client implements Lihi_Client_Interface {
     // Core
     // -------------------------------------------------------------------------
 
+    /**
+     * Execute an HTTP request against the Lihi API.
+     *
+     * GET requests append $data as a query string; other methods encode it as JSON body.
+     * Throws RuntimeException on network errors, invalid JSON, or HTTP 4xx/5xx responses.
+     *
+     * @throws RuntimeException
+     */
     private function request( string $method, string $path, array $data = [], bool $auth = true ): array {
         $headers = [ 'Content-Type' => 'application/json' ];
 

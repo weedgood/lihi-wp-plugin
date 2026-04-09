@@ -1,4 +1,9 @@
 <?php
+/**
+ * Bootstrap: loads all plugin dependencies in the correct order.
+ *
+ * Load order: interface → client → mock → service → helper → feature files.
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
