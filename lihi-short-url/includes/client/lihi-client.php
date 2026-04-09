@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class Lihi_Client {
+class Lihi_Client implements Lihi_Client_Interface {
 
     private string $base_url;
     private string $token;
