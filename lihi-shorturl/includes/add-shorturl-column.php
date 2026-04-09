@@ -18,7 +18,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 } );
 
 add_filter( 'manage_posts_columns', function ( $columns ) {
-    $columns['lihi'] = __( 'Shout URL', 'lihi-wp-plugin' );
+    $columns['lihi'] = __( 'Shout URL', 'lihi-shorturl' );
     return $columns;
 } );
 

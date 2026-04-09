@@ -19,7 +19,7 @@ add_action( 'admin_notices', function () {
 } );
 
 add_action( 'plugins_loaded', function () {
-    load_plugin_textdomain( 'lihi-wp-plugin', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+    load_plugin_textdomain( 'lihi-shorturl', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 } );
 
 require_once plugin_dir_path( __FILE__ ) . 'bootstrap.php';

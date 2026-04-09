@@ -30,7 +30,7 @@ services:
       WORDPRESS_DB_PASSWORD: wordpress
     volumes:
       - wp_data:/var/www/html
-      - ./lihi-short-url:/var/www/html/wp-content/plugins/lihi-short-url
+      - ./lihi-shorturl:/var/www/html/wp-content/plugins/lihi-shorturl
 
 volumes:
   db_data:
