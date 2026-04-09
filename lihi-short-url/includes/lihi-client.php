@@ -1,0 +1,116 @@
+<?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+class Lihi_Client {
+
+    private string $base_url;
+    private string $token;
+
+    public function __construct( string $token = '' ) {
+        $this->base_url = rtrim( defined( 'LIHI_API_DOMAIN' ) ? LIHI_API_DOMAIN : '', '/' );
+        $this->token    = $token;
+    }
+
+    // -------------------------------------------------------------------------
+    // Auth
+    // -------------------------------------------------------------------------
+
+    public function login( string $email, string $api_key ): array {
+        return $this->request( 'POST', '/api/shopify/v1/login', [
+            'email'   => $email,
+            'api_key' => $api_key,
+        ], false );
+    }
+
+    // -------------------------------------------------------------------------
+    // Posts
+    // -------------------------------------------------------------------------
+
+    public function get_posts(): array {
+        return $this->request( 'GET', '/api/shopify/v1/posts' );
+    }
+
+    // -------------------------------------------------------------------------
+    // Sites
+    // -------------------------------------------------------------------------
+
+    public function get_sites( array $params = [] ): array {
+        return $this->request( 'GET', '/api/shopify/v1/sites', $params );
+    }
+
+    public function create_site( array $body ): array {
+        return $this->request( 'POST', '/api/shopify/v1/sites', $body );
+    }
+
+    // -------------------------------------------------------------------------
+    // Site URLs
+    // -------------------------------------------------------------------------
+
+    public function create_site_url( array $body ): array {
+        return $this->request( 'POST', '/api/shopify/v1/site-urls', $body );
+    }
+
+    public function update_site_url( int $id, array $body ): array {
+        return $this->request( 'PUT', "/api/shopify/v1/site-urls/{$id}", $body );
+    }
+
+    public function delete_site_url( int $id ): bool {
+        $this->request( 'DELETE', "/api/shopify/v1/site-urls/{$id}" );
+        return true;
+    }
+
+    // -------------------------------------------------------------------------
+    // Core
+    // -------------------------------------------------------------------------
+
+    private function request( string $method, string $path, array $data = [], bool $auth = true ): array {
+        $headers = [ 'Content-Type' => 'application/json' ];
+
+        if ( $auth ) {
+            $headers['Authorization'] = 'Bearer ' . $this->token;
+        }
+
+        $args = [
+            'method'  => $method,
+            'headers' => $headers,
+            'timeout' => 15,
+        ];
+
+        if ( $method === 'GET' && ! empty( $data ) ) {
+            $url = $this->base_url . $path . '?' . http_build_query( $data );
+        } else {
+            $url = $this->base_url . $path;
+            if ( ! empty( $data ) ) {
+                $args['body'] = wp_json_encode( $data );
+            }
+        }
+
+        $response = wp_remote_request( $url, $args );
+
+        if ( is_wp_error( $response ) ) {
+            throw new RuntimeException( $response->get_error_message() );
+        }
+
+        $code = wp_remote_retrieve_response_code( $response );
+        $body = wp_remote_retrieve_body( $response );
+
+        if ( $code === 204 || $body === '' ) {
+            return [];
+        }
+
+        $decoded = json_decode( $body, true );
+
+        if ( json_last_error() !== JSON_ERROR_NONE ) {
+            throw new RuntimeException( 'Expected JSON but got: ' . substr( $body, 0, 200 ) );
+        }
+
+        if ( $code >= 400 ) {
+            throw new RuntimeException( "API request failed with status {$code}: " . wp_json_encode( $decoded ) );
+        }
+
+        return $decoded;
+    }
+}

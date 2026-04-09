@@ -1,0 +1,16 @@
+# Lihi WP Plugin - Traditional Chinese Translation
+# Copyright (C) 2026 Lihi
+msgid ""
+msgstr ""
+"Project-Id-Version: Lihi WP Plugin 0.1.0\n"
+"POT-Creation-Date: 2026-04-09\n"
+"PO-Revision-Date: 2026-04-09\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: zh_TW\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: includes/add-lihi-column.php
+msgid "Shout URL"
+msgstr "短網址"
