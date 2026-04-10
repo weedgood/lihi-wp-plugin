@@ -32,6 +32,17 @@ services:
       - wp_data:/var/www/html
       - ./lihi-shorturl:/var/www/html/wp-content/plugins/lihi-shorturl
 
+  phpunit:
+    build:
+      context: .
+      dockerfile: docker/phpunit/Dockerfile
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: [ "tail", "-f", "/dev/null" ]
+    profiles:
+      - test
+
 volumes:
   db_data:
   wp_data:
