@@ -18,3 +18,7 @@ msgstr "短網址"
 #: includes/service/lihi-service.php
 msgid "No token returned from Lihi API."
 msgstr "Lihi API 未回傳 token。"
+
+#: includes/add-shorturl-column.php
+msgid "Copied!"
+msgstr "已複製！"

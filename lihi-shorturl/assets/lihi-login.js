@@ -6,5 +6,11 @@
             action: lihiLogin.action,
             nonce:  lihiLogin.nonce,
         } ),
-    } );
+    } )
+        .then( res => res.json() )
+        .then( data => {
+            if ( ! data.success ) {
+                alert( 'Lihi login failed: ' + data.data );
+            }
+        } );
 } )();

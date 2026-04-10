@@ -54,4 +54,44 @@ class Lihi_Service {
 
         return $token;
     }
+
+    /**
+     * Return the Lihi short URL for a post, creating it if it does not yet exist.
+     *
+     * Checks whether a short link already exists for the given post ID via
+     * get_short_links(). If found, returns the existing site_name. Otherwise
+     * creates a new site and returns its site_name.
+     *
+     * @param int    $post_id WordPress post ID.
+     * @param string $type    Post type (e.g. `post`, `page`), passed from the button's data-type attribute.
+     * @return string site_name of the existing or newly created short link.
+     * @throws RuntimeException If any API call fails.
+     */
+    public function get_or_create_short_url( int $post_id, string $type ): string {
+        $result = $this->client->get_short_links( $type, $post_id );
+        $sites  = $result['data']['sites']['data'] ?? [];
+
+        foreach ( $sites as $site ) {
+            if ( (int) ( $site['shopify_link']['type_id'] ?? 0 ) === $post_id ) {
+                return $site['site_name'];
+            }
+        }
+
+        $created = $this->client->create_site( [
+            'urls'    => [ get_permalink( $post_id ) ],
+            'type'    => $type,
+            'type_id' => $post_id,
+            'domain'  => '',
+            'tags'    => '',
+            'alias'   => '',
+        ] );
+
+        $site_name = $created['data']['site_name'] ?? '';
+
+        if ( ! $site_name ) {
+            throw new RuntimeException( __( 'No site_name returned from Lihi API.', 'lihi-shorturl' ) );
+        }
+
+        return $site_name;
+    }
 }
