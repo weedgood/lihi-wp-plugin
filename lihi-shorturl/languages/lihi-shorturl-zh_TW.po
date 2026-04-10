@@ -14,3 +14,7 @@ msgstr ""
 #: includes/add-lihi-column.php
 msgid "Shout URL"
 msgstr "短網址"
+
+#: includes/service/lihi-service.php
+msgid "No token returned from Lihi API."
+msgstr "Lihi API 未回傳 token。"

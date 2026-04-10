@@ -12,7 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Lihi_Client_Mock implements Lihi_Client_Interface {
 
-    /** Returns a mock JWT token expiring in 60 seconds. */
     public function login( string $email, string $api_key ): array {
         $b64 = fn( $data ) => rtrim( strtr( base64_encode( json_encode( $data ) ), '+/', '-_' ), '=' );
 
@@ -24,31 +23,78 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
 
     public function get_posts(): array {
         return [
-            [ 'id' => 1, 'title' => 'Mock Post 1' ],
-            [ 'id' => 2, 'title' => 'Mock Post 2' ],
+            'data' => [
+                [ 'id' => 1, 'title' => 'Mock Post 1' ],
+                [ 'id' => 2, 'title' => 'Mock Post 2' ],
+            ],
         ];
     }
 
     public function get_sites( array $params = [] ): array {
-        return [
-            [ 'id' => 1, 'name' => 'Mock Site 1', 'url' => 'https://mock-site-1.example.com' ],
-            [ 'id' => 2, 'name' => 'Mock Site 2', 'url' => 'https://mock-site-2.example.com' ],
-        ];
+        return $this->mock_sites_response();
+    }
+
+    public function get_short_links( string $type, $type_ids ): array {
+        return $this->mock_sites_response();
     }
 
     public function create_site( array $body ): array {
-        return array_merge( [ 'id' => 99 ], $body );
+        return [
+            'data' => [
+                'id'           => 99,
+                'site_name'    => $body['alias'] ?? 'mock-site',
+                'shopify_link' => [
+                    'type'    => $body['type'] ?? '',
+                    'type_id' => $body['type_id'] ?? 0,
+                ],
+            ],
+        ];
+    }
+
+    public function delete_site( int $id ): bool {
+        return true;
     }
 
     public function create_site_url( array $body ): array {
-        return array_merge( [ 'id' => 99 ], $body );
+        return [
+            'data' => [
+                'id'  => 99,
+                'url' => $body['url'] ?? '',
+            ],
+        ];
     }
 
     public function update_site_url( int $id, array $body ): array {
-        return array_merge( [ 'id' => $id ], $body );
+        return [ 'id' => $id, 'url' => $body['url'] ?? '' ];
     }
 
     public function delete_site_url( int $id ): bool {
         return true;
+    }
+
+    // -------------------------------------------------------------------------
+
+    private function mock_sites_response(): array {
+        return [
+            'data' => [
+                'domains' => [ 'mock.lihi.io' ],
+                'sites'   => [
+                    'data'          => [
+                        [
+                            'id'           => 1,
+                            'site_name'    => 'mock-site',
+                            'repeat_click' => 42,
+                            'site_urls'    => [
+                                [ 'id' => 1, 'url' => 'https://example.com', 'count' => 30 ],
+                                [ 'id' => 2, 'url' => 'https://example.com/alt', 'count' => 12 ],
+                            ],
+                            'shopify_link' => [ 'type' => 'products', 'type_id' => 1 ],
+                        ],
+                    ],
+                    'prev_page_url' => null,
+                    'next_page_url' => null,
+                ],
+            ],
+        ];
     }
 }

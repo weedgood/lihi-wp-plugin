@@ -47,6 +47,19 @@ class Lihi_Client implements Lihi_Client_Interface {
         return $this->request( 'GET', '/api/shopify/v1/sites', $params );
     }
 
+    public function delete_site( int $id ): bool {
+        $this->request( 'DELETE', "/api/shopify/v1/sites/{$id}" );
+        return true;
+    }
+
+    public function get_short_links( string $type, $type_ids ): array {
+        return $this->request( 'GET', '/api/shopify/v1/sites', [
+            'per_page' => 20,
+            'type'     => $type,
+            'type_id'  => $type_ids,
+        ] );
+    }
+
     public function create_site( array $body ): array {
         return $this->request( 'POST', '/api/shopify/v1/sites', $body );
     }
