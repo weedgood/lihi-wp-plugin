@@ -1,4 +1,6 @@
 <?php
+namespace Lihi\ShortUrl;
+
 /**
  * Plugin Name: Lihi WP Plugin
  * Description: Lihi custom WordPress plugin.

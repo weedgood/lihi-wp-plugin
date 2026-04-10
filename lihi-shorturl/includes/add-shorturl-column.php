@@ -1,4 +1,6 @@
 <?php
+namespace Lihi\ShortUrl;
+
 /**
  * Adds a "Shout URL" column to all public post type list tables.
  *
@@ -72,7 +74,7 @@ add_action( 'wp_ajax_lihi_copy_url', function () {
     try {
         $url = lihi_service()->get_or_create_short_url( $post_id, $type );
         wp_send_json_success( [ 'url' => $url ] );
-    } catch ( Exception $e ) {
+    } catch ( \Exception $e ) {
         wp_send_json_error( $e->getMessage() );
     }
 } );

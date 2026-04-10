@@ -1,4 +1,6 @@
 <?php
+namespace Lihi\ShortUrl;
+
 /**
  * Bootstrap: loads all plugin dependencies in the correct order.
  *

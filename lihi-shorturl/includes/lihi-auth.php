@@ -1,4 +1,6 @@
 <?php
+namespace Lihi\ShortUrl;
+
 /**
  * Admin authentication flow.
  *
@@ -48,7 +50,7 @@ add_action( 'wp_ajax_lihi_login', function () {
         ] );
 
         wp_send_json_success();
-    } catch ( Exception $e ) {
+    } catch ( \Exception $e ) {
         wp_send_json_error( $e->getMessage() );
     }
 } );

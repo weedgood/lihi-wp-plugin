@@ -1,4 +1,6 @@
 <?php
+namespace Lihi\ShortUrl;
+
 /**
  * Lihi API client contract.
  *

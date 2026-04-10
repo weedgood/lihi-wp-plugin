@@ -1,4 +1,6 @@
 <?php
+namespace Lihi\ShortUrl;
+
 /**
  * Lihi service layer.
  *
@@ -49,7 +51,7 @@ class Lihi_Service {
         $token  = $result['token'] ?? '';
 
         if ( ! $token ) {
-            throw new RuntimeException( __( 'No token returned from Lihi API.', 'lihi-shorturl' ) );
+            throw new \RuntimeException( __( 'No token returned from Lihi API.', 'lihi-shorturl' ) );
         }
 
         return $token;
@@ -89,7 +91,7 @@ class Lihi_Service {
         $site_name = $created['data']['site_name'] ?? '';
 
         if ( ! $site_name ) {
-            throw new RuntimeException( __( 'No site_name returned from Lihi API.', 'lihi-shorturl' ) );
+            throw new \RuntimeException( __( 'No site_name returned from Lihi API.', 'lihi-shorturl' ) );
         }
 
         return $site_name;

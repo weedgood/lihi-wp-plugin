@@ -1,4 +1,6 @@
 <?php
+namespace Lihi\ShortUrl;
+
 /**
  * Production Lihi API client.
  *
@@ -118,7 +120,7 @@ class Lihi_Client implements Lihi_Client_Interface {
         $response = wp_remote_request( $url, $args );
 
         if ( is_wp_error( $response ) ) {
-            throw new RuntimeException( $response->get_error_message() );
+            throw new \RuntimeException( $response->get_error_message() );
         }
 
         $code = wp_remote_retrieve_response_code( $response );
@@ -131,11 +133,11 @@ class Lihi_Client implements Lihi_Client_Interface {
         $decoded = json_decode( $body, true );
 
         if ( json_last_error() !== JSON_ERROR_NONE ) {
-            throw new RuntimeException( 'Expected JSON but got: ' . substr( $body, 0, 200 ) );
+            throw new \RuntimeException( 'Expected JSON but got: ' . substr( $body, 0, 200 ) );
         }
 
         if ( $code >= 400 ) {
-            throw new RuntimeException( "API request failed with status {$code}: " . wp_json_encode( $decoded ) );
+            throw new \RuntimeException( "API request failed with status {$code}: " . wp_json_encode( $decoded ) );
         }
 
         return $decoded;
