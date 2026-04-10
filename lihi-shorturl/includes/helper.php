@@ -12,13 +12,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Return the shared Lihi_Service singleton.
  *
- * Uses a static variable so the same instance is reused across the request lifecycle.
+ * Passing a Lihi_Service instance replaces the singleton (useful in tests).
+ * Passing null resets the singleton so it is recreated on the next call.
+ * Calling with no arguments returns the existing or newly created singleton.
+ *
+ * @param Lihi_Service|null $inject Optional service to inject or null to reset.
  */
-function lihi_service(): Lihi_Service {
+function lihi_service( ?Lihi_Service $inject = null ): Lihi_Service {
     static $instance = null;
 
+    if ( func_num_args() > 0 ) {
+        $instance = $inject;
+    }
+
     if ( $instance === null ) {
-        $instance = new Lihi_Service( new Lihi_Client_Mock() );
+        $client   = ( defined( 'APP_ENV' ) && APP_ENV === 'test' )
+            ? new Lihi_Client_Mock()
+            : new Lihi_Client();
+        $instance = new Lihi_Service( $client );
     }
 
     return $instance;

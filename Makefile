@@ -1,7 +1,7 @@
 POFILES := $(wildcard lihi-shorturl/languages/*.po)
 MOFILES := $(POFILES:.po=.mo)
 
-.PHONY: all clean test
+.PHONY: all clean test coverage
 
 all: $(MOFILES)
 
@@ -13,3 +13,6 @@ clean:
 
 test:
 	vendor/bin/phpunit -c phpunit.xml
+
+coverage:
+	vendor/bin/phpunit -c phpunit.xml --coverage-text --coverage-html coverage

@@ -69,6 +69,7 @@ add_action( 'wp_ajax_lihi_copy_url', function () {
 
     if ( ! $post_id || ! $type ) {
         wp_send_json_error( 'Invalid post ID or type.' );
+        return;
     }
 
     try {

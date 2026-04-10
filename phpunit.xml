@@ -11,4 +11,12 @@
     <php>
         <env name="WP_PHPUNIT__TESTS_CONFIG" value="tests/wp-config.php" />
     </php>
+    <coverage>
+        <include>
+            <directory suffix=".php">lihi-shorturl/includes</directory>
+        </include>
+        <exclude>
+            <file>lihi-shorturl/includes/client/lihi-client-mock.php</file>
+        </exclude>
+    </coverage>
 </phpunit>

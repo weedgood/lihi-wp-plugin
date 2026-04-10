@@ -7,7 +7,8 @@
         "wp-phpunit/wp-phpunit": "^6",
         "yoast/phpunit-polyfills": "^2",
         "brain/monkey": "^2",
-        "johnpbloch/wordpress": "*"
+        "johnpbloch/wordpress": "*",
+        "php-stubs/wordpress-stubs": "^6.9"
     },
     "config": {
         "allow-plugins": {

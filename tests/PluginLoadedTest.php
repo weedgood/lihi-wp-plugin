@@ -1,6 +1,8 @@
 <?php
 
-class PluginLoadedTest extends WP_UnitTestCase
+namespace Lihi\ShortUrl\Tests;
+
+class PluginLoadedTest extends \WP_UnitTestCase
 {
     public function test_plugin_file_loaded(): void
     {

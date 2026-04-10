@@ -12,6 +12,7 @@ $table_prefix = 'wptests_';
 
 define('WP_DEBUG', true);
 define('WP_ADMIN', true);
+define('APP_ENV', 'test');
 
 define('WP_TESTS_DOMAIN', 'localhost');
 define('WP_TESTS_EMAIL', 'admin@example.org');

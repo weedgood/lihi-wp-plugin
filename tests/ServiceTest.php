@@ -3,6 +3,7 @@
 namespace Lihi\ShortUrl\Tests;
 
 use Brain\Monkey;
+use Brain\Monkey\Functions;
 use Lihi\ShortUrl\Lihi_Client_Interface;
 use Lihi\ShortUrl\Lihi_Service;
 use Mockery;
@@ -14,116 +15,249 @@ class ServiceTest extends TestCase
     {
         parent::setUp();
         Monkey\setUp();
+        $_COOKIE = [];
     }
 
     protected function tearDown(): void
     {
+        $_COOKIE = [];
         Monkey\tearDown();
         Mockery::close();
         parent::tearDown();
     }
 
-    // has_valid_token() -------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    private function makeClient(): Lihi_Client_Interface
+    {
+        return Mockery::mock(Lihi_Client_Interface::class);
+    }
+
+    private function makeService(Lihi_Client_Interface $client): Lihi_Service
+    {
+        return new Lihi_Service($client);
+    }
+
+    /** Build a structurally-valid JWT with the given exp timestamp. */
+    private function makeJwt(int $exp): string
+    {
+        $b64 = fn($v) => rtrim(strtr(base64_encode(json_encode($v)), '+/', '-_'), '=');
+        return $b64(['alg' => 'HS256', 'typ' => 'JWT'])
+            . '.' . $b64(['sub' => 'test', 'exp' => $exp])
+            . '.sig';
+    }
+
+    private function makeSitesResponse(array $sites): array
+    {
+        return [
+            'data' => [
+                'domains' => [],
+                'sites'   => [
+                    'data'          => $sites,
+                    'prev_page_url' => null,
+                    'next_page_url' => null,
+                ],
+            ],
+        ];
+    }
+
+    private function makeSite(int $typeId, string $siteName): array
+    {
+        return [
+            'id'           => $typeId,
+            'site_name'    => $siteName,
+            'repeat_click' => 0,
+            'site_urls'    => [],
+            'shopify_link' => ['type' => 'post', 'type_id' => $typeId],
+        ];
+    }
+
+    // -------------------------------------------------------------------------
+    // has_valid_token()
+    // -------------------------------------------------------------------------
 
     /** @test */
     public function has_valid_token_returns_false_when_cookie_missing(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $this->assertFalse($this->makeService($this->makeClient())->has_valid_token());
     }
 
     /** @test */
     public function has_valid_token_returns_false_when_cookie_empty(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $_COOKIE['lihi_token'] = '';
+        $this->assertFalse($this->makeService($this->makeClient())->has_valid_token());
     }
 
     /** @test */
     public function has_valid_token_returns_false_when_token_malformed(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $_COOKIE['lihi_token'] = 'not-a-valid-jwt';
+        $this->assertFalse($this->makeService($this->makeClient())->has_valid_token());
     }
 
     /** @test */
     public function has_valid_token_returns_false_when_exp_missing(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $b64 = fn($v) => rtrim(strtr(base64_encode(json_encode($v)), '+/', '-_'), '=');
+        $_COOKIE['lihi_token'] = $b64(['alg' => 'HS256']) . '.' . $b64(['sub' => 'test']) . '.sig';
+        $this->assertFalse($this->makeService($this->makeClient())->has_valid_token());
     }
 
     /** @test */
     public function has_valid_token_returns_false_when_token_expired(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $_COOKIE['lihi_token'] = $this->makeJwt(time() - 1);
+        $this->assertFalse($this->makeService($this->makeClient())->has_valid_token());
     }
 
     /** @test */
     public function has_valid_token_returns_true_when_token_valid(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $_COOKIE['lihi_token'] = $this->makeJwt(time() + 3600);
+        $this->assertTrue($this->makeService($this->makeClient())->has_valid_token());
     }
 
-    // login() -----------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // login()
+    // -------------------------------------------------------------------------
 
     /** @test */
     public function login_returns_token_on_success(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $client = $this->makeClient();
+        $client->shouldReceive('login')
+            ->with('user@example.com', 'key123')
+            ->once()
+            ->andReturn(['token' => 'jwt-token']);
+
+        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+
+        $this->assertSame('jwt-token', $this->makeService($client)->login('key123'));
     }
 
     /** @test */
     public function login_throws_when_token_empty(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $client = $this->makeClient();
+        $client->shouldReceive('login')->andReturn(['token' => '']);
+
+        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('__')->returnArg(1);
+
+        $this->expectException(\RuntimeException::class);
+        $this->makeService($client)->login();
     }
 
     /** @test */
     public function login_propagates_client_exception(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $client = $this->makeClient();
+        $client->shouldReceive('login')->andThrow(new \RuntimeException('Connection failed'));
+
+        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Connection failed');
+        $this->makeService($client)->login();
     }
 
-    // get_or_create_short_url() -----------------------------------------------
+    // -------------------------------------------------------------------------
+    // get_or_create_short_url()
+    // -------------------------------------------------------------------------
 
     /** @test */
     public function get_or_create_returns_existing_site_name_without_creating(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->with('post', 42)
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'existing-slug')]));
+        $client->shouldNotReceive('create_site');
+
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
+
+        $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
+        $this->assertSame('existing-slug', $result);
     }
 
     /** @test */
     public function get_or_create_calls_create_when_no_match_found(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(99, 'other-slug')]));
+        $client->shouldReceive('create_site')
+            ->once()
+            ->andReturn(['data' => ['site_name' => 'new-slug']]);
+
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
+
+        $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
+        $this->assertSame('new-slug', $result);
     }
 
     /** @test */
     public function get_or_create_throws_when_create_returns_empty_site_name(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->andReturn($this->makeSitesResponse([]));
+        $client->shouldReceive('create_site')
+            ->andReturn(['data' => ['site_name' => '']]);
+
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
+        Functions\when('__')->returnArg(1);
+
+        $this->expectException(\RuntimeException::class);
+        $this->makeService($client)->get_or_create_short_url(42, 'post');
     }
 
     /** @test */
     public function get_or_create_returns_first_matching_site_name(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->andReturn($this->makeSitesResponse([
+                $this->makeSite(42, 'first-match'),
+                $this->makeSite(42, 'second-match'),
+            ]));
+        $client->shouldNotReceive('create_site');
+
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
+
+        $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
+        $this->assertSame('first-match', $result);
     }
 
     /** @test */
     public function get_or_create_passes_correct_body_to_create_site(): void
     {
-        // TODO
-        $this->markTestIncomplete();
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->andReturn($this->makeSitesResponse([]));
+
+        $capturedBody = null;
+        $client->shouldReceive('create_site')
+            ->once()
+            ->andReturnUsing(function ($body) use (&$capturedBody) {
+                $capturedBody = $body;
+                return ['data' => ['site_name' => 'new-slug']];
+            });
+
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
+
+        $this->makeService($client)->get_or_create_short_url(42, 'post');
+
+        $this->assertSame(['https://example.com/?p=42'], $capturedBody['urls']);
+        $this->assertSame('post', $capturedBody['type']);
+        $this->assertSame(42, $capturedBody['type_id']);
+        $this->assertSame('', $capturedBody['domain']);
+        $this->assertSame('', $capturedBody['tags']);
+        $this->assertSame('', $capturedBody['alias']);
     }
 }
