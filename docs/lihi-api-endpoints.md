@@ -1,181 +1,160 @@
-# Lihi API Endpoints
+# Lihi API Endpoints（WordPress Plugin）
 
-## 原始碼位置
+Base URL:
+- Production: `https://app.lihi.com/api/wordpress/v1`
+- Dev: `https://app.lihidev.com/api/wordpress/v1`
 
-| 檔案 | 說明 |
-|------|------|
-| `lihi-shopify-app/web/middleware/lihi-api.js` | 主要 API middleware |
-| `lihi-shopify-app/web/middleware/shopify-api.js` | 含 delete site |
-| `lihi-shopify-app/web/helpers/short-link.js` | getLihiShortLinks / getPairedData |
+Auth header（login 以外都需要）:
+```
+Authorization: Bearer <token>
+Accept: application/json
+Content-Type: application/json
+```
 
 ---
 
-## Endpoints
-
-### POST `/api/shopify/v1/login`
-**檔案**: `lihi-api.js:50`
+## POST `/login`
 
 Body:
 ```json
-{ "email": "string", "api_key": "string" }
+{ "email": "string", "api_key": "string", "country": "TW" }
 ```
 Response:
 ```json
-{ "token": "string" }
+{ "result": true, "token": "string" }
 ```
-前端使用: `index.jsx:13` — 取 `res.token` 存入 localStorage
+Token TTL: 約 168 天。
 
 ---
 
-### GET `/api/shopify/v1/posts`
-**檔案**: `lihi-api.js:66`
+## GET `/posts`
 
-Headers: `Authorization: Bearer <token>`
+Query: `locale=zh-TW|en`
 
 Response:
 ```json
-{ "data": [ { "id": "number", "title": "string", "...": "..." } ] }
+{ "result": true, "data": [ { "id": 1, "title": "string", "body": "string" } ] }
 ```
-前端使用: `Announcement.jsx:15` — 取 `res.data[last]`
 
 ---
 
-### GET `/api/shopify/v1/sites`
-**檔案**: `lihi-api.js:80`, `lihi-api.js:126`, `lihi-api.js:155`, `helpers/short-link.js:4`
+## GET `/sites`
 
-Headers: `Authorization: Bearer <token>`
+Query params: `type`, `type_id`, `per_page`, `page`, `keyword`
 
-Query params:
-
-| 參數 | 型別 | 說明 |
-|------|------|------|
-| `type` | string | `products` / `collections` / `pages` / `customizations` |
-| `type_id` | string | 逗號分隔的 ID |
-| `per_page` | number | 預設 20 |
-| `keyword` | string | 關鍵字搜尋 |
+- `type` + `type_id` 合起來是唯一 key；不帶 `type` 時回傳所有 type 的結果
+- `type_id` 需傳字串
 
 Response:
 ```json
 {
+  "result": true,
   "data": {
-    "domains": ["string"],
+    "domains": [ { "id": "redirect.lihidev.com", "name": "redirect.lihidev.com" } ],
+    "total_sites": "0",
+    "limit_sites": 300,
     "sites": {
+      "current_page": 1,
+      "total": 0,
+      "per_page": 5,
       "data": [
         {
-          "id": "number",
-          "site_name": "string",
-          "short_url": "string",
-          "repeat_click": "number",
-          "site_urls": [ { "id": "number", "url": "string", "count": "number" } ],
-          "shopify_link": { "type": "string", "type_id": "number" }
+          "id": 123,
+          "domain_name": "redirect.lihidev.com",
+          "short_url": "https://redirect.lihidev.com/abc",
+          "site_urls": [ { "id": 1, "url": "https://example.com" } ],
+          "wordpress_link": { "type": "post", "type_id": "42" }
         }
-      ],
-      "prev_page_url": "string | null",
-      "next_page_url": "string | null"
+      ]
     }
   }
 }
 ```
-前端使用: `ShortLinks.jsx:150-152` — 取 `res.sites.data`, `res.sites.prev_page_url`, `res.sites.next_page_url`
 
 ---
 
-### POST `/api/shopify/v1/sites`
-**檔案**: `lihi-api.js:94`，前端呼叫: `ShortLinkModal.jsx:43`
+## POST `/sites`
 
-Headers: `Content-Type: application/json`, `Authorization: Bearer <token>`
-
-Body:
+Body（`domain` 必填，`type_id` 必須為字串）:
 ```json
 {
-  "tags": "string",
-  "urls": ["string"],
-  "alias": "string",
-  "domain": "string",
-  "type": "string (products | collections | pages | customizations)",
-  "type_id": "number (有 target 時才帶)"
+  "domain": "redirect.lihidev.com",
+  "urls": ["https://example.com/?p=42"],
+  "type": "post",
+  "type_id": "42",
+  "tags": "wordpress,example.com,post"
 }
 ```
 Response:
 ```json
 {
+  "result": true,
   "data": {
-    "id": "number",
-    "site_name": "string",
-    "short_url": "string",
-    "shopify_link": { "type": "string", "type_id": "number" }
+    "id": 456,
+    "domain_name": "redirect.lihidev.com",
+    "short_url": "https://redirect.lihidev.com/xyz",
+    "site_urls": [],
+    "wordpress_link": { "type": "post", "type_id": "42" }
   }
 }
 ```
-前端使用: `ShortLinkModal.jsx:61-70` — 取 `lihiRes.data.shopify_link`, `lihiRes.data.id`, `lihiRes.data.site_name`, `lihiRes.data.short_url`
 
 ---
 
-### DELETE `/api/shopify/v1/sites/{id}`
-**檔案**: `shopify-api.js:231`，前端呼叫: `ShortLinks.jsx:165`（無 body）
+## PUT `/sites/{id}`
 
-Headers: `Authorization: Bearer <token>`
-
-Response: 無（前端只更新本地 state，不使用回應內容）
-
----
-
-### POST `/api/shopify/v1/site-urls`
-**檔案**: `lihi-api.js:211`，前端呼叫: `AddSiteUrl.jsx:24`
-
-Headers: `Content-Type: application/json`, `Authorization: Bearer <token>`
-
-Body:
+批次更新 site_urls 目標 URL（不能改 wordpress_link）:
 ```json
-{
-  "site_id": "string (number.toFixed())",
-  "url": "string"
-}
+{ "urls": [ { "id": 789, "url": "https://example.com/new" } ] }
+```
+Response: `{ "result": true }`
+
+---
+
+## DELETE `/sites/{id}`
+
+Response: `{ "result": true }`
+
+---
+
+## POST `/site-urls`
+
+```json
+{ "site_id": "456", "url": "https://example.com/extra" }
 ```
 Response:
 ```json
-{ "data": { "id": "number", "url": "string", "...": "..." } }
+{ "result": true, "data": { "id": 791, "site_id": 456, "url": "https://..." } }
 ```
-前端使用: `AddSiteUrl.jsx:33` — 取 `res.data`
 
 ---
 
-### PUT `/api/shopify/v1/site-urls/{id}`
-**檔案**: `lihi-api.js:190`，前端呼叫: `EditSiteUrl.jsx:21`
+## PUT `/site-urls/{id}`
 
-Headers: `Content-Type: application/json`, `Authorization: Bearer <token>`
-
-Body:
 ```json
-{ "url": "string" }
+{ "url": "https://example.com/updated" }
 ```
-Response: 不使用（前端直接用本地 `url` 更新 state，`EditSiteUrl.jsx:27`）
+Response: `{ "result": true, "data": { "id": 791, "url": "https://..." } }`
 
 ---
 
-### DELETE `/api/shopify/v1/site-urls/{id}`
-**檔案**: `lihi-api.js:173`，前端呼叫: `ShortLinks.jsx:182`
+## DELETE `/site-urls/{id}`
 
-Headers: `Authorization: Bearer <token>`
-
-Response:
-```json
-{ "result": true }
-```
-前端使用: `ShortLinks.jsx:187` — 只確認成功，不取值
+Response: `{ "result": true }`
 
 ---
 
 ## PHP Client 對照
 
-| PHP 方法 | Method | Path | 檔案 | 狀態 |
-|----------|--------|------|------|------|
-| `login()` | POST | `/api/shopify/v1/login` | `lihi-api.js:50` | ✅ |
-| `get_posts()` | GET | `/api/shopify/v1/posts` | `lihi-api.js:66` | ✅ |
-| `get_sites()` | GET | `/api/shopify/v1/sites` | `lihi-api.js:80` | ✅ |
-| `get_short_links()` | GET | `/api/shopify/v1/sites` (per_page=20) | `helpers/short-link.js:3` | ✅ |
-| `create_site()` | POST | `/api/shopify/v1/sites` | `lihi-api.js:94` | ✅ |
-| `delete_site()` | DELETE | `/api/shopify/v1/sites/{id}` | `shopify-api.js:231` | ✅ |
-| `create_site_url()` | POST | `/api/shopify/v1/site-urls` | `lihi-api.js:211` | ✅ |
-| `update_site_url()` | PUT | `/api/shopify/v1/site-urls/{id}` | `lihi-api.js:190` | ✅ |
-| `delete_site_url()` | DELETE | `/api/shopify/v1/site-urls/{id}` | `lihi-api.js:173` | ✅ |
+| PHP 方法 | Method | Path |
+|----------|--------|------|
+| `login()` | POST | `/login` |
+| `get_posts()` | GET | `/posts` |
+| `get_sites()` | GET | `/sites` |
+| `get_short_links()` | GET | `/sites` (per_page=20, type, type_id) |
+| `create_site()` | POST | `/sites` |
+| `update_site()` | PUT | `/sites/{id}` |
+| `delete_site()` | DELETE | `/sites/{id}` |
+| `create_site_url()` | POST | `/site-urls` |
+| `update_site_url()` | PUT | `/site-urls/{id}` |
+| `delete_site_url()` | DELETE | `/site-urls/{id}` |

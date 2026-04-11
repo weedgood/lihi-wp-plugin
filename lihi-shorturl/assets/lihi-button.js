@@ -28,6 +28,7 @@ document.addEventListener( 'click', async function ( e ) {
 		}
 
 		await navigator.clipboard.writeText( data.data.url );
+		btn.classList.remove( 'lihi-btn-loading' );
 		btn.textContent = lihiButton.labelCopied;
 
 		await new Promise( function ( resolve ) {

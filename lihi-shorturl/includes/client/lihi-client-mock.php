@@ -14,20 +14,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Lihi_Client_Mock implements Lihi_Client_Interface {
 
-    public function login( string $email, string $api_key ): array {
+    public function login( string $email, string $api_key, string $country = 'TW' ): array {
         $b64 = fn( $data ) => rtrim( strtr( base64_encode( json_encode( $data ) ), '+/', '-_' ), '=' );
 
         $header  = $b64( [ 'alg' => 'HS256', 'typ' => 'JWT' ] );
         $payload = $b64( [ 'sub' => 'mock-user', 'email' => $email, 'exp' => time() + 60 ] );
 
-        return [ 'token' => "{$header}.{$payload}.mock-signature" ];
+        return [ 'result' => true, 'token' => "{$header}.{$payload}.mock-signature" ];
     }
 
-    public function get_posts(): array {
+    public function get_posts( string $locale = 'zh-TW' ): array {
         return [
-            'data' => [
-                [ 'id' => 1, 'title' => 'Mock Post 1' ],
-                [ 'id' => 2, 'title' => 'Mock Post 2' ],
+            'result' => true,
+            'data'   => [
+                [ 'id' => 1, 'title' => 'Mock Post 1', 'body' => '' ],
+                [ 'id' => 2, 'title' => 'Mock Post 2', 'body' => '' ],
             ],
         ];
     }
@@ -37,21 +38,40 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
     }
 
     public function get_short_links( string $type, $type_ids ): array {
-        return [ 'data' => [ 'sites' => [ 'data' => [] ] ] ];
+        return [
+            'result' => true,
+            'data'   => [
+                'domains'     => [],
+                'total_sites' => 0,
+                'limit_sites' => 500,
+                'sites'       => [
+                    'current_page' => 1,
+                    'total'        => 0,
+                    'per_page'     => 20,
+                    'data'         => [],
+                ],
+            ],
+        ];
     }
 
     public function create_site( array $body ): array {
         return [
-            'data' => [
-                'id'           => 99,
-                'site_name'    => 'mock-site',
-                'short_url'    => $body['urls'][0] ?? '',
-                'shopify_link' => [
+            'result' => true,
+            'data'   => [
+                'id'             => 99,
+                'domain'         => $body['domain'] ?? '',
+                'short_url'       => $body['urls'][0] ?? '',
+                'site_urls'      => [],
+                'wordpress_link' => [
                     'type'    => $body['type'] ?? '',
-                    'type_id' => $body['type_id'] ?? 0,
+                    'type_id' => (string) ( $body['type_id'] ?? 0 ),
                 ],
             ],
         ];
+    }
+
+    public function update_site( int $id, array $body ): array {
+        return [ 'result' => true ];
     }
 
     public function delete_site( int $id ): bool {
@@ -60,15 +80,20 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
 
     public function create_site_url( array $body ): array {
         return [
-            'data' => [
-                'id'  => 99,
-                'url' => $body['url'] ?? '',
+            'result' => true,
+            'data'   => [
+                'id'      => 99,
+                'site_id' => (int) ( $body['site_id'] ?? 0 ),
+                'url'     => $body['url'] ?? '',
             ],
         ];
     }
 
     public function update_site_url( int $id, array $body ): array {
-        return [ 'id' => $id, 'url' => $body['url'] ?? '' ];
+        return [
+            'result' => true,
+            'data'   => [ 'id' => $id, 'url' => $body['url'] ?? '' ],
+        ];
     }
 
     public function delete_site_url( int $id ): bool {
@@ -79,24 +104,28 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
 
     private function mock_sites_response(): array {
         return [
-            'data' => [
-                'domains' => [ 'mock.lihi.io' ],
-                'sites'   => [
-                    'data'          => [
+            'result' => true,
+            'data'   => [
+                'domains'     => [ 'mock.lihi.io' ],
+                'total_sites' => 1,
+                'limit_sites' => 500,
+                'sites'       => [
+                    'current_page' => 1,
+                    'total'        => 1,
+                    'per_page'     => 20,
+                    'data'         => [
                         [
-                            'id'           => 1,
-                            'site_name'    => 'mock-site',
-                            'short_url'    => 'https://lihi.io/mock',
-                            'repeat_click' => 42,
-                            'site_urls'    => [
-                                [ 'id' => 1, 'url' => 'https://example.com', 'count' => 30 ],
-                                [ 'id' => 2, 'url' => 'https://example.com/alt', 'count' => 12 ],
+                            'id'             => 1,
+                            'domain'         => 'mock.lihi.io',
+                            'short_url'       => 'https://lihi.io/mock',
+                            'site_urls'      => [
+                                [ 'id' => 1, 'url' => 'https://example.com' ],
+                                [ 'id' => 2, 'url' => 'https://example.com/alt' ],
                             ],
-                            'shopify_link' => [ 'type' => 'products', 'type_id' => 1 ],
+                            'site_tags'      => [],
+                            'wordpress_link' => [ 'type' => 'post', 'type_id' => '1' ],
                         ],
                     ],
-                    'prev_page_url' => null,
-                    'next_page_url' => null,
                 ],
             ],
         ];

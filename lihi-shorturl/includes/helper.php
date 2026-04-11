@@ -19,6 +19,15 @@ function is_production(): bool {
 }
 
 /**
+ * Return whether the plugin is running in test mode.
+ *
+ * @return bool True when APP_ENV is "test".
+ */
+function is_test(): bool {
+    return defined( 'APP_ENV' ) && APP_ENV === 'test';
+}
+
+/**
  * Return the Lihi API base URL for the current environment.
  *
  * @return string "https://app.lihi.com" in production, "https://app.lihidev.com" otherwise.
@@ -27,6 +36,17 @@ function lihi_api_domain(): string {
     return is_production()
         ? 'https://app.lihi.com'
         : 'https://app.lihidev.com';
+}
+
+/**
+ * Return the Lihi redirect domain for the current environment.
+ *
+ * @return string "redirect.lihi.com" in production, "redirect.lihidev.com" otherwise.
+ */
+function lihi_redirect_domain(): string {
+    return is_production()
+        ? 'redirect.lihi.com'
+        : 'redirect.lihidev.com';
 }
 
 /**
@@ -50,6 +70,30 @@ function lihi_api_key(): string {
 }
 
 /**
+ * Return the shared Lihi_Client_Interface singleton.
+ *
+ * Passing an instance replaces the singleton (useful in tests).
+ * Passing null resets it so it is recreated on the next call.
+ *
+ * @param Lihi_Client_Interface|null $inject Optional client to inject or null to reset.
+ */
+function lihi_client( ?Lihi_Client_Interface $inject = null ): Lihi_Client_Interface {
+    static $instance = null;
+
+    if ( func_num_args() > 0 ) {
+        $instance = $inject;
+    }
+
+    if ( $instance === null ) {
+        $instance = is_test()
+            ? new Lihi_Client_Mock()
+            : new Lihi_Client( $_COOKIE['lihi_token'] ?? '' );
+    }
+
+    return $instance;
+}
+
+/**
  * Return the shared Lihi_Service singleton.
  *
  * Passing a Lihi_Service instance replaces the singleton (useful in tests).
@@ -66,10 +110,7 @@ function lihi_service( ?Lihi_Service $inject = null ): Lihi_Service {
     }
 
     if ( $instance === null ) {
-        $client   = is_production()
-            ? new Lihi_Client()
-            : new Lihi_Client_Mock();
-        $instance = new Lihi_Service( $client );
+        $instance = new Lihi_Service( lihi_client() );
     }
 
     return $instance;

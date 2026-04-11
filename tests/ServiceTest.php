@@ -52,26 +52,30 @@ class ServiceTest extends TestCase
     private function makeSitesResponse(array $sites): array
     {
         return [
-            'data' => [
-                'domains' => [],
-                'sites'   => [
-                    'data'          => $sites,
-                    'prev_page_url' => null,
-                    'next_page_url' => null,
+            'result' => true,
+            'data'   => [
+                'domains'     => [],
+                'total_sites' => count( $sites ),
+                'limit_sites' => 500,
+                'sites'       => [
+                    'current_page' => 1,
+                    'total'        => count( $sites ),
+                    'per_page'     => 20,
+                    'data'         => $sites,
                 ],
             ],
         ];
     }
 
-    private function makeSite(int $typeId, string $shortUrl): array
+    private function makeSite(int $typeId, string $lihiUrl): array
     {
         return [
-            'id'           => $typeId,
-            'site_name'    => 'mock-site',
-            'short_url'    => $shortUrl,
-            'repeat_click' => 0,
-            'site_urls'    => [],
-            'shopify_link' => ['type' => 'post', 'type_id' => $typeId],
+            'id'             => $typeId,
+            'domain'         => 'lihi.io',
+            'short_url'       => $lihiUrl,
+            'site_urls'      => [],
+            'site_tags'      => [],
+            'wordpress_link' => ['type' => 'post', 'type_id' => (string) $typeId],
         ];
     }
 
@@ -252,14 +256,16 @@ class ServiceTest extends TestCase
             });
 
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
+        Functions\when('home_url')->justReturn('https://example.com');
+        Functions\when('wp_parse_url')->justReturn('example.com');
+        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
 
         $this->makeService($client)->get_or_create_short_url(42, 'post');
 
         $this->assertSame(['https://example.com/?p=42'], $capturedBody['urls']);
         $this->assertSame('post', $capturedBody['type']);
-        $this->assertSame(42, $capturedBody['type_id']);
-        $this->assertSame('', $capturedBody['domain']);
-        $this->assertSame('', $capturedBody['tags']);
-        $this->assertSame('', $capturedBody['alias']);
+        $this->assertSame('42', $capturedBody['type_id']);
+        $this->assertSame('redirect.lihidev.com', $capturedBody['domain']);
+        $this->assertSame('wordpress,example.com,post', $capturedBody['tags']);
     }
 }

@@ -5,7 +5,7 @@ namespace Lihi\ShortUrl;
  * Production Lihi API client.
  *
  * Sends HTTP requests to the Lihi API using WordPress's wp_remote_request().
- * The base URL is read from the LIHI_API_DOMAIN constant.
+ * The base URL is read from lihi_api_domain().
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -26,10 +26,11 @@ class Lihi_Client implements Lihi_Client_Interface {
     // Auth
     // -------------------------------------------------------------------------
 
-    public function login( string $email, string $api_key ): array {
-        return $this->request( 'POST', '/api/shopify/v1/login', [
+    public function login( string $email, string $api_key, string $country = 'TW' ): array {
+        return $this->request( 'POST', '/api/wordpress/v1/login', [
             'email'   => $email,
             'api_key' => $api_key,
+            'country' => $country,
         ], false );
     }
 
@@ -37,8 +38,8 @@ class Lihi_Client implements Lihi_Client_Interface {
     // Posts
     // -------------------------------------------------------------------------
 
-    public function get_posts(): array {
-        return $this->request( 'GET', '/api/shopify/v1/posts' );
+    public function get_posts( string $locale = 'zh-TW' ): array {
+        return $this->request( 'GET', '/api/wordpress/v1/posts', [ 'locale' => $locale ] );
     }
 
     // -------------------------------------------------------------------------
@@ -46,16 +47,11 @@ class Lihi_Client implements Lihi_Client_Interface {
     // -------------------------------------------------------------------------
 
     public function get_sites( array $params = [] ): array {
-        return $this->request( 'GET', '/api/shopify/v1/sites', $params );
-    }
-
-    public function delete_site( int $id ): bool {
-        $this->request( 'DELETE', "/api/shopify/v1/sites/{$id}" );
-        return true;
+        return $this->request( 'GET', '/api/wordpress/v1/sites', $params );
     }
 
     public function get_short_links( string $type, $type_ids ): array {
-        return $this->request( 'GET', '/api/shopify/v1/sites', [
+        return $this->request( 'GET', '/api/wordpress/v1/sites', [
             'per_page' => 20,
             'type'     => $type,
             'type_id'  => $type_ids,
@@ -63,7 +59,16 @@ class Lihi_Client implements Lihi_Client_Interface {
     }
 
     public function create_site( array $body ): array {
-        return $this->request( 'POST', '/api/shopify/v1/sites', $body );
+        return $this->request( 'POST', '/api/wordpress/v1/sites', $body );
+    }
+
+    public function update_site( int $id, array $body ): array {
+        return $this->request( 'PUT', "/api/wordpress/v1/sites/{$id}", $body );
+    }
+
+    public function delete_site( int $id ): bool {
+        $this->request( 'DELETE', "/api/wordpress/v1/sites/{$id}" );
+        return true;
     }
 
     // -------------------------------------------------------------------------
@@ -71,15 +76,15 @@ class Lihi_Client implements Lihi_Client_Interface {
     // -------------------------------------------------------------------------
 
     public function create_site_url( array $body ): array {
-        return $this->request( 'POST', '/api/shopify/v1/site-urls', $body );
+        return $this->request( 'POST', '/api/wordpress/v1/site-urls', $body );
     }
 
     public function update_site_url( int $id, array $body ): array {
-        return $this->request( 'PUT', "/api/shopify/v1/site-urls/{$id}", $body );
+        return $this->request( 'PUT', "/api/wordpress/v1/site-urls/{$id}", $body );
     }
 
     public function delete_site_url( int $id ): bool {
-        $this->request( 'DELETE', "/api/shopify/v1/site-urls/{$id}" );
+        $this->request( 'DELETE', "/api/wordpress/v1/site-urls/{$id}" );
         return true;
     }
 

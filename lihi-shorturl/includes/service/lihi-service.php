@@ -41,7 +41,7 @@ class Lihi_Service {
     /**
      * Authenticate against the Lihi API and return the JWT token.
      *
-     * Reads email and API key from the plugin settings (lihi_email, lihi_api_key).
+     * Uses the current WordPress user's email and the env-based API key.
      *
      * @return string JWT token.
      * @throws RuntimeException If the API call fails or returns no token.
@@ -74,18 +74,18 @@ class Lihi_Service {
         $sites  = $result['data']['sites']['data'] ?? [];
 
         foreach ( $sites as $site ) {
-            if ( (int) ( $site['shopify_link']['type_id'] ?? 0 ) === $item_id ) {
+            if ( (string) ( $site['wordpress_link']['type_id'] ?? '' ) === (string) $item_id ) {
                 return $site['short_url'];
             }
         }
 
+        $host    = wp_parse_url( home_url(), PHP_URL_HOST );
         $created = $this->client->create_site( [
             'urls'    => [ $this->resolve_url( $item_id, $type ) ],
             'type'    => $type,
-            'type_id' => $item_id,
-            'domain'  => '',
-            'tags'    => '',
-            'alias'   => '',
+            'type_id' => (string) $item_id,
+            'domain'  => lihi_redirect_domain(),
+            'tags'    => 'wordpress,' . $host . ',' . $type,
         ] );
 
         $short_url = $created['data']['short_url'] ?? '';
