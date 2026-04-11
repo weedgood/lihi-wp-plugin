@@ -59,9 +59,9 @@ class AjaxCopyUrlTest extends TestCase
     // -------------------------------------------------------------------------
 
     /** @test */
-    public function returns_error_when_post_id_is_zero(): void
+    public function returns_error_when_item_id_is_zero(): void
     {
-        $_POST['post_id'] = '0';
+        $_POST['item_id'] = '0';
         $_POST['type']    = 'post';
 
         Functions\when('check_ajax_referer')->justReturn(true);
@@ -81,7 +81,7 @@ class AjaxCopyUrlTest extends TestCase
     /** @test */
     public function returns_error_when_type_is_empty(): void
     {
-        $_POST['post_id'] = '42';
+        $_POST['item_id'] = '42';
         $_POST['type']    = '';
 
         Functions\when('check_ajax_referer')->justReturn(true);
@@ -101,7 +101,7 @@ class AjaxCopyUrlTest extends TestCase
     /** @test */
     public function returns_success_with_url_on_valid_request(): void
     {
-        $_POST['post_id'] = '42';
+        $_POST['item_id'] = '42';
         $_POST['type']    = 'post';
 
         $service = $this->mockService();
@@ -128,7 +128,7 @@ class AjaxCopyUrlTest extends TestCase
     /** @test */
     public function returns_error_when_service_throws(): void
     {
-        $_POST['post_id'] = '42';
+        $_POST['item_id'] = '42';
         $_POST['type']    = 'post';
 
         $service = $this->mockService();

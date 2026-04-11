@@ -30,21 +30,23 @@ function lihi_api_domain(): string {
 }
 
 /**
- * Return the configured Lihi account email.
+ * Return the current WordPress user's email address.
  *
- * @return string Email address, empty string if not set.
+ * @return string Email address.
  */
-function option_email(): string {
-    return (string) get_option( 'lihi_email', '' );
+function lihi_email(): string {
+    return wp_get_current_user()->user_email;
 }
 
 /**
- * Return the configured Lihi API key.
+ * Return the Lihi API key for the current environment.
  *
- * @return string API key, empty string if not set.
+ * @return string Shared dev key in non-production; empty string in production.
  */
-function option_api_key(): string {
-    return (string) get_option( 'lihi_api_key', '' );
+function lihi_api_key(): string {
+    return is_production()
+        ? ''
+        : '2f294400a5d37c1578df3d1c923171d51e09e9e259e2ec64f781e0b3893ed0c5';
 }
 
 /**

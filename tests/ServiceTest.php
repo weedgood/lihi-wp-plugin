@@ -135,8 +135,9 @@ class ServiceTest extends TestCase
             ->andReturn(['token' => 'jwt-token']);
 
         Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key123');
 
-        $this->assertSame('jwt-token', $this->makeService($client)->login('key123'));
+        $this->assertSame('jwt-token', $this->makeService($client)->login());
     }
 
     /** @test */

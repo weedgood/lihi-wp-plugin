@@ -47,7 +47,7 @@ class Lihi_Service {
      * @throws RuntimeException If the API call fails or returns no token.
      */
     public function login(): string {
-        $result = $this->client->login( option_email(), option_api_key() );
+        $result = $this->client->login( lihi_email(), lihi_api_key() );
         $token  = $result['token'] ?? '';
 
         if ( ! $token ) {
