@@ -6,6 +6,10 @@ namespace Lihi\ShortUrl;
  *
  * Encapsulates business logic that sits between the HTTP client and WordPress hooks.
  * Methods throw RuntimeException on failure; callers are responsible for error handling.
+ *
+ * Token management: get_token() lazily checks the lihi_token cookie. If the token is
+ * absent or expired it calls login() to obtain a fresh token and stores it in the cookie.
+ * No login is triggered on page load — only when an API call is actually needed.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -70,7 +74,8 @@ class Lihi_Service {
      * @throws RuntimeException If any API call fails.
      */
     public function get_or_create_short_url( int $item_id, string $type ): string {
-        $result = $this->client->get_short_links( $type, $item_id );
+        $token  = $this->get_token();
+        $result = $this->client->get_short_links( $token, $type, $item_id );
         $sites  = $result['data']['sites']['data'] ?? [];
 
         foreach ( $sites as $site ) {
@@ -80,7 +85,7 @@ class Lihi_Service {
         }
 
         $host    = wp_parse_url( home_url(), PHP_URL_HOST );
-        $created = $this->client->create_site( [
+        $created = $this->client->create_site( $token, [
             'urls'    => [ $this->resolve_url( $item_id, $type ) ],
             'type'    => $type,
             'type_id' => (string) $item_id,
@@ -101,5 +106,32 @@ class Lihi_Service {
         return $type === 'attachment'
             ? wp_get_attachment_url( $item_id )
             : get_permalink( $item_id );
+    }
+
+    /**
+     * Return a valid JWT token, logging in if the cookie is absent or expired.
+     *
+     * On a fresh login the token is stored in the lihi_token httponly cookie so
+     * subsequent requests within the same session reuse it without another round-trip.
+     *
+     * @throws RuntimeException If login fails.
+     */
+    private function get_token(): string {
+        if ( $this->has_valid_token() ) {
+            return $_COOKIE['lihi_token'];
+        }
+
+        $token = $this->login();
+
+        setcookie( 'lihi_token', $token, [
+            'expires'  => time() + DAY_IN_SECONDS,
+            'path'     => '/',
+            'httponly' => true,
+            'samesite' => 'Strict',
+        ] );
+
+        $_COOKIE['lihi_token'] = $token;
+
+        return $token;
     }
 }

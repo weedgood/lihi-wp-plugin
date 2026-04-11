@@ -87,7 +87,7 @@ function lihi_client( ?Lihi_Client_Interface $inject = null ): Lihi_Client_Inter
     if ( $instance === null ) {
         $instance = is_test()
             ? new Lihi_Client_Mock()
-            : new Lihi_Client( $_COOKIE['lihi_token'] ?? '' );
+            : new Lihi_Client();
     }
 
     return $instance;

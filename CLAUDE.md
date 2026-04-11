@@ -46,16 +46,14 @@ Translation files live in `languages/`. The text domain is `lihi-shorturl`.
 ## Architecture
 
 - `lihi-shorturl/lihi-shorturl.php` — plugin entry point. Non-admin requests are rejected via early `return`. Loads `bootstrap.php`.
-- `lihi-shorturl/bootstrap.php` — loads all includes in dependency order. Loads helper first, then interface → client → mock → service → feature files.
-- `lihi-shorturl/includes/helper.php` — namespace helpers: `is_production()`, `is_test()`, `lihi_api_domain()`, `lihi_redirect_domain()` (env-based URLs), `lihi_email()`, `lihi_api_key()`, `lihi_client()` singleton (reads JWT from `$_COOKIE['lihi_token']`; uses mock when `APP_ENV=test`), and `lihi_service()` singleton.
-- `lihi-shorturl/includes/client/lihi-client-interface.php` — `Lihi_Client_Interface` with full phpDoc (request/response shapes). See `docs/lihi-api-endpoints.md` for the complete API reference.
-- `lihi-shorturl/includes/client/lihi-client.php` — production HTTP client implementing the interface.
+- `lihi-shorturl/bootstrap.php` — loads all includes in dependency order: helper → interface → client → mock → service → add-shorturl-column.
+- `lihi-shorturl/includes/helper.php` — namespace helpers: `is_production()`, `is_test()`, `lihi_api_domain()`, `lihi_redirect_domain()` (env-based URLs), `lihi_email()`, `lihi_api_key()`, `lihi_client()` singleton (uses mock when `LIHI_ENV=test`), and `lihi_service()` singleton.
+- `lihi-shorturl/includes/client/lihi-client-interface.php` — `Lihi_Client_Interface` with full phpDoc (request/response shapes). Every method except `login()` takes `string $token` as its first parameter. See `docs/lihi-api-endpoints.md` for the complete API reference.
+- `lihi-shorturl/includes/client/lihi-client.php` — production HTTP client implementing the interface. No token stored on the instance; each method receives the token directly and passes it to `request()`.
 - `lihi-shorturl/includes/client/lihi-client-mock.php` — mock client for non-production environments; `get_short_links()` always returns empty, `create_site()` returns the original URL as `short_url`.
-- `lihi-shorturl/includes/service/lihi-service.php` — `Lihi_Service`: pure business logic. `login()` returns a JWT string and throws `RuntimeException` on failure; `get_or_create_short_url()` resolves the correct URL per post type (attachment uses `wp_get_attachment_url`, others use `get_permalink`).
-- `lihi-shorturl/includes/lihi-auth.php` — enqueues `lihi-login.js` when token is absent/expired; handles `wp_ajax_lihi_login` (sets httponly cookie on success, returns `wp_send_json_error` on failure).
+- `lihi-shorturl/includes/service/lihi-service.php` — `Lihi_Service`: business logic. `get_token()` (private) lazily checks the `lihi_token` cookie; if absent or expired it calls `login()`, stores the new token in a httponly cookie, and returns it. `get_or_create_short_url()` calls `get_token()` and forwards the token to every client method.
 - `docs/lihi-api-endpoints.md` — full Lihi API endpoint reference with request/response shapes and PHP client mapping.
-- `lihi-shorturl/includes/add-shorturl-column.php` — adds a "Shout URL" column to post-type list tables (current post type only); adds a Lihi button to the media attachment detail panel via `attachment_fields_to_edit`; handles `wp_ajax_lihi_copy_url`.
-- `lihi-shorturl/assets/lihi-login.js` — fetches the AJAX login endpoint to obtain and store the auth token.
-- `lihi-shorturl/assets/lihi-button.js` — async delegated click handler for Lihi buttons (uses `document` event delegation on `button[data-lihi]`). Sends `item_id` + `type` via AJAX, awaits clipboard write and reset delay. Loading state cleared in `finally`. Exposes `lihiButton` JS global via `wp_localize_script`.
+- `lihi-shorturl/includes/add-shorturl-column.php` — adds a "Short URL" column to post-type list tables; adds a Lihi button to the media attachment detail panel via `attachment_fields_to_edit`; handles `wp_ajax_lihi_copy_url`.
+- `lihi-shorturl/assets/lihi-button.js` — async delegated click handler for Lihi buttons (uses `document` event delegation on `button[data-lihi]`). Sends `item_id` + `type` via AJAX, awaits clipboard write and reset delay. Loading state cleared in `finally`. Exposes `lihiButton` JS global via `wp_localize_script`. Displays login/API errors via `alert()`.
 
 All hooks use anonymous functions registered directly via `add_action` / `add_filter`.

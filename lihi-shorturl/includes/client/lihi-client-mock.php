@@ -23,7 +23,7 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
         return [ 'result' => true, 'token' => "{$header}.{$payload}.mock-signature" ];
     }
 
-    public function get_posts( string $locale = 'zh-TW' ): array {
+    public function get_posts( string $token, string $locale = 'zh-TW' ): array {
         return [
             'result' => true,
             'data'   => [
@@ -33,11 +33,11 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
         ];
     }
 
-    public function get_sites( array $params = [] ): array {
+    public function get_sites( string $token, array $params = [] ): array {
         return $this->mock_sites_response();
     }
 
-    public function get_short_links( string $type, $type_ids ): array {
+    public function get_short_links( string $token, string $type, $type_ids ): array {
         return [
             'result' => true,
             'data'   => [
@@ -54,7 +54,7 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
         ];
     }
 
-    public function create_site( array $body ): array {
+    public function create_site( string $token, array $body ): array {
         return [
             'result' => true,
             'data'   => [
@@ -70,15 +70,15 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
         ];
     }
 
-    public function update_site( int $id, array $body ): array {
+    public function update_site( string $token, int $id, array $body ): array {
         return [ 'result' => true ];
     }
 
-    public function delete_site( int $id ): bool {
+    public function delete_site( string $token, int $id ): bool {
         return true;
     }
 
-    public function create_site_url( array $body ): array {
+    public function create_site_url( string $token, array $body ): array {
         return [
             'result' => true,
             'data'   => [
@@ -89,14 +89,14 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
         ];
     }
 
-    public function update_site_url( int $id, array $body ): array {
+    public function update_site_url( string $token, int $id, array $body ): array {
         return [
             'result' => true,
             'data'   => [ 'id' => $id, 'url' => $body['url'] ?? '' ],
         ];
     }
 
-    public function delete_site_url( int $id ): bool {
+    public function delete_site_url( string $token, int $id ): bool {
         return true;
     }
 

@@ -8,8 +8,8 @@ A WordPress admin plugin that integrates with the [Lihi](https://lihi.io) URL sh
 - **Media attachment support** — Lihi button appears in the attachment detail panel of the media grid view.
 - **Get-or-create** — fetches the existing short link for a post from Lihi; creates one automatically if none exists.
 - **One-click copy** — button copies the short URL to the clipboard and briefly shows "Copied!".
-- **Transparent auth** — authenticates against the Lihi API in the background using the current user's email; stores the JWT in an `httponly` cookie that refreshes automatically when it expires.
-- **Mock client** — when `APP_ENV` is not `production`, uses a mock client that returns the original URL directly without hitting the Lihi API.
+- **Lazy auth** — authenticates against the Lihi API only when a short URL is actually needed; stores the JWT in an `httponly` cookie and refreshes it automatically when expired.
+- **Mock client** — when `LIHI_ENV` is not `production`, uses a mock client that returns the original URL directly without hitting the Lihi API.
 - **i18n ready** — full Traditional Chinese (zh_TW) translation included; text domain `lihi-shorturl`.
 
 ## Requirements
@@ -65,25 +65,23 @@ lihi-shorturl/
 ├── lihi-shorturl.php          Plugin entry point; admin-only guard, text domain loading
 ├── bootstrap.php              Loads all includes in dependency order
 ├── assets/
-│   ├── lihi-login.js          Background AJAX login; fires when token is absent/expired
-│   └── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state
+│   └── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state; displays errors via alert()
 └── includes/
     ├── helper.php             is_production(), is_test(), lihi_api_domain(), lihi_redirect_domain(), lihi_email(), lihi_api_key(), lihi_client(), lihi_service()
-    ├── lihi-auth.php          Token validation; wp_ajax_lihi_login handler
     ├── add-shorturl-column.php Column registration, attachment panel button, wp_ajax_lihi_copy_url handler
     ├── client/
-    │   ├── lihi-client-interface.php   Interface with full phpDoc (request/response shapes)
-    │   ├── lihi-client.php             Production HTTP client
+    │   ├── lihi-client-interface.php   Interface with full phpDoc; every method except login() takes $token as first param
+    │   ├── lihi-client.php             Production HTTP client; token passed per-call, not stored on instance
     │   └── lihi-client-mock.php        Mock client; always returns original URL as short_url
     └── service/
-        └── lihi-service.php            Business logic: login(), has_valid_token(), get_or_create_short_url()
+        └── lihi-service.php            Business logic: login(), has_valid_token(), get_token() (lazy auth + cookie), get_or_create_short_url()
 ```
 
 ### Auth flow
 
-1. On every admin page load `lihi-auth.php` checks the `lihi_token` cookie.
-2. If absent or expired, `lihi-login.js` is enqueued and fires an AJAX request to `wp_ajax_lihi_login`.
-3. The handler calls `Lihi_Service::login()` with the current user's email and stores the returned JWT in a `Strict`/`httponly` cookie (TTL: 1 day).
+1. When the editor clicks the Lihi button, `lihi-button.js` triggers an AJAX call to `wp_ajax_lihi_copy_url`.
+2. `Lihi_Service::get_token()` checks the `lihi_token` cookie; if absent or expired it calls `login()` to obtain a fresh JWT.
+3. The new token is stored in a `Strict`/`httponly` cookie (TTL: 1 day) and used immediately for the API call.
 
 ### Short URL flow
 

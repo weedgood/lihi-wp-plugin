@@ -171,15 +171,101 @@ class ServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // get_token() — tested via get_or_create_short_url()
+    // -------------------------------------------------------------------------
+
+    /** @test */
+    public function get_token_reuses_valid_cookie_without_login(): void
+    {
+        $validToken = $this->makeJwt(time() + 3600);
+        $_COOKIE['lihi_token'] = $validToken;
+
+        $client = $this->makeClient();
+        $client->shouldNotReceive('login');
+        $client->shouldReceive('get_short_links')
+            ->with($validToken, 'post', 1)
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(1, 'https://lihi.io/abc')]));
+
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=1');
+
+        $result = $this->makeService($client)->get_or_create_short_url(1, 'post');
+        $this->assertSame('https://lihi.io/abc', $result);
+    }
+
+    /** @test */
+    public function get_token_calls_login_when_cookie_absent(): void
+    {
+        $newToken = $this->makeJwt(time() + 3600);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('login')
+            ->once()
+            ->andReturn(['token' => $newToken]);
+        $client->shouldReceive('get_short_links')
+            ->with($newToken, 'post', 5)
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(5, 'https://lihi.io/xyz')]));
+
+        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=5');
+        Functions\when('setcookie')->justReturn(true);
+
+        $result = $this->makeService($client)->get_or_create_short_url(5, 'post');
+        $this->assertSame('https://lihi.io/xyz', $result);
+    }
+
+    /** @test */
+    public function get_token_calls_login_when_cookie_expired(): void
+    {
+        $_COOKIE['lihi_token'] = $this->makeJwt(time() - 1);
+        $newToken = $this->makeJwt(time() + 3600);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('login')
+            ->once()
+            ->andReturn(['token' => $newToken]);
+        $client->shouldReceive('get_short_links')
+            ->with($newToken, 'post', 7)
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(7, 'https://lihi.io/def')]));
+
+        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=7');
+        Functions\when('setcookie')->justReturn(true);
+
+        $result = $this->makeService($client)->get_or_create_short_url(7, 'post');
+        $this->assertSame('https://lihi.io/def', $result);
+    }
+
+    /** @test */
+    public function get_token_propagates_login_exception(): void
+    {
+        $client = $this->makeClient();
+        $client->shouldReceive('login')->andThrow(new \RuntimeException('Auth failed'));
+
+        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Auth failed');
+        $this->makeService($client)->get_or_create_short_url(1, 'post');
+    }
+
+    // -------------------------------------------------------------------------
     // get_or_create_short_url()
     // -------------------------------------------------------------------------
 
     /** @test */
     public function get_or_create_returns_existing_short_url_without_creating(): void
     {
+        $_COOKIE['lihi_token'] = $this->makeJwt(time() + 3600);
+
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->with('post', 42)
+            ->with(Mockery::type('string'), 'post', 42)
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/existing')]));
         $client->shouldNotReceive('create_site');
@@ -193,6 +279,8 @@ class ServiceTest extends TestCase
     /** @test */
     public function get_or_create_calls_create_when_no_match_found(): void
     {
+        $_COOKIE['lihi_token'] = $this->makeJwt(time() + 3600);
+
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
             ->once()
@@ -210,6 +298,8 @@ class ServiceTest extends TestCase
     /** @test */
     public function get_or_create_throws_when_create_returns_empty_site_name(): void
     {
+        $_COOKIE['lihi_token'] = $this->makeJwt(time() + 3600);
+
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
             ->andReturn($this->makeSitesResponse([]));
@@ -226,6 +316,8 @@ class ServiceTest extends TestCase
     /** @test */
     public function get_or_create_returns_first_matching_short_url(): void
     {
+        $_COOKIE['lihi_token'] = $this->makeJwt(time() + 3600);
+
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
             ->andReturn($this->makeSitesResponse([
@@ -243,6 +335,8 @@ class ServiceTest extends TestCase
     /** @test */
     public function get_or_create_passes_correct_body_to_create_site(): void
     {
+        $_COOKIE['lihi_token'] = $this->makeJwt(time() + 3600);
+
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
             ->andReturn($this->makeSitesResponse([]));
@@ -250,7 +344,7 @@ class ServiceTest extends TestCase
         $capturedBody = null;
         $client->shouldReceive('create_site')
             ->once()
-            ->andReturnUsing(function ($body) use (&$capturedBody) {
+            ->andReturnUsing(function ($token, $body) use (&$capturedBody) {
                 $capturedBody = $body;
                 return ['data' => ['short_url' => 'https://lihi.io/new']];
             });
@@ -267,6 +361,33 @@ class ServiceTest extends TestCase
         $this->assertSame('42', $capturedBody['type_id']);
         $this->assertSame('redirect.lihidev.com', $capturedBody['domain']);
         $this->assertSame('wordpress,example.com,post', $capturedBody['tags']);
+    }
+
+    /** @test */
+    public function get_or_create_uses_attachment_url_for_attachment_type(): void
+    {
+        $_COOKIE['lihi_token'] = $this->makeJwt(time() + 3600);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->andReturn($this->makeSitesResponse([]));
+
+        $capturedBody = null;
+        $client->shouldReceive('create_site')
+            ->once()
+            ->andReturnUsing(function ($token, $body) use (&$capturedBody) {
+                $capturedBody = $body;
+                return ['data' => ['short_url' => 'https://lihi.io/img']];
+            });
+
+        Functions\when('wp_get_attachment_url')->justReturn('https://example.com/wp-content/uploads/photo.jpg');
+        Functions\when('home_url')->justReturn('https://example.com');
+        Functions\when('wp_parse_url')->justReturn('example.com');
+        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
+
+        $this->makeService($client)->get_or_create_short_url(7, 'attachment');
+
+        $this->assertSame(['https://example.com/wp-content/uploads/photo.jpg'], $capturedBody['urls']);
     }
 
     // -------------------------------------------------------------------------

@@ -28,9 +28,9 @@ class ClientTest extends TestCase
     // Helpers
     // -------------------------------------------------------------------------
 
-    private function makeClient(string $token = 'test-token'): Lihi_Client
+    private function makeClient(): Lihi_Client
     {
-        return new Lihi_Client($token);
+        return new Lihi_Client();
     }
 
     /**
@@ -66,7 +66,7 @@ class ClientTest extends TestCase
     public function get_posts_sends_get_to_posts_path(): void
     {
         $capture = $this->mockRequest(200, '{"result":true,"data":[]}');
-        $this->makeClient()->get_posts();
+        $this->makeClient()->get_posts('test-token');
         $this->assertStringContainsString('/api/wordpress/v1/posts', $capture()['url']);
         $this->assertSame('GET', $capture()['args']['method']);
     }
@@ -75,7 +75,7 @@ class ClientTest extends TestCase
     public function get_posts_passes_locale_as_query_param(): void
     {
         $capture = $this->mockRequest(200, '{"result":true,"data":[]}');
-        $this->makeClient()->get_posts('en');
+        $this->makeClient()->get_posts('test-token', 'en');
         $this->assertStringContainsString('locale=en', $capture()['url']);
     }
 
@@ -83,7 +83,7 @@ class ClientTest extends TestCase
     public function get_short_links_sends_get_with_type_and_type_id(): void
     {
         $capture = $this->mockRequest(200, '{"result":true,"data":{"sites":{"data":[]}}}');
-        $this->makeClient()->get_short_links('post', 42);
+        $this->makeClient()->get_short_links('test-token', 'post', 42);
         $url = $capture()['url'];
         $this->assertStringContainsString('/api/wordpress/v1/sites', $url);
         $this->assertStringContainsString('type=post', $url);
@@ -95,7 +95,7 @@ class ClientTest extends TestCase
     public function update_site_sends_put_with_id_in_path(): void
     {
         $capture = $this->mockRequest(200, '{"result":true}');
-        $this->makeClient()->update_site(456, ['urls' => [['id' => 1, 'url' => 'https://example.com']]]);
+        $this->makeClient()->update_site('test-token', 456, ['urls' => [['id' => 1, 'url' => 'https://example.com']]]);
         $c = $capture();
         $this->assertStringContainsString('/api/wordpress/v1/sites/456', $c['url']);
         $this->assertSame('PUT', $c['args']['method']);
@@ -105,7 +105,7 @@ class ClientTest extends TestCase
     public function delete_site_sends_delete_with_id_in_path(): void
     {
         $capture = $this->mockRequest(200, '{"result":true}');
-        $result  = $this->makeClient()->delete_site(789);
+        $result  = $this->makeClient()->delete_site('test-token', 789);
         $c       = $capture();
         $this->assertStringContainsString('/api/wordpress/v1/sites/789', $c['url']);
         $this->assertSame('DELETE', $c['args']['method']);
@@ -116,7 +116,7 @@ class ClientTest extends TestCase
     public function create_site_url_sends_post_to_site_urls_path(): void
     {
         $capture = $this->mockRequest(200, '{"result":true,"data":{"id":1,"url":"https://example.com"}}');
-        $this->makeClient()->create_site_url(['site_id' => '456', 'url' => 'https://example.com']);
+        $this->makeClient()->create_site_url('test-token', ['site_id' => '456', 'url' => 'https://example.com']);
         $c = $capture();
         $this->assertStringContainsString('/api/wordpress/v1/site-urls', $c['url']);
         $this->assertSame('POST', $c['args']['method']);
@@ -128,7 +128,7 @@ class ClientTest extends TestCase
     public function update_site_url_sends_put_with_id_in_path(): void
     {
         $capture = $this->mockRequest(200, '{"result":true,"data":{"id":99,"url":"https://new.com"}}');
-        $this->makeClient()->update_site_url(99, ['url' => 'https://new.com']);
+        $this->makeClient()->update_site_url('test-token', 99, ['url' => 'https://new.com']);
         $c = $capture();
         $this->assertStringContainsString('/api/wordpress/v1/site-urls/99', $c['url']);
         $this->assertSame('PUT', $c['args']['method']);
@@ -138,7 +138,7 @@ class ClientTest extends TestCase
     public function delete_site_url_sends_delete_with_id_in_path(): void
     {
         $capture = $this->mockRequest(200, '{"result":true}');
-        $result  = $this->makeClient()->delete_site_url(55);
+        $result  = $this->makeClient()->delete_site_url('test-token', 55);
         $c       = $capture();
         $this->assertStringContainsString('/api/wordpress/v1/site-urls/55', $c['url']);
         $this->assertSame('DELETE', $c['args']['method']);
@@ -153,7 +153,7 @@ class ClientTest extends TestCase
     public function get_request_appends_data_as_query_string(): void
     {
         $capture = $this->mockRequest();
-        $this->makeClient()->get_sites(['type' => 'products', 'per_page' => 10]);
+        $this->makeClient()->get_sites('test-token', ['type' => 'products', 'per_page' => 10]);
         $c = $capture();
         $this->assertStringContainsString('type=products', $c['url']);
         $this->assertStringContainsString('per_page=10', $c['url']);
@@ -164,7 +164,7 @@ class ClientTest extends TestCase
     public function post_request_encodes_data_as_json_body(): void
     {
         $capture = $this->mockRequest();
-        $this->makeClient()->create_site([
+        $this->makeClient()->create_site('test-token', [
             'urls'    => ['https://example.com'],
             'alias'   => 'test',
             'domain'  => '',
@@ -179,16 +179,16 @@ class ClientTest extends TestCase
     }
 
     /** @test */
-    public function request_includes_authorization_header_when_auth_true(): void
+    public function request_includes_authorization_header_when_token_provided(): void
     {
         $capture = $this->mockRequest();
-        $this->makeClient('my-token')->get_sites();
+        $this->makeClient()->get_sites('my-token');
         $c = $capture();
         $this->assertSame('Bearer my-token', $c['args']['headers']['Authorization']);
     }
 
     /** @test */
-    public function request_omits_authorization_header_when_auth_false(): void
+    public function request_omits_authorization_header_for_login(): void
     {
         $capture = $this->mockRequest();
         $this->makeClient()->login('user@example.com', 'api-key');
@@ -200,7 +200,7 @@ class ClientTest extends TestCase
     public function request_returns_empty_array_on_204(): void
     {
         $this->mockRequest(204, '');
-        $result = $this->makeClient()->get_sites();
+        $result = $this->makeClient()->get_sites('test-token');
         $this->assertSame([], $result);
     }
 
@@ -208,7 +208,7 @@ class ClientTest extends TestCase
     public function request_returns_empty_array_on_empty_body(): void
     {
         $this->mockRequest(200, '');
-        $result = $this->makeClient()->get_sites();
+        $result = $this->makeClient()->get_sites('test-token');
         $this->assertSame([], $result);
     }
 
@@ -218,7 +218,7 @@ class ClientTest extends TestCase
         $this->mockRequest(200, 'not-json');
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessageMatches('/Expected JSON but got/');
-        $this->makeClient()->get_sites();
+        $this->makeClient()->get_sites('test-token');
     }
 
     /** @test */
@@ -227,7 +227,7 @@ class ClientTest extends TestCase
         $this->mockRequest(404, '{"error":"not found"}');
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessageMatches('/404/');
-        $this->makeClient()->get_sites();
+        $this->makeClient()->get_sites('test-token');
     }
 
     /** @test */
@@ -241,6 +241,6 @@ class ClientTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('cURL error: connection timed out');
-        $this->makeClient()->get_sites();
+        $this->makeClient()->get_sites('test-token');
     }
 }

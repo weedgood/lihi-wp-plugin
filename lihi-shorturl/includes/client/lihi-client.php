@@ -6,6 +6,7 @@ namespace Lihi\ShortUrl;
  *
  * Sends HTTP requests to the Lihi API using WordPress's wp_remote_request().
  * The base URL is read from lihi_api_domain().
+ * Every method except login() requires a JWT $token passed by the caller.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -15,11 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Lihi_Client implements Lihi_Client_Interface {
 
     private string $base_url;
-    private string $token;
 
-    public function __construct( string $token = '' ) {
+    public function __construct() {
         $this->base_url = rtrim( lihi_api_domain(), '/' );
-        $this->token    = $token;
     }
 
     // -------------------------------------------------------------------------
@@ -31,43 +30,43 @@ class Lihi_Client implements Lihi_Client_Interface {
             'email'   => $email,
             'api_key' => $api_key,
             'country' => $country,
-        ], false );
+        ] );
     }
 
     // -------------------------------------------------------------------------
     // Posts
     // -------------------------------------------------------------------------
 
-    public function get_posts( string $locale = 'zh-TW' ): array {
-        return $this->request( 'GET', '/api/wordpress/v1/posts', [ 'locale' => $locale ] );
+    public function get_posts( string $token, string $locale = 'zh-TW' ): array {
+        return $this->request( 'GET', '/api/wordpress/v1/posts', [ 'locale' => $locale ], $token );
     }
 
     // -------------------------------------------------------------------------
     // Sites
     // -------------------------------------------------------------------------
 
-    public function get_sites( array $params = [] ): array {
-        return $this->request( 'GET', '/api/wordpress/v1/sites', $params );
+    public function get_sites( string $token, array $params = [] ): array {
+        return $this->request( 'GET', '/api/wordpress/v1/sites', $params, $token );
     }
 
-    public function get_short_links( string $type, $type_ids ): array {
+    public function get_short_links( string $token, string $type, $type_ids ): array {
         return $this->request( 'GET', '/api/wordpress/v1/sites', [
             'per_page' => 20,
             'type'     => $type,
             'type_id'  => $type_ids,
-        ] );
+        ], $token );
     }
 
-    public function create_site( array $body ): array {
-        return $this->request( 'POST', '/api/wordpress/v1/sites', $body );
+    public function create_site( string $token, array $body ): array {
+        return $this->request( 'POST', '/api/wordpress/v1/sites', $body, $token );
     }
 
-    public function update_site( int $id, array $body ): array {
-        return $this->request( 'PUT', "/api/wordpress/v1/sites/{$id}", $body );
+    public function update_site( string $token, int $id, array $body ): array {
+        return $this->request( 'PUT', "/api/wordpress/v1/sites/{$id}", $body, $token );
     }
 
-    public function delete_site( int $id ): bool {
-        $this->request( 'DELETE', "/api/wordpress/v1/sites/{$id}" );
+    public function delete_site( string $token, int $id ): bool {
+        $this->request( 'DELETE', "/api/wordpress/v1/sites/{$id}", [], $token );
         return true;
     }
 
@@ -75,16 +74,16 @@ class Lihi_Client implements Lihi_Client_Interface {
     // Site URLs
     // -------------------------------------------------------------------------
 
-    public function create_site_url( array $body ): array {
-        return $this->request( 'POST', '/api/wordpress/v1/site-urls', $body );
+    public function create_site_url( string $token, array $body ): array {
+        return $this->request( 'POST', '/api/wordpress/v1/site-urls', $body, $token );
     }
 
-    public function update_site_url( int $id, array $body ): array {
-        return $this->request( 'PUT', "/api/wordpress/v1/site-urls/{$id}", $body );
+    public function update_site_url( string $token, int $id, array $body ): array {
+        return $this->request( 'PUT', "/api/wordpress/v1/site-urls/{$id}", $body, $token );
     }
 
-    public function delete_site_url( int $id ): bool {
-        $this->request( 'DELETE', "/api/wordpress/v1/site-urls/{$id}" );
+    public function delete_site_url( string $token, int $id ): bool {
+        $this->request( 'DELETE', "/api/wordpress/v1/site-urls/{$id}", [], $token );
         return true;
     }
 
@@ -96,15 +95,16 @@ class Lihi_Client implements Lihi_Client_Interface {
      * Execute an HTTP request against the Lihi API.
      *
      * GET requests append $data as a query string; other methods encode it as JSON body.
+     * When $token is non-empty an Authorization: Bearer header is added.
      * Throws RuntimeException on network errors, invalid JSON, or HTTP 4xx/5xx responses.
      *
      * @throws RuntimeException
      */
-    private function request( string $method, string $path, array $data = [], bool $auth = true ): array {
+    private function request( string $method, string $path, array $data = [], string $token = '' ): array {
         $headers = [ 'Content-Type' => 'application/json' ];
 
-        if ( $auth ) {
-            $headers['Authorization'] = 'Bearer ' . $this->token;
+        if ( $token !== '' ) {
+            $headers['Authorization'] = 'Bearer ' . $token;
         }
 
         $args = [

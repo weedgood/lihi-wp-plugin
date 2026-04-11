@@ -9,17 +9,23 @@
 ## Lihi_Service
 
 ### has_valid_token()
-- [ ] cookie 不存在 → false
-- [ ] cookie 為空字串 → false
-- [ ] malformed token（缺少 `.` 分隔） → false
-- [ ] payload 無 `exp` 欄位 → false
-- [ ] exp 已過期（exp <= time()） → false
-- [ ] exp 未來有效 → true
+- [x] cookie 不存在 → false
+- [x] cookie 為空字串 → false
+- [x] malformed token（缺少 `.` 分隔） → false
+- [x] payload 無 `exp` 欄位 → false
+- [x] exp 已過期（exp <= time()） → false
+- [x] exp 未來有效 → true
 
 ### login()
 - [x] client 正常回傳 token → 回傳 token string
 - [x] client 回傳空 token → 拋出 RuntimeException
 - [x] client 拋出例外 → 例外向上傳遞
+
+### get_token()（透過 get_or_create_short_url 測試）
+- [x] cookie 有效 → 直接回傳 cookie token，不呼叫 login
+- [x] cookie 不存在 → 呼叫 login，將新 token 存入 cookie，回傳 token
+- [x] cookie 已過期 → 呼叫 login，將新 token 存入 cookie，回傳 token
+- [x] login 拋出例外 → 例外向上傳遞
 
 ### get_or_create_short_url()
 - [x] 已有相符 type_id 的短連結 → 直接回傳 `short_url`，不呼叫 create_site
@@ -41,8 +47,8 @@
 ### request() 核心邏輯
 - [x] GET 請求：$data 加到 query string，不加到 body
 - [x] POST 請求：$data 編碼為 JSON body
-- [x] auth=true：Header 包含 `Authorization: Bearer {token}`
-- [x] auth=false：Header 不包含 Authorization
+- [x] token 非空：Header 包含 `Authorization: Bearer {token}`
+- [x] token 為空（login）：Header 不包含 Authorization
 - [x] 回應碼 204 → 回傳空陣列
 - [x] body 為空字串 → 回傳空陣列
 - [x] body 為無效 JSON → 拋出 RuntimeException

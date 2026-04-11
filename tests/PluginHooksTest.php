@@ -28,11 +28,6 @@ class PluginHooksTest extends \WP_UnitTestCase
     // AJAX actions registered
     // -------------------------------------------------------------------------
 
-    public function test_wp_ajax_lihi_login_handler_is_registered(): void
-    {
-        $this->assertNotFalse(has_action('wp_ajax_lihi_login'));
-    }
-
     public function test_wp_ajax_lihi_copy_url_handler_is_registered(): void
     {
         $this->assertNotFalse(has_action('wp_ajax_lihi_copy_url'));
@@ -41,21 +36,6 @@ class PluginHooksTest extends \WP_UnitTestCase
     // -------------------------------------------------------------------------
     // Script enqueue via admin_enqueue_scripts
     // -------------------------------------------------------------------------
-
-    public function test_lihi_login_script_enqueued_when_token_absent(): void
-    {
-        do_action('admin_enqueue_scripts', 'index.php');
-        $this->assertTrue(wp_script_is('lihi-login', 'enqueued'));
-    }
-
-    public function test_lihi_login_script_not_enqueued_when_token_valid(): void
-    {
-        $b64 = fn($v) => rtrim(strtr(base64_encode(json_encode($v)), '+/', '-_'), '=');
-        $_COOKIE['lihi_token'] = $b64(['alg' => 'HS256']) . '.' . $b64(['exp' => time() + 3600]) . '.sig';
-
-        do_action('admin_enqueue_scripts', 'index.php');
-        $this->assertFalse(wp_script_is('lihi-login', 'enqueued'));
-    }
 
     public function test_lihi_admin_script_enqueued_on_edit_screen(): void
     {
