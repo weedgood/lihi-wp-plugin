@@ -194,7 +194,52 @@ class ServiceTest extends TestCase
     }
 
     /** @test */
-    public function get_token_calls_login_when_cookie_absent(): void
+    public function get_token_reuses_transient_without_login_when_cookie_absent(): void
+    {
+        $cachedToken = $this->makeJwt(time() + 3600);
+
+        $client = $this->makeClient();
+        $client->shouldNotReceive('login');
+        $client->shouldReceive('get_short_links')
+            ->with($cachedToken, 'post', 3)
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(3, 'https://lihi.io/cached')]));
+
+        Functions\when('get_current_user_id')->justReturn(7);
+        Functions\when('get_transient')->justReturn($cachedToken);
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=3');
+
+        $result = $this->makeService($client)->get_or_create_short_url(3, 'post');
+        $this->assertSame('https://lihi.io/cached', $result);
+    }
+
+    /** @test */
+    public function get_token_reuses_transient_on_double_check_after_acquiring_lock(): void
+    {
+        $cachedToken = $this->makeJwt(time() + 3600);
+
+        $client = $this->makeClient();
+        $client->shouldNotReceive('login');
+        $client->shouldReceive('get_short_links')
+            ->with($cachedToken, 'post', 13)
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(13, 'https://lihi.io/double')]));
+
+        Functions\when('get_current_user_id')->justReturn(7);
+        // First call (step 2) misses; second call (double-check inside lock) hits.
+        Functions\expect('get_transient')
+            ->twice()
+            ->andReturn(false, $cachedToken);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=13');
+
+        $result = $this->makeService($client)->get_or_create_short_url(13, 'post');
+        $this->assertSame('https://lihi.io/double', $result);
+    }
+
+    /** @test */
+    public function get_token_calls_login_when_gets_lock_and_no_transient(): void
     {
         $newToken = $this->makeJwt(time() + 3600);
 
@@ -209,17 +254,68 @@ class ServiceTest extends TestCase
 
         Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
         Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
+        Functions\when('get_current_user_id')->justReturn(7);
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('wp_cache_add')->justReturn(true);   // got lock
+        Functions\when('wp_cache_delete')->justReturn(true);
+        Functions\when('set_transient')->justReturn(true);
         Functions\when('get_permalink')->justReturn('https://example.com/?p=5');
         Functions\when('setcookie')->justReturn(true);
+        Functions\when('is_ssl')->justReturn(false);
 
         $result = $this->makeService($client)->get_or_create_short_url(5, 'post');
         $this->assertSame('https://lihi.io/xyz', $result);
     }
 
     /** @test */
-    public function get_token_calls_login_when_cookie_expired(): void
+    public function get_token_reuses_transient_without_login_when_cookie_expired(): void
     {
         $_COOKIE['lihi_token'] = $this->makeJwt(time() - 1);
+        $cachedToken = $this->makeJwt(time() + 3600);
+
+        $client = $this->makeClient();
+        $client->shouldNotReceive('login');
+        $client->shouldReceive('get_short_links')
+            ->with($cachedToken, 'post', 7)
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(7, 'https://lihi.io/def')]));
+
+        Functions\when('get_current_user_id')->justReturn(7);
+        Functions\when('get_transient')->justReturn($cachedToken);
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=7');
+
+        $result = $this->makeService($client)->get_or_create_short_url(7, 'post');
+        $this->assertSame('https://lihi.io/def', $result);
+    }
+
+    /** @test */
+    public function get_token_waits_for_transient_when_lock_held_by_another_request(): void
+    {
+        $newToken = $this->makeJwt(time() + 3600);
+
+        $client = $this->makeClient();
+        $client->shouldNotReceive('login');
+        $client->shouldReceive('get_short_links')
+            ->with($newToken, 'post', 9)
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(9, 'https://lihi.io/waited')]));
+
+        Functions\when('get_current_user_id')->justReturn(7);
+        // First call returns false (cache miss), second returns token (winner stored it)
+        Functions\expect('get_transient')
+            ->twice()
+            ->andReturn(false, $newToken);
+        Functions\when('wp_cache_add')->justReturn(false); // lock already held
+        Functions\when('usleep')->justReturn(null);
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=9');
+
+        $result = $this->makeService($client)->get_or_create_short_url(9, 'post');
+        $this->assertSame('https://lihi.io/waited', $result);
+    }
+
+    /** @test */
+    public function get_token_falls_back_to_login_after_wait_timeout_and_deletes_stale_lock(): void
+    {
         $newToken = $this->makeJwt(time() + 3600);
 
         $client = $this->makeClient();
@@ -227,17 +323,29 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn(['token' => $newToken]);
         $client->shouldReceive('get_short_links')
-            ->with($newToken, 'post', 7)
+            ->with($newToken, 'post', 11)
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(7, 'https://lihi.io/def')]));
+            ->andReturn($this->makeSitesResponse([$this->makeSite(11, 'https://lihi.io/fallback')]));
 
         Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
         Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
-        Functions\when('get_permalink')->justReturn('https://example.com/?p=7');
+        Functions\when('get_current_user_id')->justReturn(7);
+        Functions\when('get_transient')->justReturn(false); // never appears
+        Functions\when('wp_cache_add')->justReturn(false);  // lock always held
+        Functions\when('usleep')->justReturn(null);
+        Functions\when('set_transient')->justReturn(true);
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=11');
         Functions\when('setcookie')->justReturn(true);
+        Functions\when('is_ssl')->justReturn(false);
 
-        $result = $this->makeService($client)->get_or_create_short_url(7, 'post');
-        $this->assertSame('https://lihi.io/def', $result);
+        // Stale lock must be cleared after fallback login.
+        Functions\expect('wp_cache_delete')
+            ->once()
+            ->with('lihi_token_lock_7', 'transient')
+            ->andReturn(true);
+
+        $result = $this->makeService($client)->get_or_create_short_url(11, 'post');
+        $this->assertSame('https://lihi.io/fallback', $result);
     }
 
     /** @test */
@@ -248,6 +356,10 @@ class ServiceTest extends TestCase
 
         Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
         Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
+        Functions\when('get_current_user_id')->justReturn(7);
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Auth failed');

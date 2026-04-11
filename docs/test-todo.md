@@ -23,9 +23,13 @@
 
 ### get_token()（透過 get_or_create_short_url 測試）
 - [x] cookie 有效 → 直接回傳 cookie token，不呼叫 login
-- [x] cookie 不存在 → 呼叫 login，將新 token 存入 cookie，回傳 token
-- [x] cookie 已過期 → 呼叫 login，將新 token 存入 cookie，回傳 token
-- [x] login 拋出例外 → 例外向上傳遞
+- [x] cookie 不存在，transient 有效 → 回傳 transient token，不呼叫 login
+- [x] cookie 已過期，transient 有效 → 回傳 transient token，不呼叫 login
+- [x] 搶到 lock，double-check 時 transient 已存在 → 回傳 transient token，不呼叫 login
+- [x] cookie 不存在，transient 不存在，搶到 lock → 呼叫 login，存入 transient + cookie，回傳 token
+- [x] 沒搶到 lock，poll 期間 transient 出現 → 回傳 transient token，不呼叫 login
+- [x] 沒搶到 lock，poll 超時 → fallback 呼叫 login，存入 transient + cookie，回傳 token
+- [x] login 拋出例外 → lock 釋放，例外向上傳遞
 
 ### get_or_create_short_url()
 - [x] 已有相符 type_id 的短連結 → 直接回傳 `short_url`，不呼叫 create_site

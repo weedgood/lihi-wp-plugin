@@ -1,3 +1,3 @@
 {
-    "redefinable-internals": ["setcookie"]
+    "redefinable-internals": ["setcookie", "usleep"]
 }

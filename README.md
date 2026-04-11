@@ -80,8 +80,8 @@ lihi-shorturl/
 ### Auth flow
 
 1. When the editor clicks the Lihi button, `lihi-button.js` triggers an AJAX call to `wp_ajax_lihi_copy_url`.
-2. `Lihi_Service::get_token()` checks the `lihi_token` cookie; if absent or expired it calls `login()` to obtain a fresh JWT.
-3. The new token is stored in a `Strict`/`httponly` cookie (TTL: 1 day) and used immediately for the API call.
+2. `Lihi_Service::get_token()` checks in order: (a) valid `lihi_token` cookie; (b) WordPress transient keyed by user ID; (c) atomic `wp_cache_add` lock — only one concurrent request calls `login()`, the rest poll the transient and reuse the result. After a 3 s timeout, waiters fall back to calling `login()` themselves.
+3. On fresh login the JWT is stored in both a transient and a `Strict`/`httponly`/`secure` cookie (TTL: 1 day).
 
 ### Short URL flow
 

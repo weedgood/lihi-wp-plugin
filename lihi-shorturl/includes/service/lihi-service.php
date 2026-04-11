@@ -109,29 +109,92 @@ class Lihi_Service {
     }
 
     /**
-     * Return a valid JWT token, logging in if the cookie is absent or expired.
+     * Return a valid JWT token, logging in only when necessary.
      *
-     * On a fresh login the token is stored in the lihi_token httponly cookie so
-     * subsequent requests within the same session reuse it without another round-trip.
+     * Lookup order (fast → slow):
+     *   1. lihi_token cookie — cheapest, no DB hit.
+     *   2. WordPress transient keyed by user ID — shared across concurrent
+     *      requests so most of them never reach login().
+     *   3. Atomic lock via wp_cache_add — only the first concurrent request
+     *      that finds no transient calls login(); the rest wait up to 3 s and
+     *      then re-read the transient. If the wait times out they fall back to
+     *      calling login() themselves.
      *
      * @throws RuntimeException If login fails.
      */
     private function get_token(): string {
+        // 1. Cookie still valid — fastest path, no DB.
         if ( $this->has_valid_token() ) {
             return $_COOKIE['lihi_token'];
         }
 
+        $user_id       = get_current_user_id();
+        $transient_key = 'lihi_token_' . $user_id;
+        $lock_key      = 'lihi_token_lock_' . $user_id;
+
+        // 2. Transient cache hit — no login needed.
+        $cached = get_transient( $transient_key );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
+        // 3a. Atomic lock: only the first request proceeds to login().
+        $got_lock = wp_cache_add( $lock_key, 1, 'transient', 30 );
+
+        if ( $got_lock ) {
+            try {
+                // Double-check: another request may have written the transient
+                // between step 2 and acquiring the lock.
+                $cached = get_transient( $transient_key );
+                if ( false !== $cached ) {
+                    return $cached;
+                }
+
+                $token = $this->login();
+                $this->persist_token( $token, $transient_key );
+                return $token;
+            } finally {
+                wp_cache_delete( $lock_key, 'transient' );
+            }
+        }
+
+        // 3b. Did not get the lock — poll until the winner stores the token.
+        $max_wait_us = 3_000_000; // 3 seconds
+        $sleep_us    = 100_000;   // 0.1 seconds
+        $waited      = 0;
+
+        while ( $waited < $max_wait_us ) {
+            usleep( $sleep_us );
+            $waited += $sleep_us;
+
+            $cached = get_transient( $transient_key );
+            if ( false !== $cached ) {
+                return $cached;
+            }
+        }
+
+        // 3c. Fallback: winner never showed up — login independently and
+        //     clear the stale lock so future requests don't keep waiting.
         $token = $this->login();
+        $this->persist_token( $token, $transient_key );
+        wp_cache_delete( $lock_key, 'transient' );
+        return $token;
+    }
+
+    /**
+     * Store a JWT in the WordPress transient cache and in the browser cookie.
+     */
+    private function persist_token( string $token, string $transient_key ): void {
+        set_transient( $transient_key, $token, 10 * MINUTE_IN_SECONDS );
 
         setcookie( 'lihi_token', $token, [
             'expires'  => time() + DAY_IN_SECONDS,
             'path'     => '/',
             'httponly' => true,
             'samesite' => 'Strict',
+            'secure'   => is_ssl(),
         ] );
 
         $_COOKIE['lihi_token'] = $token;
-
-        return $token;
     }
 }
