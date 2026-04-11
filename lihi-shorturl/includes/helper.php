@@ -12,19 +12,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Return whether the plugin is running in production mode.
  *
- * @return bool True when APP_ENV is "production".
+ * @return bool True when LIHI_ENV is "production".
  */
 function is_production(): bool {
-    return defined( 'APP_ENV' ) && APP_ENV === 'production';
+    return defined( 'LIHI_ENV' ) && LIHI_ENV === 'production';
 }
 
 /**
  * Return whether the plugin is running in test mode.
  *
- * @return bool True when APP_ENV is "test".
+ * @return bool True when LIHI_ENV is "test".
  */
 function is_test(): bool {
-    return defined( 'APP_ENV' ) && APP_ENV === 'test';
+    return defined( 'LIHI_ENV' ) && LIHI_ENV === 'test';
 }
 
 /**

@@ -17,38 +17,52 @@
 - [ ] exp 未來有效 → true
 
 ### login()
-- [ ] client 正常回傳 token → 回傳 token string
-- [ ] client 回傳空 token → 拋出 RuntimeException
-- [ ] client 拋出例外 → 例外向上傳遞
+- [x] client 正常回傳 token → 回傳 token string
+- [x] client 回傳空 token → 拋出 RuntimeException
+- [x] client 拋出例外 → 例外向上傳遞
 
 ### get_or_create_short_url()
-- [ ] 已有相符 type_id 的短連結 → 直接回傳 `short_url`，不呼叫 create_site
-- [ ] 無相符短連結 → 呼叫 create_site 並回傳新 `short_url`
-- [ ] create_site 回傳空 `short_url` → 拋出 RuntimeException
-- [ ] get_short_links 有多筆結果 → 回傳第一筆相符的 `short_url`
-- [ ] create_site 的 body 包含正確的 permalink、type、type_id
-- [ ] type 為 `attachment` → 使用 `wp_get_attachment_url()` 而非 `get_permalink()`
+- [x] 已有相符 type_id 的短連結 → 直接回傳 `short_url`，不呼叫 create_site
+- [x] 無相符短連結 → 呼叫 create_site 並回傳新 `short_url`
+- [x] create_site 回傳空 `short_url` → 拋出 RuntimeException
+- [x] get_short_links 有多筆結果 → 回傳第一筆相符的 `short_url`
+- [x] create_site 的 body 包含正確的 permalink、type、type_id
+- [x] type 為 `attachment` → 使用 `wp_get_attachment_url()` 而非 `get_permalink()`
+
+### resolve_url()
+- [x] type=post → 使用 `get_permalink()`
+- [x] type=page → 使用 `get_permalink()`
+- [x] type=attachment → 使用 `wp_get_attachment_url()`
 
 ---
 
 ## Lihi_Client
 
 ### request() 核心邏輯
-- [ ] GET 請求：$data 加到 query string，不加到 body
-- [ ] POST 請求：$data 編碼為 JSON body
-- [ ] auth=true：Header 包含 `Authorization: Bearer {token}`
-- [ ] auth=false：Header 不包含 Authorization
-- [ ] 回應碼 204 → 回傳空陣列
-- [ ] body 為空字串 → 回傳空陣列
-- [ ] body 為無效 JSON → 拋出 RuntimeException
-- [ ] 回應碼 400+ → 拋出 RuntimeException（訊息含 status code）
-- [ ] wp_remote_request 回傳 WP_Error → 拋出 RuntimeException
+- [x] GET 請求：$data 加到 query string，不加到 body
+- [x] POST 請求：$data 編碼為 JSON body
+- [x] auth=true：Header 包含 `Authorization: Bearer {token}`
+- [x] auth=false：Header 不包含 Authorization
+- [x] 回應碼 204 → 回傳空陣列
+- [x] body 為空字串 → 回傳空陣列
+- [x] body 為無效 JSON → 拋出 RuntimeException
+- [x] 回應碼 400+ → 拋出 RuntimeException（訊息含 status code）
+- [x] wp_remote_request 回傳 WP_Error → 拋出 RuntimeException
+
+### 各方法路徑與 HTTP method
+- [x] get_posts() → GET /api/wordpress/v1/posts，locale 傳為 query param
+- [x] get_short_links() → GET /api/wordpress/v1/sites，帶 type/type_id/per_page
+- [x] update_site() → PUT /api/wordpress/v1/sites/{id}
+- [x] delete_site() → DELETE /api/wordpress/v1/sites/{id}，回傳 true
+- [x] create_site_url() → POST /api/wordpress/v1/site-urls
+- [x] update_site_url() → PUT /api/wordpress/v1/site-urls/{id}
+- [x] delete_site_url() → DELETE /api/wordpress/v1/site-urls/{id}，回傳 true
 
 ---
 
 ## AJAX Handler: lihi_copy_url
 
-- [ ] post_id 為 0 → wp_send_json_error
-- [ ] type 為空 → wp_send_json_error
-- [ ] service 正常回傳 url → wp_send_json_success(['url' => ...])
-- [ ] service 拋出例外 → wp_send_json_error(message)
+- [x] item_id 為 0 → wp_send_json_error
+- [x] type 為空 → wp_send_json_error
+- [x] service 正常回傳 url → wp_send_json_success(['url' => ...])
+- [x] service 拋出例外 → wp_send_json_error(message)

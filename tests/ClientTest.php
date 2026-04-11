@@ -59,6 +59,93 @@ class ClientTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // Individual methods — path, HTTP method, and payload
+    // -------------------------------------------------------------------------
+
+    /** @test */
+    public function get_posts_sends_get_to_posts_path(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true,"data":[]}');
+        $this->makeClient()->get_posts();
+        $this->assertStringContainsString('/api/wordpress/v1/posts', $capture()['url']);
+        $this->assertSame('GET', $capture()['args']['method']);
+    }
+
+    /** @test */
+    public function get_posts_passes_locale_as_query_param(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true,"data":[]}');
+        $this->makeClient()->get_posts('en');
+        $this->assertStringContainsString('locale=en', $capture()['url']);
+    }
+
+    /** @test */
+    public function get_short_links_sends_get_with_type_and_type_id(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true,"data":{"sites":{"data":[]}}}');
+        $this->makeClient()->get_short_links('post', 42);
+        $url = $capture()['url'];
+        $this->assertStringContainsString('/api/wordpress/v1/sites', $url);
+        $this->assertStringContainsString('type=post', $url);
+        $this->assertStringContainsString('type_id=42', $url);
+        $this->assertStringContainsString('per_page=20', $url);
+    }
+
+    /** @test */
+    public function update_site_sends_put_with_id_in_path(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true}');
+        $this->makeClient()->update_site(456, ['urls' => [['id' => 1, 'url' => 'https://example.com']]]);
+        $c = $capture();
+        $this->assertStringContainsString('/api/wordpress/v1/sites/456', $c['url']);
+        $this->assertSame('PUT', $c['args']['method']);
+    }
+
+    /** @test */
+    public function delete_site_sends_delete_with_id_in_path(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true}');
+        $result  = $this->makeClient()->delete_site(789);
+        $c       = $capture();
+        $this->assertStringContainsString('/api/wordpress/v1/sites/789', $c['url']);
+        $this->assertSame('DELETE', $c['args']['method']);
+        $this->assertTrue($result);
+    }
+
+    /** @test */
+    public function create_site_url_sends_post_to_site_urls_path(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true,"data":{"id":1,"url":"https://example.com"}}');
+        $this->makeClient()->create_site_url(['site_id' => '456', 'url' => 'https://example.com']);
+        $c = $capture();
+        $this->assertStringContainsString('/api/wordpress/v1/site-urls', $c['url']);
+        $this->assertSame('POST', $c['args']['method']);
+        $body = json_decode($c['args']['body'], true);
+        $this->assertSame('456', $body['site_id']);
+    }
+
+    /** @test */
+    public function update_site_url_sends_put_with_id_in_path(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true,"data":{"id":99,"url":"https://new.com"}}');
+        $this->makeClient()->update_site_url(99, ['url' => 'https://new.com']);
+        $c = $capture();
+        $this->assertStringContainsString('/api/wordpress/v1/site-urls/99', $c['url']);
+        $this->assertSame('PUT', $c['args']['method']);
+    }
+
+    /** @test */
+    public function delete_site_url_sends_delete_with_id_in_path(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true}');
+        $result  = $this->makeClient()->delete_site_url(55);
+        $c       = $capture();
+        $this->assertStringContainsString('/api/wordpress/v1/site-urls/55', $c['url']);
+        $this->assertSame('DELETE', $c['args']['method']);
+        $this->assertTrue($result);
+    }
+
+    // -------------------------------------------------------------------------
     // request()
     // -------------------------------------------------------------------------
 

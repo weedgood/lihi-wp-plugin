@@ -97,7 +97,7 @@ class Lihi_Service {
         return $short_url;
     }
 
-    private function resolve_url( int $item_id, string $type ): string {
+    public function resolve_url( int $item_id, string $type ): string {
         return $type === 'attachment'
             ? wp_get_attachment_url( $item_id )
             : get_permalink( $item_id );

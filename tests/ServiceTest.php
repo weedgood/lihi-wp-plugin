@@ -268,4 +268,38 @@ class ServiceTest extends TestCase
         $this->assertSame('redirect.lihidev.com', $capturedBody['domain']);
         $this->assertSame('wordpress,example.com,post', $capturedBody['tags']);
     }
+
+    // -------------------------------------------------------------------------
+    // resolve_url()
+    // -------------------------------------------------------------------------
+
+    /** @test */
+    public function resolve_url_uses_get_permalink_for_post(): void
+    {
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=5');
+
+        $result = $this->makeService($this->makeClient())->resolve_url(5, 'post');
+
+        $this->assertSame('https://example.com/?p=5', $result);
+    }
+
+    /** @test */
+    public function resolve_url_uses_get_permalink_for_page(): void
+    {
+        Functions\when('get_permalink')->justReturn('https://example.com/about/');
+
+        $result = $this->makeService($this->makeClient())->resolve_url(10, 'page');
+
+        $this->assertSame('https://example.com/about/', $result);
+    }
+
+    /** @test */
+    public function resolve_url_uses_wp_get_attachment_url_for_attachment(): void
+    {
+        Functions\when('wp_get_attachment_url')->justReturn('https://example.com/wp-content/uploads/photo.jpg');
+
+        $result = $this->makeService($this->makeClient())->resolve_url(7, 'attachment');
+
+        $this->assertSame('https://example.com/wp-content/uploads/photo.jpg', $result);
+    }
 }
