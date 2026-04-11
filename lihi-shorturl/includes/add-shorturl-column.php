@@ -12,28 +12,28 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Enqueue post-button.js on post-type list screens and the media grid.
+// Enqueue lihi-button.js on post-type list screens and the media grid.
 add_action( 'admin_enqueue_scripts', function ( $hook ) {
     if ( $hook !== 'edit.php' && $hook !== 'upload.php' ) {
         return;
     }
 
     wp_enqueue_style(
-        'lihi-admin',
-        plugin_dir_url( __FILE__ ) . '../assets/post-button.css',
+        'lihi-button',
+        plugin_dir_url( __FILE__ ) . '../assets/lihi-button.css',
         [],
         '0.1.0'
     );
 
     wp_enqueue_script(
-        'lihi-admin',
-        plugin_dir_url( __FILE__ ) . '../assets/post-button.js',
+        'lihi-button',
+        plugin_dir_url( __FILE__ ) . '../assets/lihi-button.js',
         [],
         '0.1.0',
         true
     );
 
-    wp_localize_script( 'lihi-admin', 'lihiAdmin', [
+    wp_localize_script( 'lihi-button', 'lihiButton', [
         'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
         'nonce'       => wp_create_nonce( 'lihi_copy_url' ),
         'action'      => 'lihi_copy_url',
@@ -53,7 +53,7 @@ add_action( 'init', function () {
 
     add_action( "manage_{$post_type}_posts_custom_column", function ( $column, $post_id ) use ( $post_type ) {
         if ( $column === 'lihi' ) {
-            echo '<button class="button button-secondary" data-id="' . esc_attr( $post_id ) . '" data-type="' . esc_attr( $post_type ) . '">Lihi</button>';
+            echo '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post_id ) . '" data-type="' . esc_attr( $post_type ) . '">Lihi</button>';
         }
     }, 10, 2 );
 } );
@@ -63,7 +63,7 @@ add_filter( 'attachment_fields_to_edit', function ( $form_fields, $post ) {
     $form_fields['lihi'] = [
         'label' => __( 'Shout URL', 'lihi-shorturl' ),
         'input' => 'html',
-        'html'  => '<button class="button button-secondary" data-id="' . esc_attr( $post->ID ) . '" data-type="' . esc_attr( $post->post_type ) . '">Lihi</button>',
+        'html'  => '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post->ID ) . '" data-type="' . esc_attr( $post->post_type ) . '">Lihi</button>',
     ];
     return $form_fields;
 }, 10, 2 );

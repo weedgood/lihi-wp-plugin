@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Before Every Commit
+
+Always update these four files to reflect any changes made before committing:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/test-todo.md`
+- `docs/lihi-api-endpoints.md`
+
 ## Development Environment
 
 The plugin runs inside a Docker Compose stack (WordPress + MySQL). Start it with:
@@ -47,6 +56,6 @@ Translation files live in `languages/`. The text domain is `lihi-shorturl`.
 - `docs/lihi-api-endpoints.md` — full Lihi API endpoint reference with request/response shapes and PHP client mapping.
 - `lihi-shorturl/includes/add-shorturl-column.php` — adds a "Shout URL" column to post-type list tables (current post type only); adds a Lihi button to the media attachment detail panel via `attachment_fields_to_edit`; handles `wp_ajax_lihi_copy_url`.
 - `lihi-shorturl/assets/lihi-login.js` — fetches the AJAX login endpoint to obtain and store the auth token.
-- `lihi-shorturl/assets/post-button.js` — delegated click handler for Lihi buttons (uses `document` event delegation to support dynamically rendered panels).
+- `lihi-shorturl/assets/lihi-button.js` — delegated click handler for Lihi buttons (uses `document` event delegation on `button[data-lihi]` to support dynamically rendered panels). Exposes `lihiButton` JS global via `wp_localize_script`.
 
 All hooks use anonymous functions registered directly via `add_action` / `add_filter`.

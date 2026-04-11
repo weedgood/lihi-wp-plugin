@@ -1,5 +1,5 @@
 document.addEventListener( 'click', function ( e ) {
-	var btn = e.target.closest( 'button[data-id]' );
+	var btn = e.target.closest( 'button[data-lihi]' );
 	if ( ! btn ) return;
 
 	var originalText = btn.textContent;
@@ -9,12 +9,12 @@ document.addEventListener( 'click', function ( e ) {
 	btn.disabled = true;
 	btn.classList.add( 'lihi-btn-loading' );
 
-	fetch( lihiAdmin.ajaxUrl, {
+	fetch( lihiButton.ajaxUrl, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body: new URLSearchParams( {
-			action:  lihiAdmin.action,
-			nonce:   lihiAdmin.nonce,
+			action:  lihiButton.action,
+			nonce:   lihiButton.nonce,
 			post_id: btn.dataset.id,
 			type:    btn.dataset.type,
 		} ),
@@ -30,12 +30,12 @@ document.addEventListener( 'click', function ( e ) {
 			}
 
 			navigator.clipboard.writeText( data.data.url ).then( function () {
-				btn.textContent = lihiAdmin.labelCopied;
+				btn.textContent = lihiButton.labelCopied;
 				btn.disabled = false;
 
 				setTimeout( function () {
 					btn.textContent = originalText;
-				}, lihiAdmin.resetDelay );
+				}, lihiButton.resetDelay );
 			} );
 		} )
 		.catch( function () {

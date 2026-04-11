@@ -60,12 +60,18 @@ class PluginHooksTest extends \WP_UnitTestCase
     public function test_lihi_admin_script_enqueued_on_edit_screen(): void
     {
         do_action('admin_enqueue_scripts', 'edit.php');
-        $this->assertTrue(wp_script_is('lihi-admin', 'enqueued'));
+        $this->assertTrue(wp_script_is('lihi-button', 'enqueued'));
+    }
+
+    public function test_lihi_admin_script_enqueued_on_upload_screen(): void
+    {
+        do_action('admin_enqueue_scripts', 'upload.php');
+        $this->assertTrue(wp_script_is('lihi-button', 'enqueued'));
     }
 
     public function test_lihi_admin_script_not_enqueued_on_other_screens(): void
     {
         do_action('admin_enqueue_scripts', 'post.php');
-        $this->assertFalse(wp_script_is('lihi-admin', 'enqueued'));
+        $this->assertFalse(wp_script_is('lihi-button', 'enqueued'));
     }
 }
