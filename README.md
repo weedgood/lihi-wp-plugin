@@ -66,7 +66,7 @@ lihi-shorturl/
 ├── bootstrap.php              Loads all includes in dependency order
 ├── assets/
 │   ├── lihi-login.js          Background AJAX login; fires when token is absent/expired
-│   └── lihi-button.js         Delegated click handler for Lihi buttons (data-lihi selector)
+│   └── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state
 └── includes/
     ├── helper.php             lihi_service() singleton; uses real client when APP_ENV=production, mock otherwise
     ├── lihi-auth.php          Token validation; wp_ajax_lihi_login handler

@@ -72,16 +72,16 @@ add_filter( 'attachment_fields_to_edit', function ( $form_fields, $post ) {
 add_action( 'wp_ajax_lihi_copy_url', function () {
     check_ajax_referer( 'lihi_copy_url', 'nonce' );
 
-    $post_id = intval( $_POST['post_id'] ?? 0 );
+    $item_id = intval( $_POST['item_id'] ?? 0 );
     $type    = sanitize_key( $_POST['type'] ?? '' );
 
-    if ( ! $post_id || ! $type ) {
+    if ( ! $item_id || ! $type ) {
         wp_send_json_error( 'Invalid post ID or type.' );
         return;
     }
 
     try {
-        $url = lihi_service()->get_or_create_short_url( $post_id, $type );
+        $url = lihi_service()->get_or_create_short_url( $item_id, $type );
         wp_send_json_success( [ 'url' => $url ] );
     } catch ( \Exception $e ) {
         wp_send_json_error( $e->getMessage() );

@@ -1,4 +1,4 @@
-document.addEventListener( 'click', function ( e ) {
+document.addEventListener( 'click', async function ( e ) {
 	var btn = e.target.closest( 'button[data-lihi]' );
 	if ( ! btn ) return;
 
@@ -9,37 +9,34 @@ document.addEventListener( 'click', function ( e ) {
 	btn.disabled = true;
 	btn.classList.add( 'lihi-btn-loading' );
 
-	fetch( lihiButton.ajaxUrl, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-		body: new URLSearchParams( {
-			action:  lihiButton.action,
-			nonce:   lihiButton.nonce,
-			post_id: btn.dataset.id,
-			type:    btn.dataset.type,
-		} ),
-	} )
-		.then( function ( res ) { return res.json(); } )
-		.then( function ( data ) {
-			btn.classList.remove( 'lihi-btn-loading' );
-
-			if ( ! data.success ) {
-				alert( 'Lihi error: ' + data.data );
-				btn.disabled = false;
-				return;
-			}
-
-			navigator.clipboard.writeText( data.data.url ).then( function () {
-				btn.textContent = lihiButton.labelCopied;
-				btn.disabled = false;
-
-				setTimeout( function () {
-					btn.textContent = originalText;
-				}, lihiButton.resetDelay );
-			} );
-		} )
-		.catch( function () {
-			btn.classList.remove( 'lihi-btn-loading' );
-			btn.disabled = false;
+	try {
+		var res  = await fetch( lihiButton.ajaxUrl, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body: new URLSearchParams( {
+				action:  lihiButton.action,
+				nonce:   lihiButton.nonce,
+				item_id: btn.dataset.id,
+				type:    btn.dataset.type,
+			} ),
 		} );
+		var data = await res.json();
+
+		if ( ! data.success ) {
+			alert( 'Lihi error: ' + data.data );
+			return;
+		}
+
+		await navigator.clipboard.writeText( data.data.url );
+		btn.textContent = lihiButton.labelCopied;
+
+		await new Promise( function ( resolve ) {
+			setTimeout( resolve, lihiButton.resetDelay );
+		} );
+
+		btn.textContent = originalText;
+	} finally {
+		btn.classList.remove( 'lihi-btn-loading' );
+		btn.disabled = false;
+	}
 } );
