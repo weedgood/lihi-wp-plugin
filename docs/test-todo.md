@@ -22,11 +22,12 @@
 - [ ] client 拋出例外 → 例外向上傳遞
 
 ### get_or_create_short_url()
-- [ ] 已有相符 type_id 的短連結 → 直接回傳 site_name，不呼叫 create_site
-- [ ] 無相符短連結 → 呼叫 create_site 並回傳新 site_name
-- [ ] create_site 回傳空 site_name → 拋出 RuntimeException
-- [ ] get_short_links 有多筆結果 → 回傳第一筆相符的 site_name
+- [ ] 已有相符 type_id 的短連結 → 直接回傳 `short_url`，不呼叫 create_site
+- [ ] 無相符短連結 → 呼叫 create_site 並回傳新 `short_url`
+- [ ] create_site 回傳空 `short_url` → 拋出 RuntimeException
+- [ ] get_short_links 有多筆結果 → 回傳第一筆相符的 `short_url`
 - [ ] create_site 的 body 包含正確的 permalink、type、type_id
+- [ ] type 為 `attachment` → 使用 `wp_get_attachment_url()` 而非 `get_permalink()`
 
 ---
 

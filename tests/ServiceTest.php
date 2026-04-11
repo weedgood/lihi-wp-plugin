@@ -63,11 +63,12 @@ class ServiceTest extends TestCase
         ];
     }
 
-    private function makeSite(int $typeId, string $siteName): array
+    private function makeSite(int $typeId, string $shortUrl): array
     {
         return [
             'id'           => $typeId,
-            'site_name'    => $siteName,
+            'site_name'    => 'mock-site',
+            'short_url'    => $shortUrl,
             'repeat_click' => 0,
             'site_urls'    => [],
             'shopify_link' => ['type' => 'post', 'type_id' => $typeId],
@@ -169,19 +170,19 @@ class ServiceTest extends TestCase
     // -------------------------------------------------------------------------
 
     /** @test */
-    public function get_or_create_returns_existing_site_name_without_creating(): void
+    public function get_or_create_returns_existing_short_url_without_creating(): void
     {
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
             ->with('post', 42)
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'existing-slug')]));
+            ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/existing')]));
         $client->shouldNotReceive('create_site');
 
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
 
         $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
-        $this->assertSame('existing-slug', $result);
+        $this->assertSame('https://lihi.io/existing', $result);
     }
 
     /** @test */
@@ -193,12 +194,12 @@ class ServiceTest extends TestCase
             ->andReturn($this->makeSitesResponse([$this->makeSite(99, 'other-slug')]));
         $client->shouldReceive('create_site')
             ->once()
-            ->andReturn(['data' => ['site_name' => 'new-slug']]);
+            ->andReturn(['data' => ['short_url' => 'https://lihi.io/new']]);
 
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
 
         $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
-        $this->assertSame('new-slug', $result);
+        $this->assertSame('https://lihi.io/new', $result);
     }
 
     /** @test */
@@ -208,7 +209,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->andReturn($this->makeSitesResponse([]));
         $client->shouldReceive('create_site')
-            ->andReturn(['data' => ['site_name' => '']]);
+            ->andReturn(['data' => ['short_url' => '']]);
 
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
         Functions\when('__')->returnArg(1);
@@ -218,20 +219,20 @@ class ServiceTest extends TestCase
     }
 
     /** @test */
-    public function get_or_create_returns_first_matching_site_name(): void
+    public function get_or_create_returns_first_matching_short_url(): void
     {
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
             ->andReturn($this->makeSitesResponse([
-                $this->makeSite(42, 'first-match'),
-                $this->makeSite(42, 'second-match'),
+                $this->makeSite(42, 'https://lihi.io/first'),
+                $this->makeSite(42, 'https://lihi.io/second'),
             ]));
         $client->shouldNotReceive('create_site');
 
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
 
         $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
-        $this->assertSame('first-match', $result);
+        $this->assertSame('https://lihi.io/first', $result);
     }
 
     /** @test */
@@ -246,7 +247,7 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturnUsing(function ($body) use (&$capturedBody) {
                 $capturedBody = $body;
-                return ['data' => ['site_name' => 'new-slug']];
+                return ['data' => ['short_url' => 'https://lihi.io/new']];
             });
 
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');

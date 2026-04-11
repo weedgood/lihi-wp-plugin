@@ -26,9 +26,9 @@ function lihi_service( ?Lihi_Service $inject = null ): Lihi_Service {
     }
 
     if ( $instance === null ) {
-        $client   = ( defined( 'APP_ENV' ) && APP_ENV === 'test' )
-            ? new Lihi_Client_Mock()
-            : new Lihi_Client();
+        $client   = ( defined( 'APP_ENV' ) && APP_ENV === 'production' )
+            ? new Lihi_Client()
+            : new Lihi_Client_Mock();
         $instance = new Lihi_Service( $client );
     }
 

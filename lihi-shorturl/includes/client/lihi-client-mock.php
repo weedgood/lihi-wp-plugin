@@ -37,14 +37,15 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
     }
 
     public function get_short_links( string $type, $type_ids ): array {
-        return $this->mock_sites_response();
+        return [ 'data' => [ 'sites' => [ 'data' => [] ] ] ];
     }
 
     public function create_site( array $body ): array {
         return [
             'data' => [
                 'id'           => 99,
-                'site_name'    => $body['alias'] ?? 'mock-site',
+                'site_name'    => 'mock-site',
+                'short_url'    => $body['urls'][0] ?? '',
                 'shopify_link' => [
                     'type'    => $body['type'] ?? '',
                     'type_id' => $body['type_id'] ?? 0,
@@ -85,6 +86,7 @@ class Lihi_Client_Mock implements Lihi_Client_Interface {
                         [
                             'id'           => 1,
                             'site_name'    => 'mock-site',
+                            'short_url'    => 'https://lihi.io/mock',
                             'repeat_click' => 42,
                             'site_urls'    => [
                                 [ 'id' => 1, 'url' => 'https://example.com', 'count' => 30 ],

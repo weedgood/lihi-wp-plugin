@@ -61,39 +61,45 @@ class Lihi_Service {
      * Return the Lihi short URL for a post, creating it if it does not yet exist.
      *
      * Checks whether a short link already exists for the given post ID via
-     * get_short_links(). If found, returns the existing site_name. Otherwise
-     * creates a new site and returns its site_name.
+     * get_short_links(). If found, returns the existing short_url. Otherwise
+     * creates a new site and returns its short_url.
      *
-     * @param int    $post_id WordPress post ID.
-     * @param string $type    Post type (e.g. `post`, `page`), passed from the button's data-type attribute.
-     * @return string site_name of the existing or newly created short link.
+     * @param int    $item_id WordPress post/attachment ID.
+     * @param string $type    Post type (e.g. `post`, `page`, `attachment`), passed from the button's data-type attribute.
+     * @return string short_url of the existing or newly created short link.
      * @throws RuntimeException If any API call fails.
      */
-    public function get_or_create_short_url( int $post_id, string $type ): string {
-        $result = $this->client->get_short_links( $type, $post_id );
+    public function get_or_create_short_url( int $item_id, string $type ): string {
+        $result = $this->client->get_short_links( $type, $item_id );
         $sites  = $result['data']['sites']['data'] ?? [];
 
         foreach ( $sites as $site ) {
-            if ( (int) ( $site['shopify_link']['type_id'] ?? 0 ) === $post_id ) {
-                return $site['site_name'];
+            if ( (int) ( $site['shopify_link']['type_id'] ?? 0 ) === $item_id ) {
+                return $site['short_url'];
             }
         }
 
         $created = $this->client->create_site( [
-            'urls'    => [ get_permalink( $post_id ) ],
+            'urls'    => [ $this->resolve_url( $item_id, $type ) ],
             'type'    => $type,
-            'type_id' => $post_id,
+            'type_id' => $item_id,
             'domain'  => '',
             'tags'    => '',
             'alias'   => '',
         ] );
 
-        $site_name = $created['data']['site_name'] ?? '';
+        $short_url = $created['data']['short_url'] ?? '';
 
-        if ( ! $site_name ) {
-            throw new \RuntimeException( __( 'No site_name returned from Lihi API.', 'lihi-shorturl' ) );
+        if ( ! $short_url ) {
+            throw new \RuntimeException( __( 'No short_url returned from Lihi API.', 'lihi-shorturl' ) );
         }
 
-        return $site_name;
+        return $short_url;
+    }
+
+    private function resolve_url( int $item_id, string $type ): string {
+        return $type === 'attachment'
+            ? wp_get_attachment_url( $item_id )
+            : get_permalink( $item_id );
     }
 }

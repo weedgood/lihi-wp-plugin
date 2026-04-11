@@ -1,13 +1,15 @@
 # Lihi WP Plugin
 
-A WordPress admin plugin that integrates with the [Lihi](https://lihi.io) URL shortener service. It adds a **Shout URL** column to all public post-type list tables, letting editors generate and copy a Lihi short URL for any post with a single click.
+A WordPress admin plugin that integrates with the [Lihi](https://lihi.io) URL shortener service. It adds a **Shout URL** column to all public post-type list tables and a Lihi button to the media attachment detail panel, letting editors generate and copy a Lihi short URL with a single click.
 
 ## Features
 
-- **Short URL column** — appears on every public post type (posts, pages, custom post types).
+- **Short URL column** — appears on every public post type (posts, pages, custom post types), current post type only.
+- **Media attachment support** — Lihi button appears in the attachment detail panel of the media grid view.
 - **Get-or-create** — fetches the existing short link for a post from Lihi; creates one automatically if none exists.
 - **One-click copy** — button copies the short URL to the clipboard and briefly shows "Copied!".
 - **Transparent auth** — authenticates against the Lihi API in the background using the current user's email; stores the JWT in an `httponly` cookie that refreshes automatically when it expires.
+- **Mock client** — when `APP_ENV` is not `production`, uses a mock client that returns the original URL directly without hitting the Lihi API.
 - **i18n ready** — full Traditional Chinese (zh_TW) translation included; text domain `lihi-shorturl`.
 
 ## Requirements
@@ -40,7 +42,7 @@ Translation files live in `lihi-shorturl/languages/`.
 
 ## Testing
 
-Tests use PHPUnit against a real MySQL test database (no mocks at the DB layer). A dedicated Docker profile spins up the test database and a PHPUnit container.
+Tests use PHPUnit with Brain\Monkey to mock WordPress functions. A dedicated Docker profile spins up the test database and a PHPUnit container.
 
 ```bash
 # Run the test suite
@@ -50,10 +52,10 @@ make test
 make coverage
 ```
 
-Or run PHPUnit directly:
+Or run PHPUnit directly inside the container:
 
 ```bash
-vendor/bin/phpunit -c phpunit.xml
+docker compose --profile test exec phpunit vendor/bin/phpunit -c phpunit.xml
 ```
 
 ## Architecture
@@ -64,15 +66,15 @@ lihi-shorturl/
 ├── bootstrap.php              Loads all includes in dependency order
 ├── assets/
 │   ├── lihi-login.js          Background AJAX login; fires when token is absent/expired
-│   └── post-button.js         Click handler for Lihi column buttons
+│   └── post-button.js         Delegated click handler for Lihi buttons
 └── includes/
-    ├── helper.php             lihi_service() singleton accessor
+    ├── helper.php             lihi_service() singleton; uses real client when APP_ENV=production, mock otherwise
     ├── lihi-auth.php          Token validation; wp_ajax_lihi_login handler
-    ├── add-shorturl-column.php Column registration and wp_ajax_lihi_copy_url handler
+    ├── add-shorturl-column.php Column registration, attachment panel button, wp_ajax_lihi_copy_url handler
     ├── client/
     │   ├── lihi-client-interface.php   Interface with full phpDoc (request/response shapes)
     │   ├── lihi-client.php             Production HTTP client
-    │   └── lihi-client-mock.php        Stub client for tests
+    │   └── lihi-client-mock.php        Mock client; always returns original URL as short_url
     └── service/
         └── lihi-service.php            Business logic: login(), has_valid_token(), get_or_create_short_url()
 ```
@@ -85,10 +87,10 @@ lihi-shorturl/
 
 ### Short URL flow
 
-1. Editor clicks the **Lihi** button in the post list.
+1. Editor clicks the **Lihi** button in the post list or media attachment panel.
 2. `post-button.js` sends a nonce-protected AJAX request to `wp_ajax_lihi_copy_url`.
-3. `Lihi_Service::get_or_create_short_url()` checks for an existing short link via `get_short_links()`; creates one with `create_site()` if none is found.
-4. The returned `site_name` is written to the clipboard.
+3. `Lihi_Service::get_or_create_short_url()` checks for an existing short link via `get_short_links()`; creates one with `create_site()` if none is found. URL resolution uses `wp_get_attachment_url()` for attachments and `get_permalink()` for all other post types.
+4. The returned `short_url` is written to the clipboard.
 
 ## API Reference
 

@@ -2,8 +2,8 @@
 namespace Lihi\ShortUrl;
 
 /**
- * Plugin Name: Lihi WP Plugin
- * Description: Lihi custom WordPress plugin.
+ * Plugin Name: Lihi Short URL
+ * Description: Adds a Lihi short URL column to post list tables, letting editors generate and copy short links for any post with one click.
  * Version: 0.1.0
  * Author: Lihi
  */
@@ -16,11 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( ! is_admin() ) {
     return;
 }
-
-// Display an admin notice confirming the plugin is active.
-add_action( 'admin_notices', function () {
-    echo '<div class="notice notice-success"><p><strong>Lihi WP Plugin is active and working!</strong></p></div>';
-} );
 
 // Load the plugin text domain for translations once all plugins are initialised.
 add_action( 'plugins_loaded', function () {

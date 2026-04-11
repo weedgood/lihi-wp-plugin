@@ -64,6 +64,7 @@ Response:
         {
           "id": "number",
           "site_name": "string",
+          "short_url": "string",
           "repeat_click": "number",
           "site_urls": [ { "id": "number", "url": "string", "count": "number" } ],
           "shopify_link": { "type": "string", "type_id": "number" }
@@ -101,11 +102,12 @@ Response:
   "data": {
     "id": "number",
     "site_name": "string",
+    "short_url": "string",
     "shopify_link": { "type": "string", "type_id": "number" }
   }
 }
 ```
-前端使用: `ShortLinkModal.jsx:61-70` — 取 `lihiRes.data.shopify_link`, `lihiRes.data.id`, `lihiRes.data.site_name`
+前端使用: `ShortLinkModal.jsx:61-70` — 取 `lihiRes.data.shopify_link`, `lihiRes.data.id`, `lihiRes.data.site_name`, `lihiRes.data.short_url`
 
 ---
 

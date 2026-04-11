@@ -64,6 +64,7 @@ interface Lihi_Client_Interface {
      *       data:          list<array{
      *         id:           int,
      *         site_name:    string,
+     *         short_url:    string,
      *         repeat_click: int,
      *         site_urls:    list<array{id: int, url: string, count: int}>,
      *         shopify_link: array{type: string, type_id: int},
@@ -92,6 +93,7 @@ interface Lihi_Client_Interface {
      *       data:          list<array{
      *         id:           int,
      *         site_name:    string,
+     *         short_url:    string,
      *         repeat_click: int,
      *         site_urls:    list<array{id: int, url: string, count: int}>,
      *         shopify_link: array{type: string, type_id: int},
@@ -122,6 +124,7 @@ interface Lihi_Client_Interface {
      *   data: array{
      *     id:           int,
      *     site_name:    string,
+     *     short_url:    string,
      *     shopify_link: array{type: string, type_id: int},
      *   },
      * }
