@@ -46,8 +46,9 @@ Translation files live in `languages/`. The text domain is `lihi-shorturl`.
 ## Architecture
 
 - `lihi-shorturl/lihi-shorturl.php` — plugin entry point. Non-admin requests are rejected via early `return`. Loads `bootstrap.php`.
-- `lihi-shorturl/bootstrap.php` — loads all includes in dependency order.
-- `lihi-shorturl/includes/helper.php` — global helper `lihi_service()` returning a singleton `Lihi_Service`. Uses `Lihi_Client` when `APP_ENV === 'production'`, otherwise `Lihi_Client_Mock`.
+- `lihi-shorturl/bootstrap.php` — loads all includes in dependency order. Loads helper and settings first; checks `lihi_email` / `lihi_api_key` options and shows a notice (with settings link) if either is missing, then returns early without loading plugin features.
+- `lihi-shorturl/includes/helper.php` — namespace helpers: `is_production()`, `lihi_api_domain()` (env-based URL), `option_email()`, `option_api_key()`, and `lihi_service()` singleton.
+- `lihi-shorturl/includes/lihi-settings.php` — Settings page under WordPress Settings menu. Stores `lihi_email` and `lihi_api_key`. Shows registration link pointing to `lihi_api_domain()/admin/register`.
 - `lihi-shorturl/includes/client/lihi-client-interface.php` — `Lihi_Client_Interface` with full phpDoc (request/response shapes). See `docs/lihi-api-endpoints.md` for the complete API reference.
 - `lihi-shorturl/includes/client/lihi-client.php` — production HTTP client implementing the interface.
 - `lihi-shorturl/includes/client/lihi-client-mock.php` — mock client for non-production environments; `get_short_links()` always returns empty, `create_site()` returns the original URL as `short_url`.

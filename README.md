@@ -68,7 +68,8 @@ lihi-shorturl/
 │   ├── lihi-login.js          Background AJAX login; fires when token is absent/expired
 │   └── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state
 └── includes/
-    ├── helper.php             lihi_service() singleton; uses real client when APP_ENV=production, mock otherwise
+    ├── helper.php             is_production(), lihi_api_domain(), option_email(), option_api_key(), lihi_service()
+    ├── lihi-settings.php      Settings page (email + API key); registration link via lihi_api_domain()
     ├── lihi-auth.php          Token validation; wp_ajax_lihi_login handler
     ├── add-shorturl-column.php Column registration, attachment panel button, wp_ajax_lihi_copy_url handler
     ├── client/

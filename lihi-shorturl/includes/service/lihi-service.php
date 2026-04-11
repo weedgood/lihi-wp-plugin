@@ -41,13 +41,13 @@ class Lihi_Service {
     /**
      * Authenticate against the Lihi API and return the JWT token.
      *
-     * @param string $api_key Lihi API key.
+     * Reads email and API key from the plugin settings (lihi_email, lihi_api_key).
+     *
      * @return string JWT token.
      * @throws RuntimeException If the API call fails or returns no token.
      */
-    public function login( string $api_key = '' ): string {
-        $email  = wp_get_current_user()->user_email;
-        $result = $this->client->login( $email, $api_key );
+    public function login(): string {
+        $result = $this->client->login( option_email(), option_api_key() );
         $token  = $result['token'] ?? '';
 
         if ( ! $token ) {

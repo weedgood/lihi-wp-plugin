@@ -18,7 +18,7 @@ class Lihi_Client implements Lihi_Client_Interface {
     private string $token;
 
     public function __construct( string $token = '' ) {
-        $this->base_url = rtrim( defined( 'LIHI_API_DOMAIN' ) ? LIHI_API_DOMAIN : '', '/' );
+        $this->base_url = rtrim( lihi_api_domain(), '/' );
         $this->token    = $token;
     }
 

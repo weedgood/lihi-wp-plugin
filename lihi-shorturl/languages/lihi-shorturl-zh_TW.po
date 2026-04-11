@@ -12,6 +12,7 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #: includes/add-lihi-column.php
+#: includes/add-shorturl-column.php
 msgid "Shout URL"
 msgstr "短網址"
 
@@ -19,6 +20,38 @@ msgstr "短網址"
 msgid "No token returned from Lihi API."
 msgstr "Lihi API 未回傳 token。"
 
+#: includes/service/lihi-service.php
+msgid "No short_url returned from Lihi API."
+msgstr "Lihi API 未回傳 short_url。"
+
 #: includes/add-shorturl-column.php
 msgid "Copied!"
 msgstr "已複製！"
+
+#: includes/add-shorturl-column.php
+msgid "Invalid post ID or type."
+msgstr "無效的 ID 或類型。"
+
+#: lihi-shorturl.php
+msgid "Lihi Short URL: please configure your <a href=\"%s\">email and API key</a> to activate the plugin."
+msgstr "Lihi Short URL：請先至 <a href=\"%s\">設定頁</a> 填寫 Email 與 API Key 以啟用外掛。"
+
+#: includes/lihi-settings.php
+msgid "API Domain"
+msgstr "API 網域"
+
+#: includes/lihi-settings.php
+msgid "Email"
+msgstr "Email"
+
+#: includes/lihi-settings.php
+msgid "API Key"
+msgstr "API 金鑰"
+
+#: includes/lihi-settings.php
+msgid "Lihi Short URL"
+msgstr "Lihi 短網址"
+
+#: includes/lihi-settings.php
+msgid "No account yet? Register at %s"
+msgstr "還沒有帳號？請至 %s 註冊"
