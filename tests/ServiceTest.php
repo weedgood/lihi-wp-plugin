@@ -138,7 +138,10 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn(['token' => 'jwt-token']);
 
-        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('get_option')->alias(function ( $key, $default = false ) {
+            if ( $key === 'lihi_email' ) return 'user@example.com';
+            return $default;
+        });
         Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key123');
 
         $this->assertSame('jwt-token', $this->makeService($client)->login());
@@ -150,7 +153,10 @@ class ServiceTest extends TestCase
         $client = $this->makeClient();
         $client->shouldReceive('login')->andReturn(['token' => '']);
 
-        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('get_option')->alias(function ( $key, $default = false ) {
+            if ( $key === 'lihi_email' ) return 'user@example.com';
+            return $default;
+        });
         Functions\when('__')->returnArg(1);
 
         $this->expectException(\RuntimeException::class);
@@ -163,7 +169,10 @@ class ServiceTest extends TestCase
         $client = $this->makeClient();
         $client->shouldReceive('login')->andThrow(new \RuntimeException('Connection failed'));
 
-        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('get_option')->alias(function ( $key, $default = false ) {
+            if ( $key === 'lihi_email' ) return 'user@example.com';
+            return $default;
+        });
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Connection failed');
@@ -252,7 +261,10 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(5, 'https://lihi.io/xyz')]));
 
-        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('get_option')->alias(function ( $key, $default = false ) {
+            if ( $key === 'lihi_email' ) return 'user@example.com';
+            return $default;
+        });
         Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
         Functions\when('get_current_user_id')->justReturn(7);
         Functions\when('get_transient')->justReturn(false);
@@ -327,7 +339,10 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(11, 'https://lihi.io/fallback')]));
 
-        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('get_option')->alias(function ( $key, $default = false ) {
+            if ( $key === 'lihi_email' ) return 'user@example.com';
+            return $default;
+        });
         Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
         Functions\when('get_current_user_id')->justReturn(7);
         Functions\when('get_transient')->justReturn(false); // never appears
@@ -354,7 +369,10 @@ class ServiceTest extends TestCase
         $client = $this->makeClient();
         $client->shouldReceive('login')->andThrow(new \RuntimeException('Auth failed'));
 
-        Functions\when('wp_get_current_user')->justReturn((object)['user_email' => 'user@example.com']);
+        Functions\when('get_option')->alias(function ( $key, $default = false ) {
+            if ( $key === 'lihi_email' ) return 'user@example.com';
+            return $default;
+        });
         Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
         Functions\when('get_current_user_id')->justReturn(7);
         Functions\when('get_transient')->justReturn(false);

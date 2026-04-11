@@ -6,6 +6,15 @@
 
 ---
 
+## Settings / lihi_email helper
+
+- [ ] `lihi_email()` — option 已設定 → 回傳 option 值
+- [ ] `lihi_email()` — option 為空字串 → 回傳空字串
+- [ ] bootstrap guard — email 空 → 後續 client/service 檔案未載入（`Lihi_Client_Interface` 不存在）
+- [ ] bootstrap guard — email 空 → 註冊 `admin_notices` action
+
+---
+
 ## Lihi_Service
 
 ### has_valid_token()

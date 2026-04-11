@@ -50,12 +50,14 @@ function lihi_redirect_domain(): string {
 }
 
 /**
- * Return the current WordPress user's email address.
+ * Return the email address used to authenticate with the Lihi API.
+ *
+ * Reads the value stored in the plugin settings (Options API).
  *
  * @return string Email address.
  */
 function lihi_email(): string {
-    return wp_get_current_user()->user_email;
+    return (string) get_option( 'lihi_email', '' );
 }
 
 /**
