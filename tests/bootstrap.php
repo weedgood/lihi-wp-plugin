@@ -23,6 +23,7 @@ require_once $_tests_dir . '/includes/functions.php';
 
 function _manually_load_plugin(): void
 {
+    update_option( 'lihi_email', 'test@example.com' );
     require_once dirname(__DIR__) . '/lihi-shorturl/lihi-shorturl.php';
 }
 

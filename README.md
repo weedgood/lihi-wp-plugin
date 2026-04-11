@@ -9,7 +9,6 @@ A WordPress admin plugin that integrates with the [Lihi](https://lihi.io) URL sh
 - **Get-or-create** — fetches the existing short link for a post from Lihi; creates one automatically if none exists.
 - **One-click copy** — button copies the short URL to the clipboard and briefly shows "Copied!".
 - **Lazy auth** — authenticates against the Lihi API only when a short URL is actually needed; stores the JWT in an `httponly` cookie and refreshes it automatically when expired.
-- **Mock client** — when `LIHI_ENV` is not `production`, uses a mock client that returns the original URL directly without hitting the Lihi API.
 - **Settings page** — configure the Lihi API email under Settings → Lihi Short URL. Until the email is saved, an admin notice links directly to the settings page and the plugin's features are disabled.
 - **i18n ready** — full Traditional Chinese (zh_TW) translation included; text domain `lihi-shorturl`.
 
@@ -64,17 +63,16 @@ docker compose --profile test exec phpunit vendor/bin/phpunit -c phpunit.xml
 ```
 lihi-shorturl/
 ├── lihi-shorturl.php          Plugin entry point; admin-only guard, text domain loading
-├── bootstrap.php              Loads all includes in dependency order
+├── bootstrap.php              Loads class files first, then checks email guard; only feature hooks are skipped when email is unset
 ├── assets/
 │   └── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state; displays errors via alert()
 └── includes/
-    ├── helper.php             is_production(), is_test(), lihi_api_domain(), lihi_redirect_domain(), lihi_email() (reads lihi_email option), lihi_api_key(), lihi_client(), lihi_service()
+    ├── helper.php             is_production(), lihi_api_domain(), lihi_redirect_domain(), lihi_email() (reads lihi_email option), lihi_api_key(), lihi_client(), lihi_service()
     ├── settings.php           Settings page under Settings → Lihi Short URL; stores lihi_email via Options API
     ├── add-shorturl-column.php Column registration, attachment panel button, wp_ajax_lihi_copy_url handler
     ├── client/
     │   ├── lihi-client-interface.php   Interface with full phpDoc; every method except login() takes $token as first param
-    │   ├── lihi-client.php             Production HTTP client; token passed per-call, not stored on instance
-    │   └── lihi-client-mock.php        Mock client; always returns original URL as short_url
+    │   └── lihi-client.php             Production HTTP client; token passed per-call, not stored on instance
     └── service/
         └── lihi-service.php            Business logic: login(), has_valid_token(), get_token() (lazy auth + cookie), get_or_create_short_url()
 ```

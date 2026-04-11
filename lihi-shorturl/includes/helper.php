@@ -19,15 +19,6 @@ function is_production(): bool {
 }
 
 /**
- * Return whether the plugin is running in test mode.
- *
- * @return bool True when LIHI_ENV is "test".
- */
-function is_test(): bool {
-    return defined( 'LIHI_ENV' ) && LIHI_ENV === 'test';
-}
-
-/**
  * Return the Lihi API base URL for the current environment.
  *
  * @return string "https://app.lihi.com" in production, "https://app.lihidev.com" otherwise.
@@ -87,9 +78,7 @@ function lihi_client( ?Lihi_Client_Interface $inject = null ): Lihi_Client_Inter
     }
 
     if ( $instance === null ) {
-        $instance = is_test()
-            ? new Lihi_Client_Mock()
-            : new Lihi_Client();
+        $instance = new Lihi_Client();
     }
 
     return $instance;

@@ -1,17 +1,28 @@
 # Test TODO
 
-測試框架：PHPUnit 10 + Brain\Monkey（mock WordPress 函式）
-測試類型：純單元測試，不需要 DB
+測試框架：PHPUnit 9 + Brain\Monkey（mock WordPress 函式）+ WP_UnitTestCase（整合測試，需要 DB）
 測試位置：`tests/`
+
+| Test class | 基底 | 說明 |
+|---|---|---|
+| `ServiceTest` | `TestCase` + Brain\Monkey | 純單元，mock WordPress 函式 |
+| `ClientTest` | `TestCase` + Brain\Monkey | 純單元，mock `wp_remote_request` |
+| `AjaxCopyUrlTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
+| `AdminNoticeTest` | `WP_UnitTestCase` | 整合，需要 DB |
+| `HelperTest` | `WP_UnitTestCase` | 整合，需要 DB |
+| `PluginHooksTest` | `WP_UnitTestCase` | 整合，需要 DB |
+| `PluginLoadedTest` | `WP_UnitTestCase` | 整合，需要 DB |
 
 ---
 
 ## Settings / lihi_email helper
 
-- [ ] `lihi_email()` — option 已設定 → 回傳 option 值
-- [ ] `lihi_email()` — option 為空字串 → 回傳空字串
-- [ ] bootstrap guard — email 空 → 後續 client/service 檔案未載入（`Lihi_Client_Interface` 不存在）
-- [ ] bootstrap guard — email 空 → 註冊 `admin_notices` action
+- [x] `lihi_email()` — option 已設定 → 回傳 option 值
+- [x] `lihi_email()` — option 為空字串 → 回傳空字串
+- [n/a] bootstrap guard — email 空 → feature hooks 未掛上（PHP 無法 undefine class；整合測試環境中類別已由 bootstrap 定義，hook 是否載入由程式碼審查保證）
+- [x] bootstrap guard — email 空 → 註冊 `admin_notices` action
+- [x] admin notice — 有 `manage_options` 權限 → 輸出含設定頁連結的 warning notice
+- [x] admin notice — 無 `manage_options` 權限 → 無輸出
 
 ---
 

@@ -4,7 +4,7 @@ namespace Lihi\ShortUrl;
 /**
  * Bootstrap: loads all plugin dependencies in the correct order.
  *
- * Load order: helper → interface → client → mock → service → feature files.
+ * Load order: helper → settings → interface → client → service → feature files.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -13,9 +13,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/helper.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/settings.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/client/lihi-client-interface.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/client/lihi-client.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/service/lihi-service.php';
 
 // Stop here when the email has not been configured yet; show a notice instead.
-if ( lihi_email() === '' && ! is_test() ) {
+// Class definitions above are always available; only feature hooks are skipped.
+if ( lihi_email() === '' ) {
     add_action( 'admin_notices', function () {
         if ( ! current_user_can( 'manage_options' ) ) {
             return;
@@ -35,8 +39,4 @@ if ( lihi_email() === '' && ! is_test() ) {
     return;
 }
 
-require_once plugin_dir_path( __FILE__ ) . 'includes/client/lihi-client-interface.php';
-require_once plugin_dir_path( __FILE__ ) . 'includes/client/lihi-client.php';
-require_once plugin_dir_path( __FILE__ ) . 'includes/client/lihi-client-mock.php';
-require_once plugin_dir_path( __FILE__ ) . 'includes/service/lihi-service.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/add-shorturl-column.php';
