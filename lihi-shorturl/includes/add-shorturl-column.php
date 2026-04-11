@@ -38,7 +38,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         'nonce'       => wp_create_nonce( 'lihi_copy_url' ),
         'action'      => 'lihi_copy_url',
         'labelCopied' => __( 'Copied!', 'lihi-shorturl' ),
-        'resetDelay'  => 2000,
+        'resetDelay'  => 300,
     ] );
 } );
 

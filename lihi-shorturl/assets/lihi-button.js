@@ -1,12 +1,18 @@
+var lihiBusy = false;
+
 document.addEventListener( 'click', async function ( e ) {
 	var btn = e.target.closest( 'button[data-lihi]' );
 	if ( ! btn ) return;
 
+	if ( lihiBusy ) return;
+
 	var originalText = btn.textContent;
+	var allBtns      = document.querySelectorAll( 'button[data-lihi]' );
 
 	e.stopPropagation();
 
-	btn.disabled = true;
+	lihiBusy = true;
+	allBtns.forEach( function ( b ) { b.disabled = true; } );
 	btn.classList.add( 'lihi-btn-loading' );
 
 	try {
@@ -38,6 +44,7 @@ document.addEventListener( 'click', async function ( e ) {
 		btn.textContent = originalText;
 	} finally {
 		btn.classList.remove( 'lihi-btn-loading' );
-		btn.disabled = false;
+		lihiBusy = false;
+		allBtns.forEach( function ( b ) { b.disabled = false; } );
 	}
 } );
