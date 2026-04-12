@@ -1,22 +1,35 @@
-var lihiBusy = false;
+let lihiBusy = false;
 
-document.addEventListener( 'click', async function ( e ) {
-	var btn = e.target.closest( 'button[data-lihi]' );
-	if ( ! btn ) return;
+function showNotice( message ) {
+	const target = document.querySelector( '.wp-header-end' )
+		|| document.querySelector( '#wpbody-content' )
+		|| document.body;
 
-	if ( lihiBusy ) return;
+	const notice = document.createElement( 'div' );
+	notice.className    = 'notice notice-error is-dismissible lihi-notice';
+	notice.setAttribute( 'role', 'alert' );
+	notice.innerHTML    = '<p></p>';
+	notice.querySelector( 'p' ).textContent = message;
 
-	var originalText = btn.textContent;
-	var allBtns      = document.querySelectorAll( 'button[data-lihi]' );
+	target.parentNode.insertBefore( notice, target.nextSibling );
+	setTimeout( () => notice.remove(), 5000 );
+}
+
+document.addEventListener( 'click', async ( e ) => {
+	const btn = e.target.closest( 'button[data-lihi]' );
+	if ( ! btn || lihiBusy ) return;
 
 	e.stopPropagation();
 
+	const originalText = btn.textContent;
+	const allBtns      = document.querySelectorAll( 'button[data-lihi]' );
+
 	lihiBusy = true;
-	allBtns.forEach( function ( b ) { b.disabled = true; } );
+	allBtns.forEach( ( b ) => { b.disabled = true; } );
 	btn.classList.add( 'lihi-btn-loading' );
 
 	try {
-		var res  = await fetch( lihiButton.ajaxUrl, {
+		const res = await fetch( lihiButton.ajaxUrl, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 			body: new URLSearchParams( {
@@ -26,10 +39,10 @@ document.addEventListener( 'click', async function ( e ) {
 				type:    btn.dataset.type,
 			} ),
 		} );
-		var data = await res.json();
+		const data = await res.json();
 
 		if ( ! data.success ) {
-			alert( 'Lihi error: ' + data.data );
+			showNotice( 'Lihi: ' + data.data );
 			return;
 		}
 
@@ -37,14 +50,12 @@ document.addEventListener( 'click', async function ( e ) {
 		btn.classList.remove( 'lihi-btn-loading' );
 		btn.textContent = lihiButton.labelCopied;
 
-		await new Promise( function ( resolve ) {
-			setTimeout( resolve, lihiButton.resetDelay );
-		} );
+		await new Promise( ( resolve ) => setTimeout( resolve, lihiButton.resetDelay ) );
 
 		btn.textContent = originalText;
 	} finally {
 		btn.classList.remove( 'lihi-btn-loading' );
 		lihiBusy = false;
-		allBtns.forEach( function ( b ) { b.disabled = false; } );
+		allBtns.forEach( ( b ) => { b.disabled = false; } );
 	}
 } );

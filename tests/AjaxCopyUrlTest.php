@@ -19,7 +19,7 @@ class AjaxCopyUrlTest extends TestCase
 
     protected function tearDown(): void
     {
-        \Lihi\ShortUrl\lihi_service(null);
+        \Lihi\ShortUrl\lihi_service_set(null);
         $_POST = [];
         Monkey\tearDown();
         Mockery::close();
@@ -109,7 +109,7 @@ class AjaxCopyUrlTest extends TestCase
             ->with(42, 'post')
             ->once()
             ->andReturn('abc-slug');
-        \Lihi\ShortUrl\lihi_service($service);
+        \Lihi\ShortUrl\lihi_service_set($service);
 
         Functions\when('check_ajax_referer')->justReturn(true);
 
@@ -134,7 +134,7 @@ class AjaxCopyUrlTest extends TestCase
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
             ->andThrow(new \RuntimeException('API error'));
-        \Lihi\ShortUrl\lihi_service($service);
+        \Lihi\ShortUrl\lihi_service_set($service);
 
         Functions\when('check_ajax_referer')->justReturn(true);
 
@@ -159,7 +159,7 @@ class AjaxCopyUrlTest extends TestCase
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
             ->andThrow(new \Lihi\ShortUrl\Lihi_Auth_Exception('API Key error'));
-        \Lihi\ShortUrl\lihi_service($service);
+        \Lihi\ShortUrl\lihi_service_set($service);
 
         Functions\when('check_ajax_referer')->justReturn(true);
 

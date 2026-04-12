@@ -12,9 +12,11 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Enqueue lihi-button.js on post-type list screens and the media grid.
+// Enqueue lihi-button.js on list screens, media library, and post edit
+// (so the button works inside the media modal opened from the editor).
 add_action( 'admin_enqueue_scripts', function ( $hook ) {
-    if ( $hook !== 'edit.php' && $hook !== 'upload.php' ) {
+    $allowed = [ 'edit.php', 'upload.php', 'post.php', 'post-new.php' ];
+    if ( ! in_array( $hook, $allowed, true ) ) {
         return;
     }
 

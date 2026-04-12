@@ -63,46 +63,60 @@ function lihi_api_key(): string {
 }
 
 /**
- * Return the shared Lihi_Client_Interface singleton.
+ * Internal singleton store. Keyed by class/interface name.
  *
- * Passing an instance replaces the singleton (useful in tests).
- * Passing null resets it so it is recreated on the next call.
- *
- * @param Lihi_Client_Interface|null $inject Optional client to inject or null to reset.
+ * @param string      $key     Store key.
+ * @param object|null $replace If provided (even as null), replaces the stored value.
+ * @param bool        $has_arg Whether a replacement was provided (to distinguish "set to null" from "read").
  */
-function lihi_client( ?Lihi_Client_Interface $inject = null ): Lihi_Client_Interface {
-    static $instance = null;
+function _lihi_singleton( string $key, ?object $replace = null, bool $has_arg = false ): ?object {
+    static $store = [];
 
-    if ( func_num_args() > 0 ) {
-        $instance = $inject;
+    if ( $has_arg ) {
+        $store[ $key ] = $replace;
     }
 
-    if ( $instance === null ) {
+    return $store[ $key ] ?? null;
+}
+
+/**
+ * Return the shared Lihi_Client_Interface singleton, creating it on first call.
+ */
+function lihi_client(): Lihi_Client_Interface {
+    $instance = _lihi_singleton( Lihi_Client_Interface::class );
+
+    if ( ! $instance instanceof Lihi_Client_Interface ) {
         $instance = new Lihi_Client();
+        _lihi_singleton( Lihi_Client_Interface::class, $instance, true );
     }
 
     return $instance;
 }
 
 /**
- * Return the shared Lihi_Service singleton.
- *
- * Passing a Lihi_Service instance replaces the singleton (useful in tests).
- * Passing null resets the singleton so it is recreated on the next call.
- * Calling with no arguments returns the existing or newly created singleton.
- *
- * @param Lihi_Service|null $inject Optional service to inject or null to reset.
+ * Replace (or reset, by passing null) the Lihi_Client_Interface singleton. Test helper.
  */
-function lihi_service( ?Lihi_Service $inject = null ): Lihi_Service {
-    static $instance = null;
+function lihi_client_set( ?Lihi_Client_Interface $client ): void {
+    _lihi_singleton( Lihi_Client_Interface::class, $client, true );
+}
 
-    if ( func_num_args() > 0 ) {
-        $instance = $inject;
-    }
+/**
+ * Return the shared Lihi_Service singleton, creating it on first call.
+ */
+function lihi_service(): Lihi_Service {
+    $instance = _lihi_singleton( Lihi_Service::class );
 
-    if ( $instance === null ) {
+    if ( ! $instance instanceof Lihi_Service ) {
         $instance = new Lihi_Service( lihi_client() );
+        _lihi_singleton( Lihi_Service::class, $instance, true );
     }
 
     return $instance;
+}
+
+/**
+ * Replace (or reset, by passing null) the Lihi_Service singleton. Test helper.
+ */
+function lihi_service_set( ?Lihi_Service $service ): void {
+    _lihi_singleton( Lihi_Service::class, $service, true );
 }
