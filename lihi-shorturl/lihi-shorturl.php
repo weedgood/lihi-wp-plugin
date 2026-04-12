@@ -3,7 +3,7 @@ namespace Lihi\ShortUrl;
 
 /**
  * Plugin Name: Lihi Short URL
- * Description: Adds a Lihi short URL column to post list tables, letting editors generate and copy short links for any post with one click.
+ * Description: Adds a one-click "Lihi" button to generate and copy short URLs, including posts, pages, media and all post-type list tables.
  * Version: 0.1.0
  * Author: Lihi
  */

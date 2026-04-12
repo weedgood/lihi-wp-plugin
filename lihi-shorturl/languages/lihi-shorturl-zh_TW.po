@@ -51,4 +51,8 @@ msgstr "Lihi 短網址設定"
 
 #: bootstrap.php
 msgid "Lihi Short URL: please <a href=\"%s\">configure your email address</a> to enable the plugin."
-msgstr "Lihi Short URL：請先至 <a href=\"%s\">設定頁</a> 填寫 Email 以啟用外掛。"
+msgstr "Lihi 短網址：請先至 <a href=\"%s\">設定頁</a> 填寫 Email 以啟用外掛。"
+
+#. Description of the plugin
+msgid "Adds a one-click \"Lihi\" button to generate and copy short URLs, including posts, pages, media and all post-type list tables."
+msgstr "在列表中新增一鍵生成短網址並複製的按鈕 \"Lihi\"，包含文章、頁面與媒體等所有內容行列表。"
