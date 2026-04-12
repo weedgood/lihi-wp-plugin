@@ -213,25 +213,95 @@ class ClientTest extends TestCase
     }
 
     /** @test */
-    public function request_throws_on_invalid_json(): void
+    public function request_throws_not_found_exception_on_404_html(): void
     {
-        $this->mockRequest(200, 'not-json');
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/Expected JSON but got/');
+        $html = '<html><head><title>Page Not Found</title></head><body></body></html>';
+        $this->mockRequest(404, $html);
+        $this->expectException(\Lihi\ShortUrl\Lihi_Not_Found_Exception::class);
+        $this->expectExceptionMessageMatches('/404.*Page Not Found/');
         $this->makeClient()->get_sites('test-token');
     }
 
     /** @test */
-    public function request_throws_on_http_4xx(): void
+    public function request_throws_token_invalid_exception_on_upgrade_title(): void
     {
-        $this->mockRequest(404, '{"error":"not found"}');
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/404/');
+        $html = '<html><head><title>網站升級中...</title></head><body></body></html>';
+        $this->mockRequest(500, $html);
+        $this->expectException(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class);
+        $this->expectExceptionMessageMatches('/500.*網站升級中/');
         $this->makeClient()->get_sites('test-token');
     }
 
     /** @test */
-    public function request_throws_on_wp_error(): void
+    public function token_invalid_exception_is_a_server_exception(): void
+    {
+        $html = '<html><head><title>網站升級中...</title></head><body></body></html>';
+        $this->mockRequest(500, $html);
+        $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
+        $this->makeClient()->get_sites('test-token');
+    }
+
+    /** @test */
+    public function request_throws_server_exception_on_5xx_html_unknown_title(): void
+    {
+        $html = '<html><head><title>Internal Server Error</title></head><body></body></html>';
+        $this->mockRequest(500, $html);
+        $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
+        $this->expectExceptionMessageMatches('/500.*Internal Server Error/');
+        $this->makeClient()->get_sites('test-token');
+    }
+
+    /** @test */
+    public function request_throws_server_exception_on_non_json_without_title(): void
+    {
+        $this->mockRequest(500, 'not-json');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
+        $this->makeClient()->get_sites('test-token');
+    }
+
+    /** @test */
+    public function login_upgrade_title_throws_server_exception_not_token_invalid(): void
+    {
+        // login() sends no token — "網站升級中..." is a plain server error, not token-invalid.
+        $html = '<html><head><title>網站升級中...</title></head><body></body></html>';
+        $this->mockRequest(500, $html);
+        $caught = null;
+        try {
+            $this->makeClient()->login('user@example.com', 'api-key');
+        } catch (\Lihi\ShortUrl\Lihi_Server_Exception $e) {
+            $caught = $e;
+        }
+        $this->assertInstanceOf(\Lihi\ShortUrl\Lihi_Server_Exception::class, $caught);
+        $this->assertNotInstanceOf(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class, $caught);
+    }
+
+    /** @test */
+    public function login_throws_auth_exception_when_result_false(): void
+    {
+        $this->mockRequest(200, '{"result":false,"msg":"API Key error"}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Auth_Exception::class);
+        $this->expectExceptionMessage('API Key error');
+        $this->makeClient()->login('test@example.com', 'badkey');
+    }
+
+    /** @test */
+    public function login_throws_validation_exception_on_400(): void
+    {
+        $this->mockRequest(400, '{"result":false,"msg":{"email":["The email field is required."]}}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Validation_Exception::class);
+        $this->makeClient()->login('', '');
+    }
+
+    /** @test */
+    public function create_site_throws_validation_exception_on_400(): void
+    {
+        $this->mockRequest(400, '{"result":false,"msg":{"domain":["The domain field is required."]}}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Validation_Exception::class);
+        $this->makeClient()->create_site('token', []);
+    }
+
+    /** @test */
+    public function request_throws_server_exception_on_wp_error(): void
     {
         $wpError = Mockery::mock('WP_Error');
         $wpError->shouldReceive('get_error_message')->andReturn('cURL error: connection timed out');
@@ -239,7 +309,7 @@ class ClientTest extends TestCase
         Functions\expect('wp_remote_request')->once()->andReturn($wpError);
         Functions\when('is_wp_error')->justReturn(true);
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
         $this->expectExceptionMessage('cURL error: connection timed out');
         $this->makeClient()->get_sites('test-token');
     }

@@ -68,13 +68,32 @@ class Lihi_Service {
      * get_short_links(). If found, returns the existing short_url. Otherwise
      * creates a new site and returns its short_url.
      *
+     * On Lihi_Token_Invalid_Exception the cached token is discarded and the
+     * call is retried once with a freshly obtained token.
+     *
      * @param int    $item_id WordPress post/attachment ID.
      * @param string $type    Post type (e.g. `post`, `page`, `attachment`), passed from the button's data-type attribute.
      * @return string short_url of the existing or newly created short link.
      * @throws RuntimeException If any API call fails.
      */
     public function get_or_create_short_url( int $item_id, string $type ): string {
-        $token  = $this->get_token();
+        $token = $this->get_token();
+        try {
+            return $this->fetch_or_create( $token, $item_id, $type );
+        } catch ( Lihi_Token_Invalid_Exception $e ) {
+            $this->invalidate_token();
+            $token = $this->get_token();
+            return $this->fetch_or_create( $token, $item_id, $type );
+        }
+    }
+
+    /**
+     * Core logic for get_or_create_short_url(); extracted so the retry path can reuse it.
+     *
+     * @throws Lihi_Token_Invalid_Exception propagated to trigger a retry.
+     * @throws RuntimeException on other failures.
+     */
+    private function fetch_or_create( string $token, int $item_id, string $type ): string {
         $result = $this->client->get_short_links( $token, $type, $item_id );
         $sites  = $result['data']['sites']['data'] ?? [];
 
@@ -100,6 +119,16 @@ class Lihi_Service {
         }
 
         return $short_url;
+    }
+
+    /**
+     * Discard any cached token so the next get_token() call forces a fresh login.
+     */
+    private function invalidate_token(): void {
+        $user_id       = get_current_user_id();
+        $transient_key = 'lihi_token_' . $user_id;
+        delete_transient( $transient_key );
+        unset( $_COOKIE['lihi_token'] );
     }
 
     public function resolve_url( int $item_id, string $type ): string {

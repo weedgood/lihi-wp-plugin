@@ -19,11 +19,36 @@ Body:
 ```json
 { "email": "string", "api_key": "string", "country": "TW" }
 ```
+
 Response:
 ```json
 { "result": true, "token": "string" }
 ```
+
 Token TTL: 約 168 天。
+
+**錯誤：欄位缺失（HTTP 400）**
+```json
+{
+  "result": false,
+  "msg": {
+    "email":   ["The email field is required."],
+    "api_key": ["The api key field is required."]
+  }
+}
+```
+
+**錯誤：api_key 錯誤（HTTP 200）**
+```json
+{ "result": false, "msg": "API Key error" }
+```
+注意：HTTP 仍為 200，`request()` 不拋例外；`login()` 靠檢查 `token` 是否為空間接處理。
+
+**注意：email 不存在會自動建立新帳號**
+api_key 正確時，不論 email 是否已存在都回傳 token；若 email 不存在則自動註冊新帳號。
+
+**錯誤：伺服器錯誤（HTTP 500，HTML）**
+`<title>` 固定為「網站升級中...」。
 
 ---
 
@@ -35,6 +60,9 @@ Response:
 ```json
 { "result": true, "data": [ { "id": 1, "title": "string", "body": "string" } ] }
 ```
+
+**錯誤：token 缺少或無效（HTTP 500，HTML）**
+不論是否帶 Authorization header 結果完全相同，回 HTML 頁面，`<title>` 固定為「網站升級中...」。
 
 ---
 
@@ -71,6 +99,9 @@ Response:
 }
 ```
 
+**錯誤：token 缺少或無效（HTTP 500，HTML）**
+`<title>` 固定為「網站升級中...」。
+
 ---
 
 ## POST `/sites`
@@ -85,6 +116,7 @@ Body（`domain` 必填，`type_id` 必須為字串）:
   "tags": "wordpress,example.com,post"
 }
 ```
+
 Response:
 ```json
 {
@@ -99,6 +131,24 @@ Response:
 }
 ```
 
+**錯誤：欄位缺失（HTTP 400）**
+```json
+{
+  "result": false,
+  "msg": {
+    "domain": ["The domain field is required."],
+    "urls":   ["The urls field is required."],
+    "type":   ["The type field is required."]
+  }
+}
+```
+
+**注意：無效 domain 不報錯**
+傳入不屬於帳號的 domain 時 API 不報錯，自動換成帳號下的有效 domain 建立。
+
+**錯誤：token 缺少或無效（HTTP 500，HTML）**
+`<title>` 固定為「網站升級中...」。
+
 ---
 
 ## PUT `/sites/{id}`
@@ -107,13 +157,26 @@ Response:
 ```json
 { "urls": [ { "id": 789, "url": "https://example.com/new" } ] }
 ```
+
 Response: `{ "result": true }`
+
+**錯誤：ID 不存在（HTTP 404，HTML）**
+`<title>` 為「Page Not Found」。
+
+**錯誤：token 缺少或無效（HTTP 500，HTML）**
+`<title>` 固定為「網站升級中...」。
 
 ---
 
 ## DELETE `/sites/{id}`
 
 Response: `{ "result": true }`
+
+**錯誤：ID 不存在（HTTP 500，HTML）**
+與其他端點不同，回 HTTP 500 而非 404，`<title>` 為「網站升級中...」。
+
+**錯誤：token 缺少或無效（HTTP 500，HTML）**
+`<title>` 固定為「網站升級中...」。
 
 ---
 
@@ -122,10 +185,25 @@ Response: `{ "result": true }`
 ```json
 { "site_id": "456", "url": "https://example.com/extra" }
 ```
+
 Response:
 ```json
 { "result": true, "data": { "id": 791, "site_id": 456, "url": "https://..." } }
 ```
+
+**錯誤：欄位缺失（HTTP 400）**
+```json
+{
+  "result": false,
+  "msg": {
+    "site_id": ["The site id field is required."],
+    "url":     ["The url field is required."]
+  }
+}
+```
+
+**錯誤：token 缺少或無效（HTTP 500，HTML）**
+`<title>` 固定為「網站升級中...」。
 
 ---
 
@@ -134,13 +212,26 @@ Response:
 ```json
 { "url": "https://example.com/updated" }
 ```
+
 Response: `{ "result": true, "data": { "id": 791, "url": "https://..." } }`
+
+**錯誤：ID 不存在（HTTP 404，HTML）**
+`<title>` 為「Page Not Found」。
+
+**錯誤：token 缺少或無效（HTTP 500，HTML）**
+`<title>` 固定為「網站升級中...」。
 
 ---
 
 ## DELETE `/site-urls/{id}`
 
 Response: `{ "result": true }`
+
+**錯誤：ID 不存在（HTTP 404，HTML）**
+`<title>` 為「Page Not Found」。
+
+**錯誤：token 缺少或無效（HTTP 500，HTML）**
+`<title>` 固定為「網站升級中...」。
 
 ---
 

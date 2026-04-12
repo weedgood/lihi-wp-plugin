@@ -521,6 +521,139 @@ class ServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // get_or_create_short_url() — token-invalid retry
+    // -------------------------------------------------------------------------
+
+    /** @test */
+    public function get_or_create_retries_once_when_get_short_links_throws_token_invalid(): void
+    {
+        $staleToken = $this->makeJwt(time() + 3600);
+        $freshToken = $this->makeJwt(time() + 7200);
+        $_COOKIE['lihi_token'] = $staleToken;
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->with($staleToken, 'post', 42)
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
+        $client->shouldReceive('login')
+            ->once()
+            ->andReturn(['token' => $freshToken]);
+        $client->shouldReceive('get_short_links')
+            ->with($freshToken, 'post', 42)
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/retried')]));
+
+        Functions\when('get_option')->alias(function ($key, $default = false) {
+            if ($key === 'lihi_email') return 'user@example.com';
+            return $default;
+        });
+        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
+        Functions\when('get_current_user_id')->justReturn(7);
+        Functions\when('delete_transient')->justReturn(true);
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
+        Functions\when('set_transient')->justReturn(true);
+        Functions\when('setcookie')->justReturn(true);
+        Functions\when('is_ssl')->justReturn(false);
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
+
+        $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
+        $this->assertSame('https://lihi.io/retried', $result);
+    }
+
+    /** @test */
+    public function get_or_create_retries_once_when_create_site_throws_token_invalid(): void
+    {
+        $staleToken = $this->makeJwt(time() + 3600);
+        $freshToken = $this->makeJwt(time() + 7200);
+        $_COOKIE['lihi_token'] = $staleToken;
+
+        $client = $this->makeClient();
+        // First pass: no matching short link found, create_site throws token invalid
+        $client->shouldReceive('get_short_links')
+            ->with($staleToken, 'post', 42)
+            ->once()
+            ->andReturn($this->makeSitesResponse([]));
+        $client->shouldReceive('create_site')
+            ->with($staleToken, Mockery::any())
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
+        $client->shouldReceive('login')
+            ->once()
+            ->andReturn(['token' => $freshToken]);
+        // Retry pass: no matching short link, create_site succeeds
+        $client->shouldReceive('get_short_links')
+            ->with($freshToken, 'post', 42)
+            ->once()
+            ->andReturn($this->makeSitesResponse([]));
+        $client->shouldReceive('create_site')
+            ->with($freshToken, Mockery::any())
+            ->once()
+            ->andReturn(['data' => ['short_url' => 'https://lihi.io/created']]);
+
+        Functions\when('get_option')->alias(function ($key, $default = false) {
+            if ($key === 'lihi_email') return 'user@example.com';
+            return $default;
+        });
+        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
+        Functions\when('get_current_user_id')->justReturn(7);
+        Functions\when('delete_transient')->justReturn(true);
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
+        Functions\when('set_transient')->justReturn(true);
+        Functions\when('setcookie')->justReturn(true);
+        Functions\when('is_ssl')->justReturn(false);
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
+        Functions\when('home_url')->justReturn('https://example.com');
+        Functions\when('wp_parse_url')->justReturn('example.com');
+        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
+
+        $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
+        $this->assertSame('https://lihi.io/created', $result);
+    }
+
+    /** @test */
+    public function get_or_create_propagates_token_invalid_exception_on_second_failure(): void
+    {
+        $staleToken = $this->makeJwt(time() + 3600);
+        $freshToken = $this->makeJwt(time() + 7200);
+        $_COOKIE['lihi_token'] = $staleToken;
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->with($staleToken, 'post', 42)
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
+        $client->shouldReceive('login')
+            ->once()
+            ->andReturn(['token' => $freshToken]);
+        $client->shouldReceive('get_short_links')
+            ->with($freshToken, 'post', 42)
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
+
+        Functions\when('get_option')->alias(function ($key, $default = false) {
+            if ($key === 'lihi_email') return 'user@example.com';
+            return $default;
+        });
+        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
+        Functions\when('get_current_user_id')->justReturn(7);
+        Functions\when('delete_transient')->justReturn(true);
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
+        Functions\when('set_transient')->justReturn(true);
+        Functions\when('setcookie')->justReturn(true);
+        Functions\when('is_ssl')->justReturn(false);
+
+        $this->expectException(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class);
+        $this->makeService($client)->get_or_create_short_url(42, 'post');
+    }
+
+    // -------------------------------------------------------------------------
     // resolve_url()
     // -------------------------------------------------------------------------
 
