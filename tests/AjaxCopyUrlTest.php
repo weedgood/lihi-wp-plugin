@@ -30,25 +30,6 @@ class AjaxCopyUrlTest extends TestCase
     // Helpers
     // -------------------------------------------------------------------------
 
-    private function getAjaxHandler(): \Closure
-    {
-        global $wp_filter;
-
-        if (!isset($wp_filter['wp_ajax_lihi_copy_url'])) {
-            $this->fail("Hook 'wp_ajax_lihi_copy_url' is not registered");
-        }
-
-        foreach ($wp_filter['wp_ajax_lihi_copy_url']->callbacks as $callbacks) {
-            foreach ($callbacks as $cb) {
-                if ($cb['function'] instanceof \Closure) {
-                    return $cb['function'];
-                }
-            }
-        }
-
-        $this->fail("No closure found for 'wp_ajax_lihi_copy_url'");
-    }
-
     private function mockService(): \Mockery\MockInterface&Lihi_Service
     {
         return Mockery::mock(Lihi_Service::class);
@@ -73,7 +54,7 @@ class AjaxCopyUrlTest extends TestCase
                 $errorMsg = $msg;
             });
 
-        ($this->getAjaxHandler())();
+        \Lihi\ShortUrl\ajax_copy_url();
 
         $this->assertSame('Invalid post ID or type.', $errorMsg);
     }
@@ -93,7 +74,7 @@ class AjaxCopyUrlTest extends TestCase
                 $errorMsg = $msg;
             });
 
-        ($this->getAjaxHandler())();
+        \Lihi\ShortUrl\ajax_copy_url();
 
         $this->assertSame('Invalid post ID or type.', $errorMsg);
     }
@@ -120,7 +101,7 @@ class AjaxCopyUrlTest extends TestCase
                 $sent = $data;
             });
 
-        ($this->getAjaxHandler())();
+        \Lihi\ShortUrl\ajax_copy_url();
 
         $this->assertSame(['url' => 'abc-slug'], $sent);
     }
@@ -145,7 +126,7 @@ class AjaxCopyUrlTest extends TestCase
                 $errorMsg = $msg;
             });
 
-        ($this->getAjaxHandler())();
+        \Lihi\ShortUrl\ajax_copy_url();
 
         $this->assertSame('Failed to generate short URL. Please try again later.', $errorMsg);
     }
@@ -170,7 +151,7 @@ class AjaxCopyUrlTest extends TestCase
                 $errorMsg = $msg;
             });
 
-        ($this->getAjaxHandler())();
+        \Lihi\ShortUrl\ajax_copy_url();
 
         $this->assertStringContainsString('Lihi login failed', $errorMsg);
     }

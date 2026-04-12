@@ -356,7 +356,7 @@ class ServiceTest extends TestCase
         // Stale lock must be cleared after fallback login.
         Functions\expect('wp_cache_delete')
             ->once()
-            ->with('lihi_token_lock_7', 'transient')
+            ->with('lihi_token_lock', 'transient')
             ->andReturn(true);
 
         $result = $this->makeService($client)->get_or_create_short_url(11, 'post');

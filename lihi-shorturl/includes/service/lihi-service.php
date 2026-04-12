@@ -18,6 +18,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Lihi_Service {
 
+    /**
+     * Token cache is keyed by site, not by user: the plugin authenticates against
+     * a single Lihi account (lihi_email option), so every WordPress admin shares
+     * the same JWT. A single cache entry means only one login() call per TTL,
+     * regardless of how many WP users trigger the first button click.
+     */
+    private const TRANSIENT_KEY = 'lihi_token';
+    private const LOCK_KEY      = 'lihi_token_lock';
+
     private Lihi_Client_Interface $client;
 
     public function __construct( Lihi_Client_Interface $client ) {
@@ -125,11 +134,13 @@ class Lihi_Service {
 
     /**
      * Discard any cached token so the next get_token() call forces a fresh login.
+     *
+     * Only clears server-side caches and $_COOKIE for the current request;
+     * the browser cookie is left alone since persist_token() will overwrite it
+     * on the retry.
      */
     private function invalidate_token(): void {
-        $user_id       = get_current_user_id();
-        $transient_key = 'lihi_token_' . $user_id;
-        delete_transient( $transient_key );
+        delete_transient( self::TRANSIENT_KEY );
         unset( $_COOKIE['lihi_token'] );
     }
 
@@ -159,33 +170,29 @@ class Lihi_Service {
             return $_COOKIE['lihi_token'];
         }
 
-        $user_id       = get_current_user_id();
-        $transient_key = 'lihi_token_' . $user_id;
-        $lock_key      = 'lihi_token_lock_' . $user_id;
-
         // 2. Transient cache hit — no login needed.
-        $cached = get_transient( $transient_key );
+        $cached = get_transient( self::TRANSIENT_KEY );
         if ( false !== $cached ) {
             return $cached;
         }
 
         // 3a. Atomic lock: only the first request proceeds to login().
-        $got_lock = wp_cache_add( $lock_key, 1, 'transient', 30 );
+        $got_lock = wp_cache_add( self::LOCK_KEY, 1, 'transient', 30 );
 
         if ( $got_lock ) {
             try {
                 // Double-check: another request may have written the transient
                 // between step 2 and acquiring the lock.
-                $cached = get_transient( $transient_key );
+                $cached = get_transient( self::TRANSIENT_KEY );
                 if ( false !== $cached ) {
                     return $cached;
                 }
 
                 $token = $this->login();
-                $this->persist_token( $token, $transient_key );
+                $this->persist_token( $token );
                 return $token;
             } finally {
-                wp_cache_delete( $lock_key, 'transient' );
+                wp_cache_delete( self::LOCK_KEY, 'transient' );
             }
         }
 
@@ -198,7 +205,7 @@ class Lihi_Service {
             usleep( $sleep_us );
             $waited += $sleep_us;
 
-            $cached = get_transient( $transient_key );
+            $cached = get_transient( self::TRANSIENT_KEY );
             if ( false !== $cached ) {
                 return $cached;
             }
@@ -207,19 +214,19 @@ class Lihi_Service {
         // 3c. Fallback: winner never showed up — login independently and
         //     clear the stale lock so future requests don't keep waiting.
         $token = $this->login();
-        $this->persist_token( $token, $transient_key );
-        wp_cache_delete( $lock_key, 'transient' );
+        $this->persist_token( $token );
+        wp_cache_delete( self::LOCK_KEY, 'transient' );
         return $token;
     }
 
     /**
      * Store a JWT in the WordPress transient cache and in the browser cookie.
      */
-    private function persist_token( string $token, string $transient_key ): void {
-        set_transient( $transient_key, $token, 10 * MINUTE_IN_SECONDS );
+    private function persist_token( string $token ): void {
+        set_transient( self::TRANSIENT_KEY, $token, DAY_IN_SECONDS );
 
         setcookie( 'lihi_token', $token, [
-            'expires'  => time() + DAY_IN_SECONDS,
+            'expires'  => time() + 7 * DAY_IN_SECONDS,
             'path'     => '/',
             'httponly' => true,
             'samesite' => 'Strict',

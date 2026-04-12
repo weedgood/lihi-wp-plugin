@@ -70,8 +70,14 @@ add_filter( 'attachment_fields_to_edit', function ( $form_fields, $post ) {
     return $form_fields;
 }, 10, 2 );
 
-// Fetch or create a Lihi short URL for a post, then return it for clipboard copy.
-add_action( 'wp_ajax_lihi_copy_url', function () {
+/**
+ * AJAX handler: fetch or create a Lihi short URL for a post and return it
+ * to the browser for clipboard copy.
+ *
+ * Exported as a named function (rather than an inline closure) so tests can
+ * invoke it directly without walking $wp_filter.
+ */
+function ajax_copy_url(): void {
     check_ajax_referer( 'lihi_copy_url', 'nonce' );
 
     $item_id = intval( $_POST['item_id'] ?? 0 );
@@ -93,4 +99,6 @@ add_action( 'wp_ajax_lihi_copy_url', function () {
         error_log( '[Lihi] ' . $e->getMessage() );
         wp_send_json_error( __( 'Failed to generate short URL. Please try again later.', 'lihi-shorturl' ) );
     }
-} );
+}
+
+add_action( 'wp_ajax_lihi_copy_url', __NAMESPACE__ . '\\ajax_copy_url' );
