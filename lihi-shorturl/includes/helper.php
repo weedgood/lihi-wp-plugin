@@ -101,13 +101,34 @@ function lihi_client_set( ?Lihi_Client_Interface $client ): void {
 }
 
 /**
+ * Return the shared Lihi_Token_Store singleton, creating it on first call.
+ */
+function lihi_token_store(): Lihi_Token_Store {
+    $instance = _lihi_singleton( Lihi_Token_Store::class );
+
+    if ( ! $instance instanceof Lihi_Token_Store ) {
+        $instance = new Lihi_Token_Store();
+        _lihi_singleton( Lihi_Token_Store::class, $instance, true );
+    }
+
+    return $instance;
+}
+
+/**
+ * Replace (or reset, by passing null) the Lihi_Token_Store singleton. Test helper.
+ */
+function lihi_token_store_set( ?Lihi_Token_Store $store ): void {
+    _lihi_singleton( Lihi_Token_Store::class, $store, true );
+}
+
+/**
  * Return the shared Lihi_Service singleton, creating it on first call.
  */
 function lihi_service(): Lihi_Service {
     $instance = _lihi_singleton( Lihi_Service::class );
 
     if ( ! $instance instanceof Lihi_Service ) {
-        $instance = new Lihi_Service( lihi_client() );
+        $instance = new Lihi_Service( lihi_client(), lihi_token_store() );
         _lihi_singleton( Lihi_Service::class, $instance, true );
     }
 

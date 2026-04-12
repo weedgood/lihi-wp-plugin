@@ -16,10 +16,15 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/settings.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/client/lihi-exceptions.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/client/lihi-client-interface.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/client/lihi-client.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/service/lihi-token-store.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/service/lihi-service.php';
 
-// Stop here when the email has not been configured yet; show a notice instead.
-// Class definitions above are always available; only feature hooks are skipped.
+require_once plugin_dir_path( __FILE__ ) . 'includes/add-shorturl-column.php';
+
+// Show a setup notice when the email has not been configured yet.
+// Feature hooks in add-shorturl-column.php guard themselves on lihi_email();
+// the AJAX handler is always registered so stale buttons get a friendly error
+// instead of WordPress's bare "0" response.
 if ( lihi_email() === '' ) {
     add_action( 'admin_notices', function () {
         if ( ! current_user_can( 'manage_options' ) ) {
@@ -37,7 +42,4 @@ if ( lihi_email() === '' ) {
             )
             . '</p></div>';
     } );
-    return;
 }
-
-require_once plugin_dir_path( __FILE__ ) . 'includes/add-shorturl-column.php';

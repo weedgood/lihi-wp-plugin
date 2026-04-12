@@ -24,6 +24,10 @@ msgstr "Lihi API 未回傳 token。"
 msgid "No short_url returned from Lihi API."
 msgstr "Lihi API 未回傳 short_url。"
 
+#: includes/service/lihi-service.php
+msgid "Could not resolve URL for %1$s %2$d."
+msgstr "無法取得 %1$s %2$d 的 URL。"
+
 #: includes/add-shorturl-column.php
 msgid "Copied!"
 msgstr "已複製！"
@@ -35,6 +39,10 @@ msgstr "無效的 ID 或類型。"
 #: includes/add-shorturl-column.php
 msgid "Lihi login failed. Please check the email in Settings → Lihi Short URL."
 msgstr "Lihi 登入失敗，請確認「設定 → Lihi 短網址」的 Email 是否正確。"
+
+#: includes/add-shorturl-column.php
+msgid "Lihi email is not configured. Please set it in Settings → Lihi Short URL."
+msgstr "Lihi 尚未設定 Email，請至「設定 → Lihi 短網址」填寫。"
 
 #: includes/add-shorturl-column.php
 msgid "Lihi API rejected the request data."

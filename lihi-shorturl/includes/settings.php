@@ -45,6 +45,15 @@ add_action( 'admin_init', function () {
     );
 } );
 
+// Invalidate cached token when the email changes — the old JWT belongs to a
+// different Lihi account. Covers add / update / delete of the option.
+$lihi_flush_token = function () {
+    lihi_token_store()->flush();
+};
+add_action( 'add_option_lihi_email',    $lihi_flush_token );
+add_action( 'update_option_lihi_email', $lihi_flush_token );
+add_action( 'delete_option_lihi_email', $lihi_flush_token );
+
 // Add the settings page under the Settings menu.
 add_action( 'admin_menu', function () {
     add_options_page(

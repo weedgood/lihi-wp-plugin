@@ -8,7 +8,7 @@ A WordPress admin plugin that integrates with the [Lihi](https://lihi.io) URL sh
 - **Media attachment support** — Lihi button appears in the attachment detail panel of the media grid view.
 - **Get-or-create** — fetches the existing short link for a post from Lihi; creates one automatically if none exists.
 - **One-click copy** — button copies the short URL to the clipboard and briefly shows "Copied!".
-- **Lazy auth** — authenticates against the Lihi API only when a short URL is actually needed; stores the JWT in an `httponly` cookie and refreshes it automatically when expired.
+- **Lazy auth** — authenticates against the Lihi API only when a short URL is actually needed; caches the JWT in a site-scoped transient shared across all admins and refreshes it automatically when expired or when the configured email changes.
 - **Settings page** — configure the Lihi API email under Settings → Lihi Short URL. Until the email is saved, an admin notice links directly to the settings page and the plugin's features are disabled.
 - **i18n ready** — full Traditional Chinese (zh_TW) translation included; text domain `lihi-shorturl`.
 
@@ -63,25 +63,27 @@ docker compose --profile test exec phpunit vendor/bin/phpunit -c phpunit.xml
 ```
 lihi-shorturl/
 ├── lihi-shorturl.php          Plugin entry point; admin-only guard, text domain loading
-├── bootstrap.php              Loads class files first, then checks email guard; only feature hooks are skipped when email is unset
+├── bootstrap.php              Loads class files unconditionally; registers an admin notice when email is unset (UI hooks self-guard in add-shorturl-column.php)
 ├── assets/
-│   └── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state; displays errors via alert()
+│   └── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state; errors shown via auto-dismissing WP .notice.notice-error
 └── includes/
-    ├── helper.php             is_production(), lihi_api_domain(), lihi_redirect_domain(), lihi_email() (reads lihi_email option), lihi_api_key(), lihi_client(), lihi_service()
-    ├── settings.php           Settings page under Settings → Lihi Short URL; stores lihi_email via Options API
-    ├── add-shorturl-column.php Column registration, attachment panel button, wp_ajax_lihi_copy_url handler
+    ├── helper.php             is_production(), lihi_api_domain(), lihi_redirect_domain(), lihi_email() (reads lihi_email option), lihi_api_key(), lihi_client() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
+    ├── settings.php           Settings page under Settings → Lihi Short URL; stores lihi_email via Options API; flushes the cached token on add/update/delete of the option
+    ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler
     ├── client/
     │   ├── lihi-client-interface.php   Interface with full phpDoc; every method except login() takes $token as first param
-    │   └── lihi-client.php             Production HTTP client; token passed per-call, not stored on instance
+    │   ├── lihi-client.php             Production HTTP client; token passed per-call, not stored on instance
+    │   └── lihi-exceptions.php         Typed exception hierarchy (Auth / Validation / NotFound / TokenInvalid / Server)
     └── service/
-        └── lihi-service.php            Business logic: login(), has_valid_token(), get_token() (lazy auth + cookie), get_or_create_short_url()
+        ├── lihi-token-store.php        Lihi_Token_Store: encapsulates the lihi_token transient + lihi_token_lock; get/set/delete/acquire_lock/release_lock/flush
+        └── lihi-service.php            Business logic: login(), get_or_create_short_url(); get_token() uses Lihi_Token_Store for transient-first, lock-guarded login
 ```
 
 ### Auth flow
 
 1. When the editor clicks the Lihi button, `lihi-button.js` triggers an AJAX call to `wp_ajax_lihi_copy_url`.
-2. `Lihi_Service::get_token()` checks in order: (a) valid `lihi_token` cookie; (b) WordPress transient keyed by user ID; (c) atomic `wp_cache_add` lock — only one concurrent request calls `login()`, the rest poll the transient and reuse the result. After a 3 s timeout, waiters fall back to calling `login()` themselves.
-3. On fresh login the JWT is stored in both a transient and a `Strict`/`httponly`/`secure` cookie (TTL: 1 day).
+2. `Lihi_Service::get_token()` checks in order: (a) the site-scoped `lihi_token` transient; (b) atomic `wp_cache_add` lock — only one concurrent request calls `login()`, the rest poll the transient and reuse the result. After a 3 s timeout, waiters fall back to calling `login()` themselves.
+3. On fresh login the JWT is stored in the transient (TTL: 1 day). Updating or clearing the `lihi_email` option flushes the transient under the same lock so a stale JWT can't leak across accounts.
 
 ### Short URL flow
 

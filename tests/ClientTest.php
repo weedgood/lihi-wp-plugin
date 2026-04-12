@@ -125,6 +125,14 @@ class ClientTest extends TestCase
     }
 
     /** @test */
+    public function create_site_url_throws_validation_on_400(): void
+    {
+        $this->mockRequest(400, '{"result":false,"message":"url required"}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Validation_Exception::class);
+        $this->makeClient()->create_site_url('test-token', []);
+    }
+
+    /** @test */
     public function update_site_url_sends_put_with_id_in_path(): void
     {
         $capture = $this->mockRequest(200, '{"result":true,"data":{"id":99,"url":"https://new.com"}}');
