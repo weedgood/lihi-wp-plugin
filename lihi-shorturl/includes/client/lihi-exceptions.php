@@ -14,6 +14,9 @@ class Lihi_Auth_Exception extends Lihi_Exception {}
 /** HTTP 400 — required fields missing or invalid. */
 class Lihi_Validation_Exception extends Lihi_Exception {}
 
+/** HTTP 400 on login — email missing or not registered with Lihi. */
+class Lihi_Email_Exception extends Lihi_Validation_Exception {}
+
 /** HTTP 404 HTML — resource not found. */
 class Lihi_Not_Found_Exception extends Lihi_Exception {}
 

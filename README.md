@@ -73,7 +73,7 @@ lihi-shorturl/
     ├── client/
     │   ├── lihi-client-interface.php   Interface with full phpDoc; every method except login() takes $token as first param
     │   ├── lihi-client.php             Production HTTP client; token passed per-call, not stored on instance
-    │   └── lihi-exceptions.php         Typed exception hierarchy (Auth / Validation / NotFound / TokenInvalid / Server)
+    │   └── lihi-exceptions.php         Typed exception hierarchy (Auth / Validation / Email / NotFound / TokenInvalid / Server)
     └── service/
         ├── lihi-token-store.php        Lihi_Token_Store: encapsulates the lihi_token transient + lihi_token_lock; get/set/delete/acquire_lock/release_lock/flush
         └── lihi-service.php            Business logic: login(), get_or_create_short_url(); get_token() uses Lihi_Token_Store for transient-first, lock-guarded login

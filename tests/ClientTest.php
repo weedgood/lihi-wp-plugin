@@ -293,11 +293,19 @@ class ClientTest extends TestCase
     }
 
     /** @test */
-    public function login_throws_validation_exception_on_400(): void
+    public function login_throws_email_exception_on_400(): void
     {
         $this->mockRequest(400, '{"result":false,"msg":{"email":["The email field is required."]}}');
-        $this->expectException(\Lihi\ShortUrl\Lihi_Validation_Exception::class);
+        $this->expectException(\Lihi\ShortUrl\Lihi_Email_Exception::class);
         $this->makeClient()->login('', '');
+    }
+
+    /** @test */
+    public function login_throws_auth_exception_on_400_without_email_key(): void
+    {
+        $this->mockRequest(400, '{"result":false,"msg":{"api_key":["The api_key field is required."]}}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Auth_Exception::class);
+        $this->makeClient()->login('test@example.com', '');
     }
 
     /** @test */

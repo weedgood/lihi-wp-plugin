@@ -30,8 +30,8 @@ class Lihi_Client implements Lihi_Client_Interface {
     // -------------------------------------------------------------------------
 
     /**
-     * @throws Lihi_Auth_Exception      result:false (e.g. wrong api_key)
-     * @throws Lihi_Validation_Exception missing required fields (HTTP 400)
+     * @throws Lihi_Email_Exception      HTTP 400 with "email" in msg — email missing/invalid
+     * @throws Lihi_Auth_Exception       HTTP 400 without "email" in msg, or result:false — api_key rejected
      * @throws Lihi_Server_Exception     non-JSON / server error
      */
     public function login( string $email, string $api_key, string $country = 'TW' ): array {
@@ -44,7 +44,11 @@ class Lihi_Client implements Lihi_Client_Interface {
         $data = $this->decode( $code, $body, false );
 
         if ( $code === 400 ) {
-            throw new Lihi_Validation_Exception( $this->msg( $data ) );
+            $msg = $data['msg'] ?? null;
+            if ( is_array( $msg ) && array_key_exists( 'email', $msg ) ) {
+                throw new Lihi_Email_Exception( $this->msg( $data ) );
+            }
+            throw new Lihi_Auth_Exception( $this->msg( $data ) );
         }
 
         if ( ( $data['result'] ?? true ) === false ) {

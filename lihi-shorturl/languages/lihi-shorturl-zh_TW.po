@@ -37,16 +37,21 @@ msgid "Invalid post ID or type."
 msgstr "無效的 ID 或類型。"
 
 #: includes/add-shorturl-column.php
-msgid "Lihi login failed. Please check the email in Settings → Lihi Short URL."
-msgstr "Lihi 登入失敗，請確認「設定 → Lihi 短網址」的 Email 是否正確。"
+msgid "Lihi API key was rejected — this plugin version is no longer supported. Please update the plugin."
+msgstr "Lihi API 金鑰已被拒絕，此外掛版本已無法使用，請更新外掛。"
+
+#: includes/add-shorturl-column.php
+msgid "Lihi rejected the configured email. Please verify it in Settings → Lihi Short URL."
+msgstr "Lihi 無法接受目前設定的 Email，請至「設定 → Lihi 短網址」確認。"
 
 #: includes/add-shorturl-column.php
 msgid "Lihi email is not configured. Please set it in Settings → Lihi Short URL."
 msgstr "Lihi 尚未設定 Email，請至「設定 → Lihi 短網址」填寫。"
 
 #: includes/add-shorturl-column.php
-msgid "Lihi API rejected the request data."
-msgstr "Lihi API 拒絕此請求的資料。"
+#. translators: %s: validation error message returned by the Lihi API.
+msgid "Lihi API rejected the request: %s"
+msgstr "Lihi API 拒絕此請求：%s"
 
 #: includes/add-shorturl-column.php
 msgid "Failed to generate short URL. Please try again later."

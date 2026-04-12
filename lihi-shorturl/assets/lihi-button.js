@@ -43,6 +43,8 @@ document.addEventListener( 'click', async ( e ) => {
 
 		if ( ! data.success ) {
 			showNotice( 'Lihi: ' + data.data );
+			await new Promise( ( resolve ) => setTimeout( resolve, lihiButton.resetDelay ) );
+			
 			return;
 		}
 

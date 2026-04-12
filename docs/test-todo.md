@@ -84,6 +84,8 @@
 - [x] body 為空字串 → 回傳空陣列
 - [x] body 為無效 JSON → 拋出 RuntimeException
 - [x] 回應碼 400+ → 拋出 RuntimeException（訊息含 status code）
+- [x] login() 回應碼 400 且 msg 含 `email` key → 拋出 `Lihi_Email_Exception`
+- [x] login() 回應碼 400 但 msg 無 `email` key → 拋出 `Lihi_Auth_Exception`（api_key 問題）
 - [x] wp_remote_request 回傳 WP_Error → 拋出 RuntimeException
 
 ### 各方法路徑與 HTTP method
@@ -105,7 +107,7 @@
 - [x] type 為空 → wp_send_json_error
 - [x] service 正常回傳 url → wp_send_json_success(['url' => ...])
 - [x] service 拋出一般例外 → wp_send_json_error 友善訊息（不暴露內部細節）
-- [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「Lihi login failed...」訊息
+- [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「plugin version is no longer supported」訊息（api_key 被拒，表示外掛版本過舊）
 
 ---
 
