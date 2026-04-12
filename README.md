@@ -1,6 +1,6 @@
 # Lihi WP Plugin
 
-A WordPress admin plugin that integrates with the [Lihi](https://lihi.io) URL shortener service. It adds a **Shout URL** column to all public post-type list tables and a Lihi button to the media attachment detail panel, letting editors generate and copy a Lihi short URL with a single click.
+A WordPress admin plugin that integrates with the [Lihi](https://lihi.io) URL shortener service. It adds a **Short URL** column to all public post-type list tables and a Lihi button to the media attachment detail panel, letting editors generate and copy a Lihi short URL with a single click.
 
 ## Features
 

@@ -95,4 +95,5 @@
 - [x] item_id 為 0 → wp_send_json_error
 - [x] type 為空 → wp_send_json_error
 - [x] service 正常回傳 url → wp_send_json_success(['url' => ...])
-- [x] service 拋出例外 → wp_send_json_error(message)
+- [x] service 拋出一般例外 → wp_send_json_error 友善訊息（不暴露內部細節）
+- [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「Lihi login failed...」訊息

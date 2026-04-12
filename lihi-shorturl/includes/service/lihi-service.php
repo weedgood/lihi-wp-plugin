@@ -36,10 +36,12 @@ class Lihi_Service {
             return false;
         }
 
-        $parts   = explode( '.', $token );
-        $payload = json_decode( base64_decode( strtr( $parts[1] ?? '', '-_', '+/' ) ), true );
+        $parts = explode( '.', $token );
+        $b64   = strtr( $parts[1] ?? '', '-_', '+/' );
+        $b64  .= str_repeat( '=', ( 4 - strlen( $b64 ) % 4 ) % 4 );
+        $payload = json_decode( (string) base64_decode( $b64, true ), true );
 
-        return isset( $payload['exp'] ) && $payload['exp'] > time();
+        return is_array( $payload ) && isset( $payload['exp'] ) && $payload['exp'] > time();
     }
 
     /**

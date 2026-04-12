@@ -2,7 +2,7 @@
 namespace Lihi\ShortUrl;
 
 /**
- * Adds a "Shout URL" column to all public post type list tables.
+ * Adds a "Short URL" column to all public post type list tables.
  *
  * Dynamically registers column hooks for every public post type so that
  * custom post types are supported without extra configuration.
@@ -42,26 +42,26 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
     ] );
 } );
 
-// Register column header and button for the current post type only.
-add_action( 'init', function () {
-    $post_type = sanitize_key( $_GET['post_type'] ?? 'post' );
+// Register column header and button for every public post type.
+add_action( 'admin_init', function () {
+    foreach ( get_post_types( [ 'public' => true ], 'names' ) as $post_type ) {
+        add_filter( "manage_{$post_type}_posts_columns", function ( $columns ) {
+            $columns['lihi'] = __( 'Short URL', 'lihi-shorturl' );
+            return $columns;
+        } );
 
-    add_filter( "manage_{$post_type}_posts_columns", function ( $columns ) {
-        $columns['lihi'] = __( 'Shout URL', 'lihi-shorturl' );
-        return $columns;
-    } );
-
-    add_action( "manage_{$post_type}_posts_custom_column", function ( $column, $post_id ) use ( $post_type ) {
-        if ( $column === 'lihi' ) {
-            echo '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post_id ) . '" data-type="' . esc_attr( $post_type ) . '">Lihi</button>';
-        }
-    }, 10, 2 );
+        add_action( "manage_{$post_type}_posts_custom_column", function ( $column, $post_id ) use ( $post_type ) {
+            if ( $column === 'lihi' ) {
+                echo '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post_id ) . '" data-type="' . esc_attr( $post_type ) . '">Lihi</button>';
+            }
+        }, 10, 2 );
+    }
 } );
 
 // Add a Lihi button to the attachment detail panel in the media grid view.
 add_filter( 'attachment_fields_to_edit', function ( $form_fields, $post ) {
     $form_fields['lihi'] = [
-        'label' => __( 'Shout URL', 'lihi-shorturl' ),
+        'label' => __( 'Short URL', 'lihi-shorturl' ),
         'input' => 'html',
         'html'  => '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post->ID ) . '" data-type="' . esc_attr( $post->post_type ) . '">Lihi</button>',
     ];
@@ -76,14 +76,19 @@ add_action( 'wp_ajax_lihi_copy_url', function () {
     $type    = sanitize_key( $_POST['type'] ?? '' );
 
     if ( ! $item_id || ! $type ) {
-        wp_send_json_error( 'Invalid post ID or type.' );
+        wp_send_json_error( __( 'Invalid post ID or type.', 'lihi-shorturl' ) );
         return;
     }
 
     try {
         $url = lihi_service()->get_or_create_short_url( $item_id, $type );
         wp_send_json_success( [ 'url' => $url ] );
+    } catch ( Lihi_Auth_Exception $e ) {
+        wp_send_json_error( __( 'Lihi login failed. Please check the email in Settings → Lihi Short URL.', 'lihi-shorturl' ) );
+    } catch ( Lihi_Validation_Exception $e ) {
+        wp_send_json_error( __( 'Lihi API rejected the request data.', 'lihi-shorturl' ) );
     } catch ( \Exception $e ) {
-        wp_send_json_error( $e->getMessage() );
+        error_log( '[Lihi] ' . $e->getMessage() );
+        wp_send_json_error( __( 'Failed to generate short URL. Please try again later.', 'lihi-shorturl' ) );
     }
 } );

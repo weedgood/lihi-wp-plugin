@@ -147,6 +147,31 @@ class AjaxCopyUrlTest extends TestCase
 
         ($this->getAjaxHandler())();
 
-        $this->assertSame('API error', $errorMsg);
+        $this->assertSame('Failed to generate short URL. Please try again later.', $errorMsg);
+    }
+
+    /** @test */
+    public function returns_friendly_message_on_auth_exception(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['type']    = 'post';
+
+        $service = $this->mockService();
+        $service->shouldReceive('get_or_create_short_url')
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Auth_Exception('API Key error'));
+        \Lihi\ShortUrl\lihi_service($service);
+
+        Functions\when('check_ajax_referer')->justReturn(true);
+
+        $errorMsg = null;
+        Functions\expect('wp_send_json_error')
+            ->once()
+            ->andReturnUsing(function ($msg) use (&$errorMsg) {
+                $errorMsg = $msg;
+            });
+
+        ($this->getAjaxHandler())();
+
+        $this->assertStringContainsString('Lihi login failed', $errorMsg);
     }
 }

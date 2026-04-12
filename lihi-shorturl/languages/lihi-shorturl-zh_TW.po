@@ -13,7 +13,7 @@ msgstr ""
 
 #: includes/add-lihi-column.php
 #: includes/add-shorturl-column.php
-msgid "Shout URL"
+msgid "Short URL"
 msgstr "短網址"
 
 #: includes/service/lihi-service.php
@@ -31,6 +31,18 @@ msgstr "已複製！"
 #: includes/add-shorturl-column.php
 msgid "Invalid post ID or type."
 msgstr "無效的 ID 或類型。"
+
+#: includes/add-shorturl-column.php
+msgid "Lihi login failed. Please check the email in Settings → Lihi Short URL."
+msgstr "Lihi 登入失敗，請確認「設定 → Lihi 短網址」的 Email 是否正確。"
+
+#: includes/add-shorturl-column.php
+msgid "Lihi API rejected the request data."
+msgstr "Lihi API 拒絕此請求的資料。"
+
+#: includes/add-shorturl-column.php
+msgid "Failed to generate short URL. Please try again later."
+msgstr "產生短網址失敗，請稍後再試。"
 
 #: includes/settings.php
 msgid "Email"
