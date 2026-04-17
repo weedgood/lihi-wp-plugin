@@ -1,6 +1,6 @@
 {
     "name": "lihi/shorturl",
-    "description": "Lihi WP Plugin",
+    "description": "lihi WP Plugin",
     "type": "wordpress-plugin",
     "require-dev": {
         "phpunit/phpunit": "^9",

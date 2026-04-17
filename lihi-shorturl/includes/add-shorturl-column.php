@@ -54,7 +54,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 // pair (manage_media_columns / manage_media_custom_column), handled separately.
 add_action( 'admin_init', function () {
     $render_button = function ( $post_id, $post_type ) {
-        echo '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post_id ) . '" data-type="' . esc_attr( $post_type ) . '">Lihi</button>';
+        echo '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post_id ) . '" data-type="' . esc_attr( $post_type ) . '">lihi</button>';
     };
 
     foreach ( get_post_types( [ 'public' => true ], 'names' ) as $post_type ) {
@@ -87,12 +87,12 @@ add_action( 'admin_init', function () {
     }, 10, 2 );
 } );
 
-// Add a Lihi button to the attachment detail panel in the media grid view.
+// Add a lihi button to the attachment detail panel in the media grid view.
 add_filter( 'attachment_fields_to_edit', function ( $form_fields, $post ) {
     $form_fields['lihi'] = [
         'label' => __( 'Short URL', 'lihi-shorturl' ),
         'input' => 'html',
-        'html'  => '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post->ID ) . '" data-type="' . esc_attr( $post->post_type ) . '">Lihi</button>',
+        'html'  => '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post->ID ) . '" data-type="' . esc_attr( $post->post_type ) . '">lihi</button>',
     ];
     return $form_fields;
 }, 10, 2 );
@@ -100,7 +100,7 @@ add_filter( 'attachment_fields_to_edit', function ( $form_fields, $post ) {
 } // end lihi_email() guard
 
 /**
- * AJAX handler: fetch or create a Lihi short URL for a post and return it
+ * AJAX handler: fetch or create a lihi short URL for a post and return it
  * to the browser for clipboard copy.
  *
  * Exported as a named function (rather than an inline closure) so tests can
@@ -110,7 +110,7 @@ function ajax_copy_url(): void {
     check_ajax_referer( 'lihi_copy_url', 'nonce' );
 
     if ( lihi_email() === '' ) {
-        wp_send_json_error( __( 'Lihi email is not configured. Please set it in Settings → Lihi Short URL.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'lihi email is not configured. Please set it in Settings → lihi Short URL.', 'lihi-shorturl' ) );
         return;
     }
 
@@ -126,14 +126,14 @@ function ajax_copy_url(): void {
         $url = lihi_service()->get_or_create_short_url( $item_id, $type );
         wp_send_json_success( [ 'url' => $url ] );
     } catch ( Lihi_Auth_Exception $e ) {
-        wp_send_json_error( __( 'Lihi API key was rejected — this plugin version is no longer supported. Please update the plugin.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'lihi API key was rejected — this plugin version is no longer supported. Please update the plugin.', 'lihi-shorturl' ) );
     } catch ( Lihi_Email_Exception $e ) {
-        wp_send_json_error( __( 'Lihi rejected the configured email. Please verify it in Settings → Lihi Short URL.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'lihi rejected the configured email. Please verify it in Settings → lihi Short URL.', 'lihi-shorturl' ) );
     } catch ( Lihi_Validation_Exception $e ) {
-        /* translators: %s: validation error message returned by the Lihi API. */
-        wp_send_json_error( sprintf( __( 'Lihi API rejected the request: %s', 'lihi-shorturl' ), $e->getMessage() ) );
+        /* translators: %s: validation error message returned by the lihi API. */
+        wp_send_json_error( sprintf( __( 'lihi API rejected the request: %s', 'lihi-shorturl' ), $e->getMessage() ) );
     } catch ( \Exception $e ) {
-        error_log( '[Lihi] ' . $e->getMessage() );
+        error_log( '[lihi] ' . $e->getMessage() );
         wp_send_json_error( __( 'Failed to generate short URL. Please try again later.', 'lihi-shorturl' ) );
     }
 }

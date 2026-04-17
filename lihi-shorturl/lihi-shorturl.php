@@ -2,10 +2,10 @@
 namespace Lihi\ShortUrl;
 
 /**
- * Plugin Name: Lihi Short URL
- * Description: Adds a one-click "Lihi" button to generate and copy short URLs, including posts, pages, media and all post-type list tables.
+ * Plugin Name: lihi Short URL
+ * Description: Adds a one-click "lihi" button to generate and copy short URLs, including posts, pages, media and all post-type list tables.
  * Version: 0.1.0
- * Author: Lihi
+ * Author: lihi
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

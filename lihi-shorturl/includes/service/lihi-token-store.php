@@ -2,10 +2,10 @@
 namespace Lihi\ShortUrl;
 
 /**
- * Storage and locking for the shared Lihi JWT.
+ * Storage and locking for the shared lihi JWT.
  *
  * Wraps the underlying WordPress transient + wp_cache lock so no other code
- * needs to know the cache keys. The token is site-scoped (one Lihi account per
+ * needs to know the cache keys. The token is site-scoped (one lihi account per
  * site), so a single shared entry is correct.
  */
 

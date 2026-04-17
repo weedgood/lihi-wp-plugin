@@ -19,7 +19,7 @@ function is_production(): bool {
 }
 
 /**
- * Return the Lihi API base URL for the current environment.
+ * Return the lihi API base URL for the current environment.
  *
  * @return string "https://app.lihi.com" in production, "https://app.lihidev.com" otherwise.
  */
@@ -30,7 +30,7 @@ function lihi_api_domain(): string {
 }
 
 /**
- * Return the Lihi redirect domain for the current environment.
+ * Return the lihi redirect domain for the current environment.
  *
  * @return string "redirect.lihi.com" in production, "redirect.lihidev.com" otherwise.
  */
@@ -41,7 +41,7 @@ function lihi_redirect_domain(): string {
 }
 
 /**
- * Return the email address used to authenticate with the Lihi API.
+ * Return the email address used to authenticate with the lihi API.
  *
  * Reads the value stored in the plugin settings (Options API).
  *
@@ -52,7 +52,7 @@ function lihi_email(): string {
 }
 
 /**
- * Return the Lihi API key for the current environment.
+ * Return the lihi API key for the current environment.
  *
  * @return string Shared dev key in non-production; empty string in production.
  */

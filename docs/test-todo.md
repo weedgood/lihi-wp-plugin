@@ -104,7 +104,7 @@
 
 ## AJAX Handler: lihi_copy_url
 
-- [x] email 為空 → wp_send_json_error「Lihi email is not configured…」
+- [x] email 為空 → wp_send_json_error「lihi email is not configured…」
 - [x] item_id 為 0 → wp_send_json_error
 - [x] type 為空 → wp_send_json_error
 - [x] service 正常回傳 url → wp_send_json_success(['url' => ...])
@@ -124,5 +124,5 @@
 - [x] `manage_media_custom_column` 輸出 `data-type="attachment"` 按鈕
 - [x] `attachment_fields_to_edit` 新增 `lihi` 欄位含按鈕
 - [x] `admin_init` 註冊 `lihi_email` setting
-- [x] `admin_menu` 註冊 Settings → Lihi Short URL 頁面
+- [x] `admin_menu` 註冊 Settings → lihi Short URL 頁面
 - [x] `update_option('lihi_email', …)` → `lihi_token` transient 被清除

@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-/** Base exception for all Lihi API errors. */
+/** Base exception for all lihi API errors. */
 class Lihi_Exception extends \RuntimeException {}
 
 /** HTTP 200 result:false — e.g. wrong api_key. */
@@ -14,7 +14,7 @@ class Lihi_Auth_Exception extends Lihi_Exception {}
 /** HTTP 400 — required fields missing or invalid. */
 class Lihi_Validation_Exception extends Lihi_Exception {}
 
-/** HTTP 400 on login — email missing or not registered with Lihi. */
+/** HTTP 400 on login — email missing or not registered with lihi. */
 class Lihi_Email_Exception extends Lihi_Validation_Exception {}
 
 /** HTTP 404 HTML — resource not found. */
@@ -26,7 +26,7 @@ class Lihi_Server_Exception extends Lihi_Exception {}
 /**
  * Token is missing or has been revoked server-side.
  *
- * Detected by the fixed HTML title "網站升級中..." returned by the Lihi API
+ * Detected by the fixed HTML title "網站升級中..." returned by the lihi API
  * for all requests that lack a valid Authorization header.
  * Extends Lihi_Server_Exception so general server-error catch blocks still apply.
  */

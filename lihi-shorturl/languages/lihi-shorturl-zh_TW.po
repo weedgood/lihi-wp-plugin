@@ -1,8 +1,8 @@
-# Lihi WP Plugin - Traditional Chinese Translation
-# Copyright (C) 2026 Lihi
+# lihi WP Plugin - Traditional Chinese Translation
+# Copyright (C) 2026 lihi
 msgid ""
 msgstr ""
-"Project-Id-Version: Lihi WP Plugin 0.1.0\n"
+"Project-Id-Version: lihi WP Plugin 0.1.0\n"
 "POT-Creation-Date: 2026-04-09\n"
 "PO-Revision-Date: 2026-04-09\n"
 "MIME-Version: 1.0\n"
@@ -17,12 +17,12 @@ msgid "Short URL"
 msgstr "短網址"
 
 #: includes/service/lihi-service.php
-msgid "No token returned from Lihi API."
-msgstr "Lihi API 未回傳 token。"
+msgid "No token returned from lihi API."
+msgstr "lihi API 未回傳 token。"
 
 #: includes/service/lihi-service.php
-msgid "No short_url returned from Lihi API."
-msgstr "Lihi API 未回傳 short_url。"
+msgid "No short_url returned from lihi API."
+msgstr "lihi API 未回傳 short_url。"
 
 #: includes/service/lihi-service.php
 msgid "Could not resolve URL for %1$s %2$d."
@@ -37,21 +37,21 @@ msgid "Invalid post ID or type."
 msgstr "無效的 ID 或類型。"
 
 #: includes/add-shorturl-column.php
-msgid "Lihi API key was rejected — this plugin version is no longer supported. Please update the plugin."
-msgstr "Lihi API 金鑰已被拒絕，此外掛版本已無法使用，請更新外掛。"
+msgid "lihi API key was rejected — this plugin version is no longer supported. Please update the plugin."
+msgstr "lihi API 金鑰已被拒絕，此外掛版本已無法使用，請更新外掛。"
 
 #: includes/add-shorturl-column.php
-msgid "Lihi rejected the configured email. Please verify it in Settings → Lihi Short URL."
-msgstr "Lihi 無法接受目前設定的 Email，請至「設定 → Lihi 短網址」確認。"
+msgid "lihi rejected the configured email. Please verify it in Settings → lihi Short URL."
+msgstr "lihi 無法接受目前設定的 Email，請至「設定 → lihi 短網址」確認。"
 
 #: includes/add-shorturl-column.php
-msgid "Lihi email is not configured. Please set it in Settings → Lihi Short URL."
-msgstr "Lihi 尚未設定 Email，請至「設定 → Lihi 短網址」填寫。"
+msgid "lihi email is not configured. Please set it in Settings → lihi Short URL."
+msgstr "lihi 尚未設定 Email，請至「設定 → lihi 短網址」填寫。"
 
 #: includes/add-shorturl-column.php
-#. translators: %s: validation error message returned by the Lihi API.
-msgid "Lihi API rejected the request: %s"
-msgstr "Lihi API 拒絕此請求：%s"
+#. translators: %s: validation error message returned by the lihi API.
+msgid "lihi API rejected the request: %s"
+msgstr "lihi API 拒絕此請求：%s"
 
 #: includes/add-shorturl-column.php
 msgid "Failed to generate short URL. Please try again later."
@@ -62,22 +62,22 @@ msgid "Email"
 msgstr "Email"
 
 #: includes/settings.php
-msgid "Lihi Short URL"
-msgstr "Lihi 短網址"
+msgid "lihi Short URL"
+msgstr "lihi 短網址"
 
 #: includes/settings.php
-msgid "Required. The email address used to log in to the Lihi API."
-msgstr "必填。用於登入 Lihi API 的 Email 地址。"
+msgid "Required. The email address used to log in to the lihi API."
+msgstr "必填。用於登入 lihi API 的 Email 地址。"
 
 #: includes/settings.php
-msgid "Lihi Short URL Settings"
-msgstr "Lihi 短網址設定"
+msgid "lihi Short URL Settings"
+msgstr "lihi 短網址設定"
 
 
 #: bootstrap.php
-msgid "Lihi Short URL: please <a href=\"%s\">configure your email address</a> to enable the plugin."
-msgstr "Lihi 短網址：請先至 <a href=\"%s\">設定頁</a> 填寫 Email 以啟用外掛。"
+msgid "lihi Short URL: please <a href=\"%s\">configure your email address</a> to enable the plugin."
+msgstr "lihi 短網址：請先至 <a href=\"%s\">設定頁</a> 填寫 Email 以啟用外掛。"
 
 #. Description of the plugin
-msgid "Adds a one-click \"Lihi\" button to generate and copy short URLs, including posts, pages, media and all post-type list tables."
-msgstr "在列表中新增一鍵生成短網址並複製的按鈕 \"Lihi\"，包含文章、頁面與媒體等所有內容行列表。"
+msgid "Adds a one-click \"lihi\" button to generate and copy short URLs, including posts, pages, media and all post-type list tables."
+msgstr "在列表中新增一鍵生成短網址並複製的按鈕 \"lihi\"，包含文章、頁面與媒體等所有內容行列表。"

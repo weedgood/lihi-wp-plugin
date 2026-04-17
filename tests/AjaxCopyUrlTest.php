@@ -57,7 +57,7 @@ class AjaxCopyUrlTest extends TestCase
 
         \Lihi\ShortUrl\ajax_copy_url();
 
-        $this->assertStringContainsString('Lihi email is not configured', $errorMsg);
+        $this->assertStringContainsString('lihi email is not configured', $errorMsg);
     }
 
     /** @test */

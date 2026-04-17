@@ -2,7 +2,7 @@
 namespace Lihi\ShortUrl;
 
 /**
- * Lihi API client contract.
+ * lihi API client contract.
  *
  * All client implementations (production and mock) must satisfy this interface.
  * Base URL: https://app.lihi.com/api/wordpress/v1 (production)
@@ -31,7 +31,7 @@ interface Lihi_Client_Interface {
      * registration (TW/HK → zh-TW, others → en).
      *
      * @param string $email   WordPress admin email.
-     * @param string $api_key Lihi API key (server-side WORDPRESS_API_KEY).
+     * @param string $api_key lihi API key (server-side WORDPRESS_API_KEY).
      * @param string $country Optional. ISO country code, default 'TW'.
      * @return array{result: bool, token: string}
      */

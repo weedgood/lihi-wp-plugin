@@ -34,8 +34,8 @@ if ( lihi_email() === '' ) {
         echo '<div class="notice notice-warning"><p>'
             . wp_kses(
                 sprintf(
-                    /* translators: %s: URL to the Lihi Short URL settings page */
-                    __( 'Lihi Short URL: please <a href="%s">configure your email address</a> to enable the plugin.', 'lihi-shorturl' ),
+                    /* translators: %s: URL to the lihi Short URL settings page */
+                    __( 'lihi Short URL: please <a href="%s">configure your email address</a> to enable the plugin.', 'lihi-shorturl' ),
                     $url
                 ),
                 [ 'a' => [ 'href' => [] ] ]

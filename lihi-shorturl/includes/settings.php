@@ -2,7 +2,7 @@
 namespace Lihi\ShortUrl;
 
 /**
- * Plugin settings page: allows administrators to configure the Lihi email address.
+ * Plugin settings page: allows administrators to configure the lihi email address.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -37,7 +37,7 @@ add_action( 'admin_init', function () {
                 . esc_attr( $value )
                 . '" class="regular-text" />';
             echo '<p class="description">'
-                . esc_html__( 'Required. The email address used to log in to the Lihi API.', 'lihi-shorturl' )
+                . esc_html__( 'Required. The email address used to log in to the lihi API.', 'lihi-shorturl' )
                 . '</p>';
         },
         'lihi-settings',
@@ -46,7 +46,7 @@ add_action( 'admin_init', function () {
 } );
 
 // Invalidate cached token when the email changes — the old JWT belongs to a
-// different Lihi account. Covers add / update / delete of the option.
+// different lihi account. Covers add / update / delete of the option.
 $lihi_flush_token = function () {
     lihi_token_store()->flush();
 };
@@ -57,8 +57,8 @@ add_action( 'delete_option_lihi_email', $lihi_flush_token );
 // Add the settings page under the Settings menu.
 add_action( 'admin_menu', function () {
     add_options_page(
-        __( 'Lihi Short URL Settings', 'lihi-shorturl' ),
-        __( 'Lihi Short URL', 'lihi-shorturl' ),
+        __( 'lihi Short URL Settings', 'lihi-shorturl' ),
+        __( 'lihi Short URL', 'lihi-shorturl' ),
         'manage_options',
         'lihi-settings',
         function () {

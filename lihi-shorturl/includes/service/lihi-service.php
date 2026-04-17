@@ -2,7 +2,7 @@
 namespace Lihi\ShortUrl;
 
 /**
- * Lihi service layer.
+ * lihi service layer.
  *
  * Encapsulates business logic that sits between the HTTP client and WordPress hooks.
  * Methods throw RuntimeException on failure; callers are responsible for error handling.
@@ -27,7 +27,7 @@ class Lihi_Service {
     }
 
     /**
-     * Authenticate against the Lihi API and return the JWT token.
+     * Authenticate against the lihi API and return the JWT token.
      *
      * @return string JWT token.
      * @throws RuntimeException If the API call fails or returns no token.
@@ -37,14 +37,14 @@ class Lihi_Service {
         $token  = $result['token'] ?? '';
 
         if ( ! $token ) {
-            throw new \RuntimeException( __( 'No token returned from Lihi API.', 'lihi-shorturl' ) );
+            throw new \RuntimeException( __( 'No token returned from lihi API.', 'lihi-shorturl' ) );
         }
 
         return $token;
     }
 
     /**
-     * Return the Lihi short URL for a post, creating it if it does not yet exist.
+     * Return the lihi short URL for a post, creating it if it does not yet exist.
      *
      * On Lihi_Token_Invalid_Exception the cached token is discarded and the
      * call is retried once with a freshly obtained token.
@@ -89,7 +89,7 @@ class Lihi_Service {
         $short_url = $created['data']['short_url'] ?? '';
 
         if ( ! $short_url ) {
-            throw new \RuntimeException( __( 'No short_url returned from Lihi API.', 'lihi-shorturl' ) );
+            throw new \RuntimeException( __( 'No short_url returned from lihi API.', 'lihi-shorturl' ) );
         }
 
         return $short_url;
