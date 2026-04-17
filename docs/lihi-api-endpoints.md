@@ -72,6 +72,7 @@ Query params: `type`, `type_id`, `per_page`, `page`, `keyword`
 
 - `type` + `type_id` 合起來是唯一 key；不帶 `type` 時回傳所有 type 的結果
 - `type_id` 需傳字串
+- 本外掛在呼叫時會將 `type` 串上網站本身的 host（格式 `"{type}:{host}"`，例如 `post:example.com`），以便同一 Lihi 帳號下多個 WordPress 站台共用相同 `type_id` 時仍可區分
 
 Response:
 ```json
@@ -111,11 +112,13 @@ Body（`domain` 必填，`type_id` 必須為字串）:
 {
   "domain": "redirect.lihidev.com",
   "urls": ["https://example.com/?p=42"],
-  "type": "post",
+  "type": "post:example.com",
   "type_id": "42",
   "tags": "wordpress,example.com,post"
 }
 ```
+
+本外掛送出的 `type` 會帶上 WP 站台 host（格式 `"{type}:{host}"`），與 `GET /sites` 的查詢條件一致；`tags` 仍使用未串接的原始 `type`。
 
 Response:
 ```json

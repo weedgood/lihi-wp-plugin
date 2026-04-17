@@ -15,6 +15,10 @@ class ServiceTest extends TestCase
     {
         parent::setUp();
         Monkey\setUp();
+        // fetch_or_create() always resolves the WP host for the namespaced
+        // API type; default both so tests don't have to repeat themselves.
+        Functions\when('home_url')->justReturn('https://example.com');
+        Functions\when('wp_parse_url')->justReturn('example.com');
     }
 
     protected function tearDown(): void
@@ -136,7 +140,7 @@ class ServiceTest extends TestCase
         $client = $this->makeClient();
         $client->shouldNotReceive('login');
         $client->shouldReceive('get_short_links')
-            ->with($cachedToken, 'post', 3)
+            ->with($cachedToken, 'post:example.com', 3)
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(3, 'https://lihi.io/cached')]));
 
@@ -155,7 +159,7 @@ class ServiceTest extends TestCase
         $client = $this->makeClient();
         $client->shouldNotReceive('login');
         $client->shouldReceive('get_short_links')
-            ->with($cachedToken, 'post', 13)
+            ->with($cachedToken, 'post:example.com', 13)
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(13, 'https://lihi.io/double')]));
 
@@ -181,7 +185,7 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn(['token' => $newToken]);
         $client->shouldReceive('get_short_links')
-            ->with($newToken, 'post', 5)
+            ->with($newToken, 'post:example.com', 5)
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(5, 'https://lihi.io/xyz')]));
 
@@ -205,7 +209,7 @@ class ServiceTest extends TestCase
         $client = $this->makeClient();
         $client->shouldNotReceive('login');
         $client->shouldReceive('get_short_links')
-            ->with($newToken, 'post', 9)
+            ->with($newToken, 'post:example.com', 9)
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(9, 'https://lihi.io/waited')]));
 
@@ -231,7 +235,7 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn(['token' => $newToken]);
         $client->shouldReceive('get_short_links')
-            ->with($newToken, 'post', 11)
+            ->with($newToken, 'post:example.com', 11)
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(11, 'https://lihi.io/fallback')]));
 
@@ -281,7 +285,7 @@ class ServiceTest extends TestCase
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->with(Mockery::type('string'), 'post', 42)
+            ->with(Mockery::type('string'), 'post:example.com', 42)
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/existing')]));
         $client->shouldNotReceive('create_site');
@@ -379,9 +383,10 @@ class ServiceTest extends TestCase
         $this->makeService($client)->get_or_create_short_url(42, 'post');
 
         $this->assertSame(['https://example.com/?p=42'], $capturedBody['urls']);
-        $this->assertSame('post', $capturedBody['type']);
+        $this->assertSame('post:example.com', $capturedBody['type']);
         $this->assertSame('42', $capturedBody['type_id']);
         $this->assertSame('redirect.lihidev.com', $capturedBody['domain']);
+        // tags keeps the bare $type, not the host-namespaced form
         $this->assertSame('wordpress,example.com,post', $capturedBody['tags']);
     }
 
@@ -412,6 +417,60 @@ class ServiceTest extends TestCase
         $this->assertSame(['https://example.com/wp-content/uploads/photo.jpg'], $capturedBody['urls']);
     }
 
+    /** @test */
+    public function get_or_create_namespaces_api_type_with_wp_host_for_get_short_links(): void
+    {
+        Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
+
+        // Override the setUp default so we can verify the host propagates into $api_type.
+        Functions\when('home_url')->justReturn('https://shop.example.org');
+        Functions\when('wp_parse_url')->justReturn('shop.example.org');
+
+        $capturedType = null;
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->once()
+            ->andReturnUsing(function ($token, $type, $itemId) use (&$capturedType) {
+                $capturedType = $type;
+                return $this->makeSitesResponse([]);
+            });
+        $client->shouldReceive('create_site')
+            ->andReturn(['data' => ['short_url' => 'https://lihi.io/new']]);
+
+        Functions\when('get_permalink')->justReturn('https://shop.example.org/?p=42');
+        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
+
+        $this->makeService($client)->get_or_create_short_url(42, 'post');
+
+        $this->assertSame('post:shop.example.org', $capturedType);
+    }
+
+    /** @test */
+    public function get_or_create_sends_namespaced_type_but_bare_type_in_tags(): void
+    {
+        Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->andReturn($this->makeSitesResponse([]));
+
+        $capturedBody = null;
+        $client->shouldReceive('create_site')
+            ->once()
+            ->andReturnUsing(function ($token, $body) use (&$capturedBody) {
+                $capturedBody = $body;
+                return ['data' => ['short_url' => 'https://lihi.io/img']];
+            });
+
+        Functions\when('wp_get_attachment_url')->justReturn('https://example.com/uploads/a.jpg');
+        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
+
+        $this->makeService($client)->get_or_create_short_url(7, 'attachment');
+
+        $this->assertSame('attachment:example.com', $capturedBody['type']);
+        $this->assertSame('wordpress,example.com,attachment', $capturedBody['tags']);
+    }
+
     // -------------------------------------------------------------------------
     // get_or_create_short_url() — token-invalid retry
     // -------------------------------------------------------------------------
@@ -424,14 +483,14 @@ class ServiceTest extends TestCase
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->with($staleToken, 'post', 42)
+            ->with($staleToken, 'post:example.com', 42)
             ->once()
             ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
         $client->shouldReceive('login')
             ->once()
             ->andReturn(['token' => $freshToken]);
         $client->shouldReceive('get_short_links')
-            ->with($freshToken, 'post', 42)
+            ->with($freshToken, 'post:example.com', 42)
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/retried')]));
 
@@ -459,7 +518,7 @@ class ServiceTest extends TestCase
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->with($staleToken, 'post', 42)
+            ->with($staleToken, 'post:example.com', 42)
             ->once()
             ->andReturn($this->makeSitesResponse([]));
         $client->shouldReceive('create_site')
@@ -470,7 +529,7 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn(['token' => $freshToken]);
         $client->shouldReceive('get_short_links')
-            ->with($freshToken, 'post', 42)
+            ->with($freshToken, 'post:example.com', 42)
             ->once()
             ->andReturn($this->makeSitesResponse([]));
         $client->shouldReceive('create_site')
@@ -503,14 +562,14 @@ class ServiceTest extends TestCase
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->with($staleToken, 'post', 42)
+            ->with($staleToken, 'post:example.com', 42)
             ->once()
             ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
         $client->shouldReceive('login')
             ->once()
             ->andReturn(['token' => $freshToken]);
         $client->shouldReceive('get_short_links')
-            ->with($freshToken, 'post', 42)
+            ->with($freshToken, 'post:example.com', 42)
             ->once()
             ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
 

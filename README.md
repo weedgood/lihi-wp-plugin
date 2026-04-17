@@ -89,7 +89,7 @@ lihi-shorturl/
 
 1. Editor clicks the **Lihi** button in the post list or media attachment panel.
 2. `lihi-button.js` sends a nonce-protected AJAX request to `wp_ajax_lihi_copy_url`.
-3. `Lihi_Service::get_or_create_short_url()` checks for an existing short link via `get_short_links()`; creates one with `create_site()` if none is found. URL resolution uses `wp_get_attachment_url()` for attachments and `get_permalink()` for all other post types.
+3. `Lihi_Service::get_or_create_short_url()` checks for an existing short link via `get_short_links()`; creates one with `create_site()` if none is found. The API `type` field is namespaced as `"{type}:{host}"` (e.g. `post:example.com`) so the same `type_id` on different WP sites under one Lihi account stays distinct. URL resolution uses `wp_get_attachment_url()` for attachments and `get_permalink()` for all other post types.
 4. The returned `short_url` is written to the clipboard.
 
 ## API Reference

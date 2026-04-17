@@ -63,6 +63,8 @@
 - [x] get_short_links 有多筆結果 → 回傳第一筆相符的 `short_url`
 - [x] create_site 的 body 包含正確的 permalink、type、type_id
 - [x] type 為 `attachment` → 使用 `wp_get_attachment_url()` 而非 `get_permalink()`
+- [x] get_short_links 的 type 參數為 `"{type}:{host}"`（host 取自 `home_url()`）
+- [x] create_site 的 body `type` 為 `"{type}:{host}"`，`tags` 仍使用原始 `type`
 
 ### resolve_url()
 - [x] type=post → 使用 `get_permalink()`

@@ -67,8 +67,10 @@ class Lihi_Service {
      * @throws RuntimeException on other failures.
      */
     private function fetch_or_create( string $token, int $item_id, string $type ): string {
-        $result = $this->client->get_short_links( $token, $type, $item_id );
-        $sites  = $result['data']['sites']['data'] ?? [];
+        $host     = wp_parse_url( home_url(), PHP_URL_HOST );
+        $api_type = $type . ':' . $host;
+        $result   = $this->client->get_short_links( $token, $api_type, $item_id );
+        $sites    = $result['data']['sites']['data'] ?? [];
 
         foreach ( $sites as $site ) {
             if ( (string) ( $site['wordpress_link']['type_id'] ?? '' ) === (string) $item_id ) {
@@ -76,10 +78,9 @@ class Lihi_Service {
             }
         }
 
-        $host    = wp_parse_url( home_url(), PHP_URL_HOST );
         $created = $this->client->create_site( $token, [
             'urls'    => [ $this->resolve_url( $item_id, $type ) ],
-            'type'    => $type,
+            'type'    => $api_type,
             'type_id' => (string) $item_id,
             'domain'  => lihi_redirect_domain(),
             'tags'    => 'wordpress,' . $host . ',' . $type,
