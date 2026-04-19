@@ -14,13 +14,6 @@ class Lihi_Auth_Exception extends Lihi_Exception {}
 /** HTTP 400 — required fields missing or invalid. */
 class Lihi_Validation_Exception extends Lihi_Exception {}
 
-/**
- * Email-specific validation failure. No longer thrown by any client method;
- * kept for backwards-compatible catch blocks in the AJAX handler until the
- * verification-flow rewrite lands.
- */
-class Lihi_Email_Exception extends Lihi_Validation_Exception {}
-
 /** HTTP 404 HTML — resource not found. */
 class Lihi_Not_Found_Exception extends Lihi_Exception {}
 

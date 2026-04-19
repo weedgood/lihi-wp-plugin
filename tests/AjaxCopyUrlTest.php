@@ -174,6 +174,6 @@ class AjaxCopyUrlTest extends TestCase
 
         \Lihi\ShortUrl\ajax_copy_url();
 
-        $this->assertStringContainsString('plugin version is no longer supported', $errorMsg);
+        $this->assertStringContainsString('has not been verified', $errorMsg);
     }
 }

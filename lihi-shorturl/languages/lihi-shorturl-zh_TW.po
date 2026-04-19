@@ -37,12 +37,8 @@ msgid "Invalid post ID or type."
 msgstr "無效的 ID 或類型。"
 
 #: includes/add-shorturl-column.php
-msgid "lihi API key was rejected — this plugin version is no longer supported. Please update the plugin."
-msgstr "lihi API 金鑰已被拒絕，此外掛版本已無法使用，請更新外掛。"
-
-#: includes/add-shorturl-column.php
-msgid "lihi rejected the configured email. Please verify it in Settings → lihi Short URL."
-msgstr "lihi 無法接受目前設定的 Email，請至「設定 → lihi 短網址」確認。"
+msgid "Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email."
+msgstr "您的 lihi Email 尚未完成驗證，請至「設定 → lihi 短網址」點擊「儲存並驗證」重新寄送驗證信。"
 
 #: includes/add-shorturl-column.php
 msgid "lihi email is not configured. Please set it in Settings → lihi Short URL."
@@ -66,8 +62,12 @@ msgid "lihi Short URL"
 msgstr "lihi 短網址"
 
 #: includes/settings.php
-msgid "Required. The email used to authenticate with the lihi service. Saving triggers email verification."
-msgstr "必填。用於 lihi 服務驗證身分的 Email；儲存後會觸發驗證流程。"
+msgid "Email used to authenticate with the lihi service. Saving triggers email verification; leave blank to disable the plugin."
+msgstr "用於 lihi 服務驗證身分的 Email；儲存後會觸發驗證流程，留白則停用外掛。"
+
+#: includes/settings.php
+msgid "lihi email cleared. Short URL generation is disabled until a new email is verified."
+msgstr "已清除 lihi Email；在新 Email 完成驗證前，短網址功能將停用。"
 
 #: includes/settings.php
 msgid "lihi Short URL Settings"

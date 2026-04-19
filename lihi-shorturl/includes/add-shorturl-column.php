@@ -126,9 +126,7 @@ function ajax_copy_url(): void {
         $url = lihi_service()->get_or_create_short_url( $item_id, $type );
         wp_send_json_success( [ 'url' => $url ] );
     } catch ( Lihi_Auth_Exception $e ) {
-        wp_send_json_error( __( 'lihi API key was rejected — this plugin version is no longer supported. Please update the plugin.', 'lihi-shorturl' ) );
-    } catch ( Lihi_Email_Exception $e ) {
-        wp_send_json_error( __( 'lihi rejected the configured email. Please verify it in Settings → lihi Short URL.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email.', 'lihi-shorturl' ) );
     } catch ( Lihi_Validation_Exception $e ) {
         /* translators: %s: validation error message returned by the lihi API. */
         wp_send_json_error( sprintf( __( 'lihi API rejected the request: %s', 'lihi-shorturl' ), $e->getMessage() ) );

@@ -77,7 +77,7 @@ lihi-shorturl/
     │   ├── lihi-client.php                 Production HTTP client; token passed per-call, not stored on instance
     │   ├── lihi-auth-client-interface.php  Interface for the lihi auth service (update_email, login)
     │   ├── lihi-auth-client.php            Production auth HTTP client; overrides HTTP Host header with home_url() host so the auth service can identify the tenant
-    │   └── lihi-exceptions.php             Typed exception hierarchy (Auth / Validation / Email / NotFound / TokenInvalid / Server)
+    │   └── lihi-exceptions.php             Typed exception hierarchy (Auth / Validation / NotFound / TokenInvalid / Server)
     └── service/
         ├── lihi-token-store.php        Lihi_Token_Store: encapsulates the lihi_token transient + lihi_token_lock; get/set/delete/acquire_lock/release_lock/flush
         └── lihi-service.php            Business logic: login() (via Lihi_Auth_Client), get_or_create_short_url(); get_token() uses Lihi_Token_Store for transient-first, lock-guarded login

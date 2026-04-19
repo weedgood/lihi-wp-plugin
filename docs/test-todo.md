@@ -129,14 +129,15 @@
 - [x] type 為空 → wp_send_json_error
 - [x] service 正常回傳 url → wp_send_json_success(['url' => ...])
 - [x] service 拋出一般例外 → wp_send_json_error 友善訊息（不暴露內部細節）
-- [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「plugin version is no longer supported」訊息（api_key 被拒，表示外掛版本過舊）
+- [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「email has not been verified」訊息（auth service 回 403，表示 email 尚未驗證）
 
 ---
 
 ## AJAX Handler: lihi_update_email
 
 - [x] 無 `manage_options` 權限 → wp_send_json_error，不呼叫 `update_option`
-- [x] email 為空 → wp_send_json_error，不呼叫 auth client 與 `update_option`
+- [x] email 為空 → 呼叫 `delete_option('lihi_email')`，wp_send_json_success 訊息含「cleared」，不呼叫 auth client
+- [x] email 全為空白字元 → 同上，視為清除
 - [x] email 格式無效 → wp_send_json_error，不呼叫 auth client 與 `update_option`
 - [x] email 被 `sanitize_email()` 清洗過後仍通不過 `is_email()`（例：`alice @example`）→ wp_send_json_error，不呼叫 auth client 與 `update_option`
 - [x] auth client 拋出 `Lihi_Validation_Exception` → wp_send_json_error「rejected the email」訊息，`update_option` 不被呼叫

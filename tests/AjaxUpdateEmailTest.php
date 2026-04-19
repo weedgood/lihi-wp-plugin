@@ -67,22 +67,54 @@ class AjaxUpdateEmailTest extends TestCase
     }
 
     /** @test */
-    public function returns_error_when_email_is_empty(): void
+    public function empty_email_clears_option_and_returns_success(): void
     {
         $_POST['email'] = '';
 
-        Functions\expect('update_option')->never();
+        $authClient = $this->mockAuthClient();
+        $authClient->shouldNotReceive('update_email');
 
-        $captured = null;
-        Functions\expect('wp_send_json_error')
+        Functions\expect('update_option')->never();
+        Functions\expect('delete_option')
             ->once()
-            ->andReturnUsing(function ($msg) use (&$captured) {
-                $captured = $msg;
+            ->with('lihi_email');
+
+        $sent = null;
+        Functions\expect('wp_send_json_success')
+            ->once()
+            ->andReturnUsing(function ($data) use (&$sent) {
+                $sent = $data;
             });
 
         \Lihi\ShortUrl\ajax_update_email();
 
-        $this->assertStringContainsString('valid email', $captured);
+        $this->assertFalse($sent['verified']);
+        $this->assertStringContainsString('cleared', $sent['message']);
+    }
+
+    /** @test */
+    public function whitespace_only_email_clears_option(): void
+    {
+        $_POST['email'] = "   \t\n";
+
+        $authClient = $this->mockAuthClient();
+        $authClient->shouldNotReceive('update_email');
+
+        Functions\expect('update_option')->never();
+        Functions\expect('delete_option')
+            ->once()
+            ->with('lihi_email');
+
+        $sent = null;
+        Functions\expect('wp_send_json_success')
+            ->once()
+            ->andReturnUsing(function ($data) use (&$sent) {
+                $sent = $data;
+            });
+
+        \Lihi\ShortUrl\ajax_update_email();
+
+        $this->assertFalse($sent['verified']);
     }
 
     /** @test */

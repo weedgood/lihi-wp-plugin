@@ -82,7 +82,7 @@ function render_settings_page(): void {
                             <?php esc_html_e( 'Save & Verify', 'lihi-shorturl' ); ?>
                         </button>
                         <p class="description">
-                            <?php esc_html_e( 'Required. The email used to authenticate with the lihi service. Saving triggers email verification.', 'lihi-shorturl' ); ?>
+                            <?php esc_html_e( 'Email used to authenticate with the lihi service. Saving triggers email verification; leave blank to disable the plugin.', 'lihi-shorturl' ); ?>
                         </p>
                         <div id="lihi-email-status" role="status" aria-live="polite"></div>
                     </td>
@@ -96,8 +96,9 @@ function render_settings_page(): void {
 /**
  * AJAX handler: verify and persist the lihi email.
  *
- * Calls the auth service first; only updates the option if the service
- * accepts the email. Returns { verified: bool } on success.
+ * Empty input clears the option (effectively disabling the plugin).
+ * Otherwise the auth service is called first; only on success is the
+ * option updated, so an address the service rejects never becomes active.
  */
 function ajax_update_email(): void {
     check_ajax_referer( 'lihi_update_email', 'nonce' );
@@ -107,7 +108,17 @@ function ajax_update_email(): void {
         return;
     }
 
-    $email = sanitize_email( (string) ( $_POST['email'] ?? '' ) );
+    $raw = trim( (string) ( $_POST['email'] ?? '' ) );
+    if ( $raw === '' ) {
+        delete_option( 'lihi_email' );
+        wp_send_json_success( [
+            'verified' => false,
+            'message'  => __( 'lihi email cleared. Short URL generation is disabled until a new email is verified.', 'lihi-shorturl' ),
+        ] );
+        return;
+    }
+
+    $email = sanitize_email( $raw );
     if ( $email === '' || ! is_email( $email ) ) {
         wp_send_json_error( __( 'Please enter a valid email address.', 'lihi-shorturl' ) );
         return;
