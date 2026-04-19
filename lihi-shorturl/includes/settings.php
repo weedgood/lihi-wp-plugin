@@ -129,6 +129,9 @@ function ajax_update_email(): void {
     } catch ( Lihi_Validation_Exception $e ) {
         wp_send_json_error( __( 'lihi rejected the email address. Please check the format and try again.', 'lihi-shorturl' ) );
         return;
+    } catch ( Lihi_Rate_Limit_Exception $e ) {
+        wp_send_json_error( __( 'Too many verification attempts. Please wait a moment and try again.', 'lihi-shorturl' ) );
+        return;
     } catch ( Lihi_Server_Exception $e ) {
         error_log( '[lihi] update_email failed: ' . $e->getMessage() );
         wp_send_json_error( __( 'The lihi auth service is unavailable. Please try again later.', 'lihi-shorturl' ) );

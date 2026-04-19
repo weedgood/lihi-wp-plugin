@@ -94,6 +94,10 @@ msgid "The lihi auth service is unavailable. Please try again later."
 msgstr "lihi 驗證服務目前無法連線，請稍後再試。"
 
 #: includes/settings.php
+msgid "Too many verification attempts. Please wait a moment and try again."
+msgstr "驗證嘗試過於頻繁，請稍候再試。"
+
+#: includes/settings.php
 msgid "✓ Email verified."
 msgstr "✓ Email 已驗證。"
 

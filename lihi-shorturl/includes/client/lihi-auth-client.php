@@ -27,6 +27,9 @@ class Lihi_Auth_Client implements Lihi_Auth_Client_Interface {
         if ( $code === 400 ) {
             throw new Lihi_Validation_Exception( $this->message( $data ) );
         }
+        if ( $code === 429 ) {
+            throw new Lihi_Rate_Limit_Exception( $this->message( $data ) );
+        }
         if ( $code >= 500 ) {
             throw new Lihi_Server_Exception( $this->message( $data ) );
         }

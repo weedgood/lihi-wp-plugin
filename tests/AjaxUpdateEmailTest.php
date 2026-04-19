@@ -5,6 +5,7 @@ namespace Lihi\ShortUrl\Tests;
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use Lihi\ShortUrl\Lihi_Auth_Client_Interface;
+use Lihi\ShortUrl\Lihi_Rate_Limit_Exception;
 use Lihi\ShortUrl\Lihi_Server_Exception;
 use Lihi\ShortUrl\Lihi_Validation_Exception;
 use Mockery;
@@ -183,6 +184,30 @@ class AjaxUpdateEmailTest extends TestCase
         \Lihi\ShortUrl\ajax_update_email();
 
         $this->assertStringContainsString('rejected the email', $captured);
+    }
+
+    /** @test */
+    public function update_option_not_called_when_auth_client_throws_rate_limit(): void
+    {
+        $_POST['email'] = 'alice@example.com';
+
+        $this->mockAuthClient()
+            ->shouldReceive('update_email')
+            ->once()
+            ->andThrow(new Lihi_Rate_Limit_Exception('too many requests'));
+
+        Functions\expect('update_option')->never();
+
+        $captured = null;
+        Functions\expect('wp_send_json_error')
+            ->once()
+            ->andReturnUsing(function ($msg) use (&$captured) {
+                $captured = $msg;
+            });
+
+        \Lihi\ShortUrl\ajax_update_email();
+
+        $this->assertStringContainsString('Too many', $captured);
     }
 
     /** @test */

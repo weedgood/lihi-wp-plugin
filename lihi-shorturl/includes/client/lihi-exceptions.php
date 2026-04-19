@@ -17,6 +17,9 @@ class Lihi_Validation_Exception extends Lihi_Exception {}
 /** HTTP 404 HTML — resource not found. */
 class Lihi_Not_Found_Exception extends Lihi_Exception {}
 
+/** HTTP 429 — per-host rate limit exceeded on the auth service. */
+class Lihi_Rate_Limit_Exception extends Lihi_Exception {}
+
 /** HTTP 5xx HTML or other unrecoverable server error. */
 class Lihi_Server_Exception extends Lihi_Exception {}
 

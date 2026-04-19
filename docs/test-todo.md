@@ -111,6 +111,7 @@
 - [ ] `update_email()` 回應 200 `{ data: { verified: true } }` → 回傳 `['verified' => true]`
 - [ ] `update_email()` 回應 200 `{ data: { verified: false } }` → 回傳 `['verified' => false]`
 - [ ] `update_email()` 回應 400 → 拋出 `Lihi_Validation_Exception`
+- [ ] `update_email()` 回應 429 → 拋出 `Lihi_Rate_Limit_Exception`
 - [ ] `update_email()` 回應 500 → 拋出 `Lihi_Server_Exception`
 - [ ] `update_email()` 回應非 JSON → 拋出 `Lihi_Server_Exception`
 - [ ] `update_email()` `wp_remote_request` 回傳 `WP_Error` → 拋出 `Lihi_Server_Exception`
@@ -141,6 +142,7 @@
 - [x] email 格式無效 → wp_send_json_error，不呼叫 auth client 與 `update_option`
 - [x] email 被 `sanitize_email()` 清洗過後仍通不過 `is_email()`（例：`alice @example`）→ wp_send_json_error，不呼叫 auth client 與 `update_option`
 - [x] auth client 拋出 `Lihi_Validation_Exception` → wp_send_json_error「rejected the email」訊息，`update_option` 不被呼叫
+- [x] auth client 拋出 `Lihi_Rate_Limit_Exception` → wp_send_json_error「Too many」訊息，`update_option` 不被呼叫
 - [x] auth client 拋出 `Lihi_Server_Exception` → wp_send_json_error「unavailable」訊息，`update_option` 不被呼叫
 - [x] auth client 回傳 `verified: true` → 呼叫 `update_option('lihi_email', …)`，wp_send_json_success(['verified' => true])
 - [x] auth client 回傳 `verified: false` → 呼叫 `update_option('lihi_email', …)`，wp_send_json_success(['verified' => false])

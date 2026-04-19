@@ -246,6 +246,7 @@ Response 200（新簽發了一份驗證 token，out-of-band 寄出）:
 
 **錯誤：欄位缺失或 email 無效（HTTP 400）** → `Lihi_Validation_Exception`
 **錯誤：Host header 缺失（HTTP 400）** → `Lihi_Validation_Exception`（auth 服務刻意回傳通用訊息以作防偽閘道）
+**錯誤：超過速率限制（HTTP 429，auth 服務對 `/auth/update-email` 每 host 10 req/min）** → `Lihi_Rate_Limit_Exception`
 **錯誤：DB 或簽章失敗（HTTP 500）** → `Lihi_Server_Exception`
 
 ---
