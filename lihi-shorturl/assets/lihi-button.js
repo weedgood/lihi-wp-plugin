@@ -1,4 +1,13 @@
 let lihiBusy = false;
+const pendingReverts = new WeakMap();
+
+function cancelPendingRevert( btn ) {
+	const timer = pendingReverts.get( btn );
+	if ( ! timer ) return;
+	clearTimeout( timer );
+	pendingReverts.delete( btn );
+	btn.textContent = lihiButton.labelOriginal;
+}
 
 function showNotice( message ) {
 	const target = document.querySelector( '.wp-header-end' )
@@ -20,9 +29,9 @@ document.addEventListener( 'click', async ( e ) => {
 	if ( ! btn || lihiBusy ) return;
 
 	e.stopPropagation();
+	cancelPendingRevert( btn );
 
-	const originalText = btn.textContent;
-	const allBtns      = document.querySelectorAll( 'button[data-lihi]' );
+	const allBtns = document.querySelectorAll( 'button[data-lihi]' );
 
 	lihiBusy = true;
 	allBtns.forEach( ( b ) => { b.disabled = true; } );
@@ -44,7 +53,7 @@ document.addEventListener( 'click', async ( e ) => {
 		if ( ! data.success ) {
 			showNotice( 'lihi: ' + data.data );
 			await new Promise( ( resolve ) => setTimeout( resolve, lihiButton.resetDelay ) );
-			
+
 			return;
 		}
 
@@ -52,9 +61,15 @@ document.addEventListener( 'click', async ( e ) => {
 		btn.classList.remove( 'lihi-btn-loading' );
 		btn.textContent = lihiButton.labelCopied;
 
-		await new Promise( ( resolve ) => setTimeout( resolve, lihiButton.resetDelay ) );
+		// Schedule the label revert independently so "Copied!" stays visible
+		// longer than the button stays disabled.
+		const timer = setTimeout( () => {
+			btn.textContent = lihiButton.labelOriginal;
+			pendingReverts.delete( btn );
+		}, lihiButton.labelDelay );
+		pendingReverts.set( btn, timer );
 
-		btn.textContent = originalText;
+		await new Promise( ( resolve ) => setTimeout( resolve, lihiButton.resetDelay ) );
 	} finally {
 		btn.classList.remove( 'lihi-btn-loading' );
 		lihiBusy = false;

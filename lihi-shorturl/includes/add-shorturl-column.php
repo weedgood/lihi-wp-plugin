@@ -41,11 +41,13 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
     );
 
     wp_localize_script( 'lihi-button', 'lihiButton', [
-        'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
-        'nonce'       => wp_create_nonce( 'lihi_copy_url' ),
-        'action'      => 'lihi_copy_url',
-        'labelCopied' => __( 'Copied!', 'lihi-shorturl' ),
-        'resetDelay'  => 300,
+        'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
+        'nonce'         => wp_create_nonce( 'lihi_copy_url' ),
+        'action'        => 'lihi_copy_url',
+        'labelOriginal' => 'lihi',
+        'labelCopied'   => __( 'Copied!', 'lihi-shorturl' ),
+        'resetDelay'    => 300,
+        'labelDelay'    => 1200,
     ] );
 } );
 

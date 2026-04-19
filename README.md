@@ -65,7 +65,7 @@ lihi-shorturl/
 ├── lihi-shorturl.php          Plugin entry point; admin-only guard, text domain loading
 ├── bootstrap.php              Loads class files unconditionally; registers an admin notice when email is unset (UI hooks self-guard in add-shorturl-column.php)
 ├── assets/
-│   ├── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state; errors shown via auto-dismissing WP .notice.notice-error
+│   ├── lihi-button.js         Async delegated click handler; splits disable window (300 ms) from "Copied!" label duration (1200 ms); errors shown via auto-dismissing WP .notice.notice-error
 │   └── lihi-settings.js       Settings page "Save & Verify" button; POSTs email to lihi_update_email AJAX, renders inline .notice-success / .notice-error with verified / sent / error message
 └── includes/
     ├── config.php             Flat array of plugin config (api_domain, redirect_domain, auth_domain); read via lihi_config()
