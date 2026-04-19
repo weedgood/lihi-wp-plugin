@@ -252,3 +252,65 @@ Response: `{ "result": true }`
 | `create_site_url()` | POST | `/site-urls` |
 | `update_site_url()` | PUT | `/site-urls/{id}` |
 | `delete_site_url()` | DELETE | `/site-urls/{id}` |
+
+---
+
+# lihi Auth API（Lihi_Auth_Client）
+
+Base URL: `lihi_config( 'auth_domain' )`（例：`https://w.lihidev.com`）。
+
+`Lihi_Auth_Client` 每次呼叫都把 HTTP `Host` header 覆寫成 WP 站台本身的 host（取自 `home_url()`），auth 服務靠這個 header 判斷 tenant domain，而非 URL 中的 host。
+
+Response 一律使用 envelope `{ result: bool, data: {...} }`；失敗時 `data.message` 為錯誤字串。
+
+完整規格見 sibling repo：`/home/wayne/lihi-wp-auth/docs/api.md`。
+
+## POST `/auth/update-email`
+
+Body:
+```json
+{ "email": "alice@example.com" }
+```
+
+Response 200（已驗證、略過）:
+```json
+{ "result": true, "data": { "verified": true } }
+```
+
+Response 200（新簽發了一份驗證 token，out-of-band 寄出）:
+```json
+{ "result": true, "data": { "verified": false } }
+```
+
+**錯誤：欄位缺失或 email 無效（HTTP 400）** → `Lihi_Validation_Exception`
+**錯誤：Host header 缺失（HTTP 400）** → `Lihi_Validation_Exception`（auth 服務刻意回傳通用訊息以作防偽閘道）
+**錯誤：DB 或簽章失敗（HTTP 500）** → `Lihi_Server_Exception`
+
+---
+
+## POST `/auth/login`
+
+Body:
+```json
+{ "email": "alice@example.com" }
+```
+
+Response 200:
+```json
+{ "result": true, "data": { "token": "eyJhbGci..." } }
+```
+
+- `data.token` — lihi 上游 bearer token（上游 TTL 約 168 天）。
+
+**錯誤：欄位缺失或 email 無效（HTTP 400）** → `Lihi_Validation_Exception`
+**錯誤：email 未驗證或該 `(domain, email)` 不存在（HTTP 403）** → `Lihi_Auth_Exception`
+**錯誤：DB 或上游 lihi 失敗（HTTP 500）** → `Lihi_Server_Exception`
+
+---
+
+## PHP Auth Client 對照
+
+| PHP 方法 | Method | Path |
+|----------|--------|------|
+| `Lihi_Auth_Client::update_email()` | POST | `/auth/update-email` |
+| `Lihi_Auth_Client::login()` | POST | `/auth/login` |

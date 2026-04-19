@@ -11,6 +11,12 @@ use PHPUnit\Framework\TestCase;
 
 class ServiceTest extends TestCase
 {
+    private array $configDefaults = [
+        'api_key'         => 'key',
+        'redirect_domain' => 'redirect.lihidev.com',
+        'api_domain'      => 'https://app.lihidev.com',
+    ];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -19,6 +25,16 @@ class ServiceTest extends TestCase
         // API type; default both so tests don't have to repeat themselves.
         Functions\when('home_url')->justReturn('https://example.com');
         Functions\when('wp_parse_url')->justReturn('example.com');
+        $this->mockConfig();
+    }
+
+    /**
+     * Stub lihi_config() to return values merged over $configDefaults.
+     */
+    private function mockConfig(array $overrides = []): void
+    {
+        $cfg = array_merge($this->configDefaults, $overrides);
+        Functions\when('Lihi\ShortUrl\lihi_config')->alias(fn($k) => $cfg[$k] ?? null);
     }
 
     protected function tearDown(): void
@@ -95,7 +111,7 @@ class ServiceTest extends TestCase
             ->andReturn(['token' => 'jwt-token']);
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key123');
+        $this->mockConfig(['api_key' => 'key123']);
 
         $this->assertSame('jwt-token', $this->makeService($client)->login());
     }
@@ -107,7 +123,6 @@ class ServiceTest extends TestCase
         $client->shouldReceive('login')->andReturn(['token' => '']);
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
         Functions\when('__')->returnArg(1);
 
         $this->expectException(\RuntimeException::class);
@@ -121,7 +136,6 @@ class ServiceTest extends TestCase
         $client->shouldReceive('login')->andThrow(new \RuntimeException('Connection failed'));
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Connection failed');
@@ -190,7 +204,6 @@ class ServiceTest extends TestCase
             ->andReturn($this->makeSitesResponse([$this->makeSite(5, 'https://lihi.io/xyz')]));
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
         Functions\when('get_transient')->justReturn(false);
         Functions\when('wp_cache_add')->justReturn(true);
         Functions\when('wp_cache_delete')->justReturn(true);
@@ -240,7 +253,6 @@ class ServiceTest extends TestCase
             ->andReturn($this->makeSitesResponse([$this->makeSite(11, 'https://lihi.io/fallback')]));
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
         Functions\when('get_transient')->justReturn(false); // never appears
         Functions\when('wp_cache_add')->justReturn(false);  // lock always held
         Functions\when('usleep')->justReturn(null);
@@ -264,7 +276,6 @@ class ServiceTest extends TestCase
         $client->shouldReceive('login')->andThrow(new \RuntimeException('Auth failed'));
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
         Functions\when('get_transient')->justReturn(false);
         Functions\when('wp_cache_add')->justReturn(true);
         Functions\when('wp_cache_delete')->justReturn(true);
@@ -312,7 +323,6 @@ class ServiceTest extends TestCase
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
         Functions\when('home_url')->justReturn('https://example.com');
         Functions\when('wp_parse_url')->justReturn('example.com');
-        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
 
         $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
         $this->assertSame('https://lihi.io/new', $result);
@@ -332,7 +342,6 @@ class ServiceTest extends TestCase
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
         Functions\when('home_url')->justReturn('https://example.com');
         Functions\when('wp_parse_url')->justReturn('example.com');
-        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
         Functions\when('__')->returnArg(1);
 
         $this->expectException(\RuntimeException::class);
@@ -378,7 +387,6 @@ class ServiceTest extends TestCase
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
         Functions\when('home_url')->justReturn('https://example.com');
         Functions\when('wp_parse_url')->justReturn('example.com');
-        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
 
         $this->makeService($client)->get_or_create_short_url(42, 'post');
 
@@ -410,7 +418,6 @@ class ServiceTest extends TestCase
         Functions\when('wp_get_attachment_url')->justReturn('https://example.com/wp-content/uploads/photo.jpg');
         Functions\when('home_url')->justReturn('https://example.com');
         Functions\when('wp_parse_url')->justReturn('example.com');
-        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
 
         $this->makeService($client)->get_or_create_short_url(7, 'attachment');
 
@@ -438,7 +445,6 @@ class ServiceTest extends TestCase
             ->andReturn(['data' => ['short_url' => 'https://lihi.io/new']]);
 
         Functions\when('get_permalink')->justReturn('https://shop.example.org/?p=42');
-        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
 
         $this->makeService($client)->get_or_create_short_url(42, 'post');
 
@@ -463,7 +469,6 @@ class ServiceTest extends TestCase
             });
 
         Functions\when('wp_get_attachment_url')->justReturn('https://example.com/uploads/a.jpg');
-        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
 
         $this->makeService($client)->get_or_create_short_url(7, 'attachment');
 
@@ -495,7 +500,6 @@ class ServiceTest extends TestCase
             ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/retried')]));
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
         Functions\when('delete_transient')->justReturn(true);
         // First read returns stale token; after invalidate_token, next reads return false
         // so the lock path takes over and login() is called.
@@ -538,7 +542,6 @@ class ServiceTest extends TestCase
             ->andReturn(['data' => ['short_url' => 'https://lihi.io/created']]);
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
         Functions\when('delete_transient')->justReturn(true);
         Functions\expect('get_transient')
             ->andReturn($staleToken, false, false);
@@ -548,7 +551,6 @@ class ServiceTest extends TestCase
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
         Functions\when('home_url')->justReturn('https://example.com');
         Functions\when('wp_parse_url')->justReturn('example.com');
-        Functions\when('Lihi\ShortUrl\lihi_redirect_domain')->justReturn('redirect.lihidev.com');
 
         $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
         $this->assertSame('https://lihi.io/created', $result);
@@ -574,7 +576,6 @@ class ServiceTest extends TestCase
             ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_api_key')->justReturn('key');
         Functions\when('delete_transient')->justReturn(true);
         Functions\expect('get_transient')
             ->andReturn($staleToken, false, false);

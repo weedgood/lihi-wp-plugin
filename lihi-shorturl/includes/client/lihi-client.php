@@ -5,7 +5,7 @@ namespace Lihi\ShortUrl;
  * Production lihi API client.
  *
  * Sends HTTP requests to the lihi API using WordPress's wp_remote_request().
- * The base URL is read from lihi_api_domain().
+ * The base URL is read from lihi_config( 'api_domain' ).
  * Every method except login() requires a JWT $token passed by the caller.
  *
  * request() handles only network errors and non-JSON (HTML) responses.
@@ -22,7 +22,7 @@ class Lihi_Client implements Lihi_Client_Interface {
     private string $base_url;
 
     public function __construct() {
-        $this->base_url = rtrim( lihi_api_domain(), '/' );
+        $this->base_url = rtrim( lihi_config( 'api_domain' ), '/' );
     }
 
     // -------------------------------------------------------------------------

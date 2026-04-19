@@ -10,34 +10,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Return whether the plugin is running in production mode.
+ * Return a configuration value loaded from includes/config.php.
  *
- * @return bool True when LIHI_ENV is "production".
- */
-function is_production(): bool {
-    return defined( 'LIHI_ENV' ) && LIHI_ENV === 'production';
-}
-
-/**
- * Return the lihi API base URL for the current environment.
+ * The config file is required once and cached for the request lifetime.
  *
- * @return string "https://app.lihi.com" in production, "https://app.lihidev.com" otherwise.
+ * @param string $key Configuration key (e.g. "api_domain", "redirect_domain", "api_key").
+ * @return mixed Value for the key, or null if the key is unknown.
  */
-function lihi_api_domain(): string {
-    return is_production()
-        ? 'https://app.lihi.com'
-        : 'https://app.lihidev.com';
-}
-
-/**
- * Return the lihi redirect domain for the current environment.
- *
- * @return string "redirect.lihi.com" in production, "redirect.lihidev.com" otherwise.
- */
-function lihi_redirect_domain(): string {
-    return is_production()
-        ? 'redirect.lihi.com'
-        : 'redirect.lihidev.com';
+function lihi_config( string $key ) {
+    static $cfg = null;
+    if ( $cfg === null ) {
+        $cfg = require __DIR__ . '/config.php';
+    }
+    return $cfg[ $key ] ?? null;
 }
 
 /**
@@ -49,17 +34,6 @@ function lihi_redirect_domain(): string {
  */
 function lihi_email(): string {
     return (string) get_option( 'lihi_email', '' );
-}
-
-/**
- * Return the lihi API key for the current environment.
- *
- * @return string Shared dev key in non-production; empty string in production.
- */
-function lihi_api_key(): string {
-    return is_production()
-        ? ''
-        : '2f294400a5d37c1578df3d1c923171d51e09e9e259e2ec64f781e0b3893ed0c5';
 }
 
 /**
@@ -98,6 +72,27 @@ function lihi_client(): Lihi_Client_Interface {
  */
 function lihi_client_set( ?Lihi_Client_Interface $client ): void {
     _lihi_singleton( Lihi_Client_Interface::class, $client, true );
+}
+
+/**
+ * Return the shared Lihi_Auth_Client_Interface singleton, creating it on first call.
+ */
+function lihi_auth_client(): Lihi_Auth_Client_Interface {
+    $instance = _lihi_singleton( Lihi_Auth_Client_Interface::class );
+
+    if ( ! $instance instanceof Lihi_Auth_Client_Interface ) {
+        $instance = new Lihi_Auth_Client();
+        _lihi_singleton( Lihi_Auth_Client_Interface::class, $instance, true );
+    }
+
+    return $instance;
+}
+
+/**
+ * Replace (or reset, by passing null) the Lihi_Auth_Client_Interface singleton. Test helper.
+ */
+function lihi_auth_client_set( ?Lihi_Auth_Client_Interface $client ): void {
+    _lihi_singleton( Lihi_Auth_Client_Interface::class, $client, true );
 }
 
 /**

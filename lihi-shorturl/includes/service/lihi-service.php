@@ -33,7 +33,7 @@ class Lihi_Service {
      * @throws RuntimeException If the API call fails or returns no token.
      */
     public function login(): string {
-        $result = $this->client->login( lihi_email(), lihi_api_key() );
+        $result = $this->client->login( lihi_email(), lihi_config( 'api_key' ) );
         $token  = $result['token'] ?? '';
 
         if ( ! $token ) {
@@ -82,7 +82,7 @@ class Lihi_Service {
             'urls'    => [ $this->resolve_url( $item_id, $type ) ],
             'type'    => $api_type,
             'type_id' => (string) $item_id,
-            'domain'  => lihi_redirect_domain(),
+            'domain'  => lihi_config( 'redirect_domain' ),
             'tags'    => 'wordpress,' . $host . ',' . $type,
         ] );
 

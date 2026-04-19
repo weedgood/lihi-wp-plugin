@@ -8,6 +8,7 @@
 | `ServiceTest` | `TestCase` + Brain\Monkey | 純單元，mock WordPress 函式 |
 | `TokenStoreTest` | `TestCase` + Brain\Monkey | 純單元，mock transient/wp_cache |
 | `ClientTest` | `TestCase` + Brain\Monkey | 純單元，mock `wp_remote_request` |
+| `AuthClientTest` | `TestCase` + Brain\Monkey | 純單元，mock `wp_remote_request`（尚未撰寫） |
 | `AjaxCopyUrlTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
 | `AdminNoticeTest` | `WP_UnitTestCase` | 整合，需要 DB |
 | `HelperTest` | `WP_UnitTestCase` | 整合，需要 DB |
@@ -16,10 +17,12 @@
 
 ---
 
-## Settings / lihi_email helper
+## Helpers
 
 - [x] `lihi_email()` — option 已設定 → 回傳 option 值
 - [x] `lihi_email()` — option 為空字串 → 回傳空字串
+- [x] `lihi_config( $key )` — 載入 `includes/config.php` 並回傳對應 key 的值（由 `Lihi_Client` 建構子與 `Lihi_Service` 透過實際呼叫驗證）
+- [x] `lihi_config( $key )` — 未知 key 回傳 null（透過 `mockConfig()` 預設邏輯涵蓋）
 - [n/a] UI hooks — email 空 → column/enqueue/attachment panel 未掛（是否註冊取決於 bootstrap 載入瞬間的 email 值，由程式碼審查保證）
 - [x] bootstrap guard — email 空 → 註冊 `admin_notices` action
 - [x] admin notice — 有 `manage_options` 權限 → 輸出含設定頁連結的 warning notice
@@ -99,6 +102,25 @@
 - [x] create_site_url() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
 - [x] update_site_url() → PUT /api/wordpress/v1/site-urls/{id}
 - [x] delete_site_url() → DELETE /api/wordpress/v1/site-urls/{id}，回傳 true
+
+---
+
+## Lihi_Auth_Client
+
+尚未建立測試。涵蓋範圍應包含：
+
+- [ ] `update_email()` → POST `/auth/update-email`，body 為 `{ email }`，Host header 為 `home_url()` 的 host
+- [ ] `update_email()` 回應 200 `{ data: { verified: true } }` → 回傳 `['verified' => true]`
+- [ ] `update_email()` 回應 200 `{ data: { verified: false } }` → 回傳 `['verified' => false]`
+- [ ] `update_email()` 回應 400 → 拋出 `Lihi_Validation_Exception`
+- [ ] `update_email()` 回應 500 → 拋出 `Lihi_Server_Exception`
+- [ ] `update_email()` 回應非 JSON → 拋出 `Lihi_Server_Exception`
+- [ ] `update_email()` `wp_remote_request` 回傳 `WP_Error` → 拋出 `Lihi_Server_Exception`
+- [ ] `login()` → POST `/auth/login`，body 為 `{ email }`，Host header 為 `home_url()` 的 host
+- [ ] `login()` 回應 200 → 回傳 `['token' => ...]`
+- [ ] `login()` 回應 400 → 拋出 `Lihi_Validation_Exception`
+- [ ] `login()` 回應 403 → 拋出 `Lihi_Auth_Exception`
+- [ ] `login()` 回應 500 → 拋出 `Lihi_Server_Exception`
 
 ---
 

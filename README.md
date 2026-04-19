@@ -67,13 +67,16 @@ lihi-shorturl/
 ├── assets/
 │   └── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state; errors shown via auto-dismissing WP .notice.notice-error
 └── includes/
-    ├── helper.php             is_production(), lihi_api_domain(), lihi_redirect_domain(), lihi_email() (reads lihi_email option), lihi_api_key(), lihi_client() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
+    ├── config.php             Flat array of plugin config (api_domain, redirect_domain, api_key, auth_domain); read via lihi_config()
+    ├── helper.php             lihi_config($key), lihi_email() (reads lihi_email option), lihi_client() / lihi_auth_client() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
     ├── settings.php           Settings page under Settings → lihi Short URL; stores lihi_email via Options API; flushes the cached token on add/update/delete of the option
     ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler
     ├── client/
-    │   ├── lihi-client-interface.php   Interface with full phpDoc; every method except login() takes $token as first param
-    │   ├── lihi-client.php             Production HTTP client; token passed per-call, not stored on instance
-    │   └── lihi-exceptions.php         Typed exception hierarchy (Auth / Validation / Email / NotFound / TokenInvalid / Server)
+    │   ├── lihi-client-interface.php       Interface with full phpDoc; every method except login() takes $token as first param
+    │   ├── lihi-client.php                 Production HTTP client; token passed per-call, not stored on instance
+    │   ├── lihi-auth-client-interface.php  Interface for the lihi auth service (update_email, login)
+    │   ├── lihi-auth-client.php            Production auth HTTP client; overrides HTTP Host header with home_url() host so the auth service can identify the tenant
+    │   └── lihi-exceptions.php             Typed exception hierarchy (Auth / Validation / Email / NotFound / TokenInvalid / Server)
     └── service/
         ├── lihi-token-store.php        Lihi_Token_Store: encapsulates the lihi_token transient + lihi_token_lock; get/set/delete/acquire_lock/release_lock/flush
         └── lihi-service.php            Business logic: login(), get_or_create_short_url(); get_token() uses Lihi_Token_Store for transient-first, lock-guarded login
