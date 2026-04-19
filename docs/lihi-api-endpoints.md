@@ -4,51 +4,12 @@ Base URL:
 - Production: `https://app.lihi.com/api/wordpress/v1`
 - Dev: `https://app.lihidev.com/api/wordpress/v1`
 
-Auth header（login 以外都需要）:
+Auth header（所有端點都需要，token 由 `Lihi_Auth_Client::login()` 取得）:
 ```
 Authorization: Bearer <token>
 Accept: application/json
 Content-Type: application/json
 ```
-
----
-
-## POST `/login`
-
-Body:
-```json
-{ "email": "string", "api_key": "string", "country": "TW" }
-```
-
-Response:
-```json
-{ "result": true, "token": "string" }
-```
-
-Token TTL: 約 168 天。
-
-**錯誤：欄位缺失（HTTP 400）**
-```json
-{
-  "result": false,
-  "msg": {
-    "email":   ["The email field is required."],
-    "api_key": ["The api key field is required."]
-  }
-}
-```
-
-**錯誤：api_key 錯誤（HTTP 200）**
-```json
-{ "result": false, "msg": "API Key error" }
-```
-注意：HTTP 仍為 200，`request()` 不拋例外；`login()` 靠檢查 `token` 是否為空間接處理。
-
-**注意：email 不存在會自動建立新帳號**
-api_key 正確時，不論 email 是否已存在都回傳 token；若 email 不存在則自動註冊新帳號。
-
-**錯誤：伺服器錯誤（HTTP 500，HTML）**
-`<title>` 固定為「網站升級中...」。
 
 ---
 
@@ -242,7 +203,6 @@ Response: `{ "result": true }`
 
 | PHP 方法 | Method | Path |
 |----------|--------|------|
-| `login()` | POST | `/login` |
 | `get_posts()` | GET | `/posts` |
 | `get_sites()` | GET | `/sites` |
 | `get_short_links()` | GET | `/sites` (per_page=20, type, type_id) |

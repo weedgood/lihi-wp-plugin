@@ -2,13 +2,12 @@
 namespace Lihi\ShortUrl;
 
 /**
- * lihi API client contract.
+ * lihi short-url API client contract.
  *
  * All client implementations (production and mock) must satisfy this interface.
- * Base URL: https://app.lihi.com/api/wordpress/v1 (production)
- *           https://app.lihidev.com/api/wordpress/v1 (non-production)
+ * Base URL: lihi_config( 'api_domain' ) + /api/wordpress/v1.
  *
- * Every method except login() requires a JWT $token obtained via login().
+ * Every method requires a bearer $token obtained from Lihi_Auth_Client::login().
  * The service layer is responsible for acquiring and refreshing the token.
  */
 
@@ -17,25 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 interface Lihi_Client_Interface {
-
-    // -------------------------------------------------------------------------
-    // Auth
-    // -------------------------------------------------------------------------
-
-    /**
-     * Authenticate and return a JWT token.
-     *
-     * POST /api/wordpress/v1/login
-     *
-     * Email not found is auto-registered. Country only affects locale on first
-     * registration (TW/HK → zh-TW, others → en).
-     *
-     * @param string $email   WordPress admin email.
-     * @param string $api_key lihi API key (server-side WORDPRESS_API_KEY).
-     * @param string $country Optional. ISO country code, default 'TW'.
-     * @return array{result: bool, token: string}
-     */
-    public function login( string $email, string $api_key, string $country = 'TW' ): array;
 
     // -------------------------------------------------------------------------
     // Posts（系統公告）

@@ -19,21 +19,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Lihi_Service {
 
     private Lihi_Client_Interface $client;
+    private Lihi_Auth_Client_Interface $auth_client;
     private Lihi_Token_Store $tokens;
 
-    public function __construct( Lihi_Client_Interface $client, ?Lihi_Token_Store $tokens = null ) {
-        $this->client = $client;
-        $this->tokens = $tokens ?? new Lihi_Token_Store();
+    public function __construct(
+        Lihi_Client_Interface $client,
+        Lihi_Auth_Client_Interface $auth_client,
+        ?Lihi_Token_Store $tokens = null
+    ) {
+        $this->client      = $client;
+        $this->auth_client = $auth_client;
+        $this->tokens      = $tokens ?? new Lihi_Token_Store();
     }
 
     /**
-     * Authenticate against the lihi API and return the JWT token.
+     * Exchange the configured email for a fresh upstream lihi bearer token
+     * via the lihi auth service.
      *
-     * @return string JWT token.
-     * @throws RuntimeException If the API call fails or returns no token.
+     * @return string Bearer token.
+     * @throws RuntimeException If the auth call fails or returns no token.
      */
     public function login(): string {
-        $result = $this->client->login( lihi_email(), lihi_config( 'api_key' ) );
+        $result = $this->auth_client->login( lihi_email() );
         $token  = $result['token'] ?? '';
 
         if ( ! $token ) {

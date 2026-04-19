@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * The config file is required once and cached for the request lifetime.
  *
- * @param string $key Configuration key (e.g. "api_domain", "redirect_domain", "api_key").
+ * @param string $key Configuration key (e.g. "api_domain", "redirect_domain", "auth_domain").
  * @return mixed Value for the key, or null if the key is unknown.
  */
 function lihi_config( string $key ) {
@@ -123,7 +123,7 @@ function lihi_service(): Lihi_Service {
     $instance = _lihi_singleton( Lihi_Service::class );
 
     if ( ! $instance instanceof Lihi_Service ) {
-        $instance = new Lihi_Service( lihi_client(), lihi_token_store() );
+        $instance = new Lihi_Service( lihi_client(), lihi_auth_client(), lihi_token_store() );
         _lihi_singleton( Lihi_Service::class, $instance, true );
     }
 

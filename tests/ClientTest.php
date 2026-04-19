@@ -196,15 +196,6 @@ class ClientTest extends TestCase
     }
 
     /** @test */
-    public function request_omits_authorization_header_for_login(): void
-    {
-        $capture = $this->mockRequest();
-        $this->makeClient()->login('user@example.com', 'api-key');
-        $c = $capture();
-        $this->assertArrayNotHasKey('Authorization', $c['args']['headers']);
-    }
-
-    /** @test */
     public function request_returns_empty_array_on_204(): void
     {
         $this->mockRequest(204, '');
@@ -265,47 +256,6 @@ class ClientTest extends TestCase
         $this->mockRequest(500, 'not-json');
         $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
         $this->makeClient()->get_sites('test-token');
-    }
-
-    /** @test */
-    public function login_upgrade_title_throws_server_exception_not_token_invalid(): void
-    {
-        // login() sends no token — "網站升級中..." is a plain server error, not token-invalid.
-        $html = '<html><head><title>網站升級中...</title></head><body></body></html>';
-        $this->mockRequest(500, $html);
-        $caught = null;
-        try {
-            $this->makeClient()->login('user@example.com', 'api-key');
-        } catch (\Lihi\ShortUrl\Lihi_Server_Exception $e) {
-            $caught = $e;
-        }
-        $this->assertInstanceOf(\Lihi\ShortUrl\Lihi_Server_Exception::class, $caught);
-        $this->assertNotInstanceOf(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class, $caught);
-    }
-
-    /** @test */
-    public function login_throws_auth_exception_when_result_false(): void
-    {
-        $this->mockRequest(200, '{"result":false,"msg":"API Key error"}');
-        $this->expectException(\Lihi\ShortUrl\Lihi_Auth_Exception::class);
-        $this->expectExceptionMessage('API Key error');
-        $this->makeClient()->login('test@example.com', 'badkey');
-    }
-
-    /** @test */
-    public function login_throws_email_exception_on_400(): void
-    {
-        $this->mockRequest(400, '{"result":false,"msg":{"email":["The email field is required."]}}');
-        $this->expectException(\Lihi\ShortUrl\Lihi_Email_Exception::class);
-        $this->makeClient()->login('', '');
-    }
-
-    /** @test */
-    public function login_throws_auth_exception_on_400_without_email_key(): void
-    {
-        $this->mockRequest(400, '{"result":false,"msg":{"api_key":["The api_key field is required."]}}');
-        $this->expectException(\Lihi\ShortUrl\Lihi_Auth_Exception::class);
-        $this->makeClient()->login('test@example.com', '');
     }
 
     /** @test */

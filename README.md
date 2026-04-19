@@ -67,7 +67,7 @@ lihi-shorturl/
 ├── assets/
 │   └── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state; errors shown via auto-dismissing WP .notice.notice-error
 └── includes/
-    ├── config.php             Flat array of plugin config (api_domain, redirect_domain, api_key, auth_domain); read via lihi_config()
+    ├── config.php             Flat array of plugin config (api_domain, redirect_domain, auth_domain); read via lihi_config()
     ├── helper.php             lihi_config($key), lihi_email() (reads lihi_email option), lihi_client() / lihi_auth_client() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
     ├── settings.php           Settings page under Settings → lihi Short URL; stores lihi_email via Options API; flushes the cached token on add/update/delete of the option
     ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler
@@ -79,14 +79,14 @@ lihi-shorturl/
     │   └── lihi-exceptions.php             Typed exception hierarchy (Auth / Validation / Email / NotFound / TokenInvalid / Server)
     └── service/
         ├── lihi-token-store.php        Lihi_Token_Store: encapsulates the lihi_token transient + lihi_token_lock; get/set/delete/acquire_lock/release_lock/flush
-        └── lihi-service.php            Business logic: login(), get_or_create_short_url(); get_token() uses Lihi_Token_Store for transient-first, lock-guarded login
+        └── lihi-service.php            Business logic: login() (via Lihi_Auth_Client), get_or_create_short_url(); get_token() uses Lihi_Token_Store for transient-first, lock-guarded login
 ```
 
 ### Auth flow
 
 1. When the editor clicks the lihi button, `lihi-button.js` triggers an AJAX call to `wp_ajax_lihi_copy_url`.
-2. `Lihi_Service::get_token()` checks in order: (a) the site-scoped `lihi_token` transient; (b) atomic `wp_cache_add` lock — only one concurrent request calls `login()`, the rest poll the transient and reuse the result. After a 3 s timeout, waiters fall back to calling `login()` themselves.
-3. On fresh login the JWT is stored in the transient (TTL: 1 day). Updating or clearing the `lihi_email` option flushes the transient under the same lock so a stale JWT can't leak across accounts.
+2. `Lihi_Service::get_token()` checks in order: (a) the site-scoped `lihi_token` transient; (b) atomic `wp_cache_add` lock — only one concurrent request calls `login()` (which hits `Lihi_Auth_Client::login( lihi_email() )` against the lihi auth service), the rest poll the transient and reuse the result. After a 3 s timeout, waiters fall back to calling `login()` themselves.
+3. On fresh login the bearer token is stored in the transient (TTL: 1 day, well within the upstream ~168 day token TTL). Updating or clearing the `lihi_email` option flushes the transient under the same lock so a stale token can't leak across accounts.
 
 ### Short URL flow
 

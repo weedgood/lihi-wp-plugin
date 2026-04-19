@@ -47,9 +47,9 @@
 ## Lihi_Service
 
 ### login()
-- [x] client 正常回傳 token → 回傳 token string
-- [x] client 回傳空 token → 拋出 RuntimeException
-- [x] client 拋出例外 → 例外向上傳遞
+- [x] auth client 正常回傳 token → 回傳 token string
+- [x] auth client 回傳空 token → 拋出 RuntimeException
+- [x] auth client 拋出例外 → 例外向上傳遞
 
 ### get_token()（透過 get_or_create_short_url 測試）
 - [x] transient 有效 → 回傳 transient token，不呼叫 login
@@ -84,13 +84,10 @@
 - [x] GET 請求：$data 加到 query string，不加到 body
 - [x] POST 請求：$data 編碼為 JSON body
 - [x] token 非空：Header 包含 `Authorization: Bearer {token}`
-- [x] token 為空（login）：Header 不包含 Authorization
 - [x] 回應碼 204 → 回傳空陣列
 - [x] body 為空字串 → 回傳空陣列
 - [x] body 為無效 JSON → 拋出 RuntimeException
 - [x] 回應碼 400+ → 拋出 RuntimeException（訊息含 status code）
-- [x] login() 回應碼 400 且 msg 含 `email` key → 拋出 `Lihi_Email_Exception`
-- [x] login() 回應碼 400 但 msg 無 `email` key → 拋出 `Lihi_Auth_Exception`（api_key 問題）
 - [x] wp_remote_request 回傳 WP_Error → 拋出 RuntimeException
 
 ### 各方法路徑與 HTTP method

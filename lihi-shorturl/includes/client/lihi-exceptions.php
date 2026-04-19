@@ -8,13 +8,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Base exception for all lihi API errors. */
 class Lihi_Exception extends \RuntimeException {}
 
-/** HTTP 200 result:false — e.g. wrong api_key. */
+/** Authorization rejected — e.g. auth service returns 403 "email not verified". */
 class Lihi_Auth_Exception extends Lihi_Exception {}
 
 /** HTTP 400 — required fields missing or invalid. */
 class Lihi_Validation_Exception extends Lihi_Exception {}
 
-/** HTTP 400 on login — email missing or not registered with lihi. */
+/**
+ * Email-specific validation failure. No longer thrown by any client method;
+ * kept for backwards-compatible catch blocks in the AJAX handler until the
+ * verification-flow rewrite lands.
+ */
 class Lihi_Email_Exception extends Lihi_Validation_Exception {}
 
 /** HTTP 404 HTML — resource not found. */

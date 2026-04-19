@@ -2,11 +2,11 @@
 namespace Lihi\ShortUrl;
 
 /**
- * Production lihi API client.
+ * Production lihi short-url API client.
  *
- * Sends HTTP requests to the lihi API using WordPress's wp_remote_request().
- * The base URL is read from lihi_config( 'api_domain' ).
- * Every method except login() requires a JWT $token passed by the caller.
+ * Sends HTTP requests to the lihi short-url API using WordPress's
+ * wp_remote_request(). The base URL is read from lihi_config( 'api_domain' ).
+ * Every method requires a bearer $token obtained from Lihi_Auth_Client::login().
  *
  * request() handles only network errors and non-JSON (HTML) responses.
  * Each public method is responsible for interpreting its own JSON error payload
@@ -23,39 +23,6 @@ class Lihi_Client implements Lihi_Client_Interface {
 
     public function __construct() {
         $this->base_url = rtrim( lihi_config( 'api_domain' ), '/' );
-    }
-
-    // -------------------------------------------------------------------------
-    // Auth
-    // -------------------------------------------------------------------------
-
-    /**
-     * @throws Lihi_Email_Exception      HTTP 400 with "email" in msg — email missing/invalid
-     * @throws Lihi_Auth_Exception       HTTP 400 without "email" in msg, or result:false — api_key rejected
-     * @throws Lihi_Server_Exception     non-JSON / server error
-     */
-    public function login( string $email, string $api_key, string $country = 'TW' ): array {
-        [ 'code' => $code, 'body' => $body ] = $this->request( 'POST', '/api/wordpress/v1/login', [
-            'email'   => $email,
-            'api_key' => $api_key,
-            'country' => $country,
-        ] );
-
-        $data = $this->decode( $code, $body, false );
-
-        if ( $code === 400 ) {
-            $msg = $data['msg'] ?? null;
-            if ( is_array( $msg ) && array_key_exists( 'email', $msg ) ) {
-                throw new Lihi_Email_Exception( $this->msg( $data ) );
-            }
-            throw new Lihi_Auth_Exception( $this->msg( $data ) );
-        }
-
-        if ( ( $data['result'] ?? true ) === false ) {
-            throw new Lihi_Auth_Exception( $this->msg( $data ) );
-        }
-
-        return $data;
     }
 
     // -------------------------------------------------------------------------
