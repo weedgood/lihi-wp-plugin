@@ -66,12 +66,40 @@ msgid "lihi Short URL"
 msgstr "lihi 短網址"
 
 #: includes/settings.php
-msgid "Required. The email address used to log in to the lihi API."
-msgstr "必填。用於登入 lihi API 的 Email 地址。"
+msgid "Required. The email used to authenticate with the lihi service. Saving triggers email verification."
+msgstr "必填。用於 lihi 服務驗證身分的 Email；儲存後會觸發驗證流程。"
 
 #: includes/settings.php
 msgid "lihi Short URL Settings"
 msgstr "lihi 短網址設定"
+
+#: includes/settings.php
+msgid "Save & Verify"
+msgstr "儲存並驗證"
+
+#: includes/settings.php
+msgid "You do not have permission to update this setting."
+msgstr "您沒有權限更新此設定。"
+
+#: includes/settings.php
+msgid "Please enter a valid email address."
+msgstr "請輸入有效的 Email 地址。"
+
+#: includes/settings.php
+msgid "lihi rejected the email address. Please check the format and try again."
+msgstr "lihi 拒絕了此 Email 地址，請確認格式後再試一次。"
+
+#: includes/settings.php
+msgid "The lihi auth service is unavailable. Please try again later."
+msgstr "lihi 驗證服務目前無法連線，請稍後再試。"
+
+#: includes/settings.php
+msgid "✓ Email verified."
+msgstr "✓ Email 已驗證。"
+
+#: includes/settings.php
+msgid "Verification email sent. Please click the link in that email to finish verification."
+msgstr "驗證信已寄出，請點擊信中的連結完成驗證。"
 
 
 #: bootstrap.php

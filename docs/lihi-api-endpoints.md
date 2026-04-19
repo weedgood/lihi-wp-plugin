@@ -227,6 +227,8 @@ Response 一律使用 envelope `{ result: bool, data: {...} }`；失敗時 `data
 
 ## POST `/auth/update-email`
 
+由外掛設定頁的「Save & Verify」按鈕觸發：`wp_ajax_lihi_update_email` handler 先呼叫本端點，成功才 `update_option('lihi_email', $email)`，避免被 auth 服務拒絕的 email 成為有效設定。
+
 Body:
 ```json
 { "email": "alice@example.com" }

@@ -10,6 +10,7 @@
 | `ClientTest` | `TestCase` + Brain\Monkey | 純單元，mock `wp_remote_request` |
 | `AuthClientTest` | `TestCase` + Brain\Monkey | 純單元，mock `wp_remote_request`（尚未撰寫） |
 | `AjaxCopyUrlTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
+| `AjaxUpdateEmailTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式與 auth client |
 | `AdminNoticeTest` | `WP_UnitTestCase` | 整合，需要 DB |
 | `HelperTest` | `WP_UnitTestCase` | 整合，需要 DB |
 | `PluginHooksTest` | `WP_UnitTestCase` | 整合，需要 DB |
@@ -132,9 +133,23 @@
 
 ---
 
+## AJAX Handler: lihi_update_email
+
+- [x] 無 `manage_options` 權限 → wp_send_json_error，不呼叫 `update_option`
+- [x] email 為空 → wp_send_json_error，不呼叫 auth client 與 `update_option`
+- [x] email 格式無效 → wp_send_json_error，不呼叫 auth client 與 `update_option`
+- [x] email 被 `sanitize_email()` 清洗過後仍通不過 `is_email()`（例：`alice @example`）→ wp_send_json_error，不呼叫 auth client 與 `update_option`
+- [x] auth client 拋出 `Lihi_Validation_Exception` → wp_send_json_error「rejected the email」訊息，`update_option` 不被呼叫
+- [x] auth client 拋出 `Lihi_Server_Exception` → wp_send_json_error「unavailable」訊息，`update_option` 不被呼叫
+- [x] auth client 回傳 `verified: true` → 呼叫 `update_option('lihi_email', …)`，wp_send_json_success(['verified' => true])
+- [x] auth client 回傳 `verified: false` → 呼叫 `update_option('lihi_email', …)`，wp_send_json_success(['verified' => false])
+
+---
+
 ## Plugin hooks (整合)
 
 - [x] `wp_ajax_lihi_copy_url` 已註冊
+- [x] `wp_ajax_lihi_update_email` 已註冊
 - [x] `admin_enqueue_scripts` 白名單（edit/upload/post/post-new）→ enqueue lihi-button
 - [x] `admin_enqueue_scripts` 非白名單 → 不 enqueue
 - [x] `manage_post_posts_columns` 有 `lihi` 欄位

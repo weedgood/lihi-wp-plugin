@@ -43,6 +43,11 @@ class PluginHooksTest extends \WP_UnitTestCase
         $this->assertNotFalse(has_action('wp_ajax_lihi_copy_url'));
     }
 
+    public function test_wp_ajax_lihi_update_email_handler_is_registered(): void
+    {
+        $this->assertNotFalse(has_action('wp_ajax_lihi_update_email'));
+    }
+
     // -------------------------------------------------------------------------
     // Script enqueue via admin_enqueue_scripts
     // -------------------------------------------------------------------------

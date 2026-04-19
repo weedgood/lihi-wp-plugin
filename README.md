@@ -65,11 +65,12 @@ lihi-shorturl/
 ├── lihi-shorturl.php          Plugin entry point; admin-only guard, text domain loading
 ├── bootstrap.php              Loads class files unconditionally; registers an admin notice when email is unset (UI hooks self-guard in add-shorturl-column.php)
 ├── assets/
-│   └── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state; errors shown via auto-dismissing WP .notice.notice-error
+│   ├── lihi-button.js         Async delegated click handler; awaits clipboard write and reset delay, finally clears loading state; errors shown via auto-dismissing WP .notice.notice-error
+│   └── lihi-settings.js       Settings page "Save & Verify" button; POSTs email to lihi_update_email AJAX, renders inline .notice-success / .notice-error with verified / sent / error message
 └── includes/
     ├── config.php             Flat array of plugin config (api_domain, redirect_domain, auth_domain); read via lihi_config()
     ├── helper.php             lihi_config($key), lihi_email() (reads lihi_email option), lihi_client() / lihi_auth_client() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
-    ├── settings.php           Settings page under Settings → lihi Short URL; stores lihi_email via Options API; flushes the cached token on add/update/delete of the option
+    ├── settings.php           Settings page under Settings → lihi Short URL; "Save & Verify" triggers wp_ajax_lihi_update_email which calls Lihi_Auth_Client::update_email() first and only persists the option on success; flushes the cached token on add/update/delete of lihi_email
     ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler
     ├── client/
     │   ├── lihi-client-interface.php       Interface with full phpDoc; every method except login() takes $token as first param
@@ -84,9 +85,10 @@ lihi-shorturl/
 
 ### Auth flow
 
-1. When the editor clicks the lihi button, `lihi-button.js` triggers an AJAX call to `wp_ajax_lihi_copy_url`.
-2. `Lihi_Service::get_token()` checks in order: (a) the site-scoped `lihi_token` transient; (b) atomic `wp_cache_add` lock — only one concurrent request calls `login()` (which hits `Lihi_Auth_Client::login( lihi_email() )` against the lihi auth service), the rest poll the transient and reuse the result. After a 3 s timeout, waiters fall back to calling `login()` themselves.
-3. On fresh login the bearer token is stored in the transient (TTL: 1 day, well within the upstream ~168 day token TTL). Updating or clearing the `lihi_email` option flushes the transient under the same lock so a stale token can't leak across accounts.
+1. Admin opens Settings → lihi Short URL, enters an email, and clicks **Save & Verify**. `lihi-settings.js` POSTs to `wp_ajax_lihi_update_email`, which calls `Lihi_Auth_Client::update_email( $email )` first and only persists `lihi_email` on success. The UI shows "✓ Email verified" when the address is already verified, or "Verification email sent" when the auth service mints a fresh verification token and emails it out-of-band (the admin must click that link to finish).
+2. When the editor clicks the lihi button, `lihi-button.js` triggers an AJAX call to `wp_ajax_lihi_copy_url`.
+3. `Lihi_Service::get_token()` checks in order: (a) the site-scoped `lihi_token` transient; (b) atomic `wp_cache_add` lock — only one concurrent request calls `login()` (which hits `Lihi_Auth_Client::login( lihi_email() )` against the lihi auth service), the rest poll the transient and reuse the result. After a 3 s timeout, waiters fall back to calling `login()` themselves.
+4. On fresh login the bearer token is stored in the transient (TTL: 1 day, well within the upstream ~168 day token TTL). Updating or clearing the `lihi_email` option flushes the transient under the same lock so a stale token can't leak across accounts.
 
 ### Short URL flow
 
