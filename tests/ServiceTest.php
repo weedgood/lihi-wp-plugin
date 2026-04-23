@@ -303,6 +303,83 @@ class ServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // get_profile()
+    // -------------------------------------------------------------------------
+
+    /** @test */
+    public function get_profile_returns_data_on_success(): void
+    {
+        Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_profile')
+            ->with(Mockery::type('string'))
+            ->once()
+            ->andReturn([
+                'result' => true,
+                'data'   => [
+                    'user_role' => 'admin',
+                    'end_date'  => '2026-12-31',
+                    'domains'   => ['redirect.lihidev.com'],
+                ],
+            ]);
+
+        $result = $this->makeService($client)->get_profile();
+        $this->assertSame('admin', $result['user_role']);
+        $this->assertSame('2026-12-31', $result['end_date']);
+        $this->assertSame(['redirect.lihidev.com'], $result['domains']);
+    }
+
+    /** @test */
+    public function get_profile_retries_once_on_token_invalid(): void
+    {
+        $staleToken = $this->makeJwt(time() + 3600);
+        $freshToken = $this->makeJwt(time() + 7200);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_profile')
+            ->with($staleToken)
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
+        $client->shouldReceive('get_profile')
+            ->with($freshToken)
+            ->once()
+            ->andReturn(['result' => true, 'data' => ['user_role' => 'user', 'end_date' => null, 'domains' => []]]);
+
+        $authClient = $this->makeAuthClient();
+        $authClient->shouldReceive('login')
+            ->once()
+            ->andReturn(['token' => $freshToken]);
+
+        Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
+        Functions\when('delete_transient')->justReturn(true);
+        Functions\expect('get_transient')->andReturn($staleToken, false, false);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
+        Functions\when('set_transient')->justReturn(true);
+
+        $result = $this->makeService($client, $authClient)->get_profile();
+        $this->assertSame('user', $result['user_role']);
+    }
+
+    /** @test */
+    public function get_profile_propagates_auth_exception_from_login(): void
+    {
+        $authClient = $this->makeAuthClient();
+        $authClient->shouldReceive('login')
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Auth_Exception('email not verified'));
+
+        Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
+
+        $this->expectException(\Lihi\ShortUrl\Lihi_Auth_Exception::class);
+        $this->makeService($this->makeClient(), $authClient)->get_profile();
+    }
+
+    // -------------------------------------------------------------------------
     // get_or_create_short_url()
     // -------------------------------------------------------------------------
 

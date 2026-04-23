@@ -9,7 +9,7 @@ A WordPress admin plugin that integrates with the [lihi](https://lihi.io) URL sh
 - **Get-or-create** — fetches the existing short link for a post from lihi; creates one automatically if none exists.
 - **One-click copy** — button copies the short URL to the clipboard and briefly shows "Copied!".
 - **Lazy auth** — authenticates against the lihi API only when a short URL is actually needed; caches the JWT in a site-scoped transient shared across all admins and refreshes it automatically when expired or when the configured email changes.
-- **Settings page** — configure the lihi API email under Settings → lihi Short URL. Until the email is saved, an admin notice links directly to the settings page and the plugin's features are disabled.
+- **Settings page** — configure the lihi API email under Settings → lihi Short URL; once an email is verified, the page also shows the account's role, plan end date, and available redirect domains (fetched via the same login-then-call flow as the lihi button). Until the email is saved, an admin notice links directly to the settings page and the plugin's features are disabled.
 - **i18n ready** — full Traditional Chinese (zh_TW) translation included; text domain `lihi-shorturl`.
 
 ## Requirements

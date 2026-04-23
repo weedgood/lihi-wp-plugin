@@ -68,7 +68,26 @@ function enqueue_settings_assets(): void {
 }
 
 function render_settings_page(): void {
-    $value = get_option( 'lihi_email', '' );
+    $value         = get_option( 'lihi_email', '' );
+    $profile       = null;
+    $profile_error = '';
+
+    // Same login-then-call pattern as the lihi button: Lihi_Service::get_profile()
+    // wraps get_token() (which calls Lihi_Auth_Client::login() once per cache miss)
+    // and retries once on Lihi_Token_Invalid_Exception.
+    if ( $value !== '' ) {
+        try {
+            $profile = lihi_service()->get_profile();
+        } catch ( Lihi_Auth_Exception $e ) {
+            $profile_error = __( 'Email not verified yet. Click Save & Verify to resend the verification email.', 'lihi-shorturl' );
+        } catch ( Lihi_Server_Exception $e ) {
+            error_log( '[lihi] profile fetch failed: ' . $e->getMessage() );
+            $profile_error = __( 'The lihi service is temporarily unavailable. Please try again later.', 'lihi-shorturl' );
+        } catch ( \Exception $e ) {
+            error_log( '[lihi] profile fetch failed: ' . $e->getMessage() );
+            $profile_error = __( 'Could not load account information.', 'lihi-shorturl' );
+        }
+    }
     ?>
     <div class="wrap">
         <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -89,6 +108,37 @@ function render_settings_page(): void {
                 </tr>
             </tbody>
         </table>
+
+        <?php if ( $profile !== null ) : ?>
+            <h2><?php esc_html_e( 'Account', 'lihi-shorturl' ); ?></h2>
+            <table class="form-table" role="presentation">
+                <tbody>
+                    <tr>
+                        <th scope="row"><?php esc_html_e( 'Subscribe Plan', 'lihi-shorturl' ); ?></th>
+                        <td><?php echo esc_html( $profile['user_role'] ?? __( '(none)', 'lihi-shorturl' ) ); ?></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e( 'Plan End Date', 'lihi-shorturl' ); ?></th>
+                        <td><?php echo esc_html( $profile['end_date'] ?? __( '—', 'lihi-shorturl' ) ); ?></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><?php esc_html_e( 'Redirect domains', 'lihi-shorturl' ); ?></th>
+                        <td>
+                            <?php
+                            $domains = $profile['domains'] ?? [];
+                            if ( empty( $domains ) ) {
+                                esc_html_e( '(none available)', 'lihi-shorturl' );
+                            } else {
+                                echo esc_html( implode( ', ', $domains ) );
+                            }
+                            ?>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        <?php elseif ( $profile_error !== '' ) : ?>
+            <div class="notice notice-error inline"><p><?php echo esc_html( $profile_error ); ?></p></div>
+        <?php endif; ?>
     </div>
     <?php
 }

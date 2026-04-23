@@ -51,6 +51,31 @@ class Lihi_Service {
     }
 
     /**
+     * Fetch the authenticated user's profile (role, plan end date, redirect domains).
+     *
+     * Uses the same token-then-call pattern as get_or_create_short_url():
+     * on Lihi_Token_Invalid_Exception the cached token is discarded and the
+     * call is retried once with a freshly obtained token.
+     *
+     * @return array{user_role: ?string, end_date: ?string, domains: list<string>}
+     *
+     * @throws Lihi_Auth_Exception       auth service rejected the login (email unverified).
+     * @throws Lihi_Server_Exception     auth service or short-URL API unavailable.
+     */
+    public function get_profile(): array {
+        $token = $this->get_token();
+        try {
+            $result = $this->client->get_profile( $token );
+        } catch ( Lihi_Token_Invalid_Exception $e ) {
+            $this->invalidate_token();
+            $token  = $this->get_token();
+            $result = $this->client->get_profile( $token );
+        }
+
+        return $result['data'] ?? [];
+    }
+
+    /**
      * Return the lihi short URL for a post, creating it if it does not yet exist.
      *
      * On Lihi_Token_Invalid_Exception the cached token is discarded and the

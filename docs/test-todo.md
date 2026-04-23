@@ -60,6 +60,11 @@
 - [x] 沒搶到 lock，poll 超時 → fallback 呼叫 login，存入 transient，回傳 token
 - [x] login 拋出例外 → lock 釋放，例外向上傳遞
 
+### get_profile()
+- [x] 成功 → 回傳 `data` 子陣列（user_role / end_date / domains）
+- [x] `client->get_profile()` 拋出 `Lihi_Token_Invalid_Exception` → invalidate token、重新 login、再試一次
+- [x] `auth_client->login()` 拋出 `Lihi_Auth_Exception`（email 未驗證）→ 向上傳遞
+
 ### get_or_create_short_url()
 - [x] 已有相符 type_id 的短連結 → 直接回傳 `short_url`，不呼叫 create_site
 - [x] 無相符短連結 → 呼叫 create_site 並回傳新 `short_url`

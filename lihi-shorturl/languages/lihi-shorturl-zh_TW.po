@@ -105,6 +105,46 @@ msgstr "✓ Email 已驗證。"
 msgid "Verification email sent. Please click the link in that email to finish verification."
 msgstr "驗證信已寄出，請點擊信中的連結完成驗證。"
 
+#: includes/settings.php
+msgid "Email not verified yet. Click Save & Verify to resend the verification email."
+msgstr "Email 尚未完成驗證，請點擊「儲存並驗證」重新寄送驗證信。"
+
+#: includes/settings.php
+msgid "The lihi service is temporarily unavailable. Please try again later."
+msgstr "lihi 服務目前無法連線，請稍後再試。"
+
+#: includes/settings.php
+msgid "Could not load account information."
+msgstr "無法載入帳號資訊。"
+
+#: includes/settings.php
+msgid "Account"
+msgstr "帳號"
+
+#: includes/settings.php
+msgid "Subscribe Plan"
+msgstr "訂閱方案"
+
+#: includes/settings.php
+msgid "Plan End Date"
+msgstr "方案到期日"
+
+#: includes/settings.php
+msgid "Redirect domains"
+msgstr "可用短網址網域"
+
+#: includes/settings.php
+msgid "(none)"
+msgstr "（無）"
+
+#: includes/settings.php
+msgid "—"
+msgstr "—"
+
+#: includes/settings.php
+msgid "(none available)"
+msgstr "（尚無）"
+
 
 #: bootstrap.php
 msgid "lihi Short URL: please <a href=\"%s\">configure your email address</a> to enable the plugin."
