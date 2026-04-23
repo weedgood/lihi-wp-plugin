@@ -1,5 +1,13 @@
 # lihi API Endpoints（WordPress Plugin）
 
+本外掛對接兩個獨立服務：
+- **lihi short-URL API**（見 `lihi-admin`）— 下方的 `Lihi_Client` 契約
+- **lihi auth 服務**（見 `/home/wayne/lihi-wp-auth/docs/api.md`）— 下方的 `Lihi_Auth_Client` 契約
+
+---
+
+# lihi Short-URL API（Lihi_Client）
+
 Base URL:
 - Production: `https://app.lihi.com/api/wordpress/v1`
 - Dev: `https://app.lihidev.com/api/wordpress/v1`
@@ -11,23 +19,48 @@ Accept: application/json
 Content-Type: application/json
 ```
 
+> `wordpress/v1` routes（見 `lihi-admin/routes/api.php`）掛載下列 endpoint，`Lihi_Client`
+> 契約只涵蓋**非 auth 的 jwt endpoints**（auth 全部走下方 Lihi_Auth_Client）：
+>
+> | Endpoint | Auth | 契約 |
+> |---|---|---|
+> | `POST /auth/login` | legacy api_key | ❌（由 `Lihi_Auth_Client` 對 lihi-wp-auth 取 token） |
+> | `POST /auth/mail` | legacy api_key | ❌（外掛無用途） |
+> | `GET /profile` | jwt | ✅ |
+> | `GET /sites` / `POST /sites` | jwt | ✅ |
+>
+> 註：lihi-admin 已把 `login` / `mail` 移到 `auth` prefix 下，原本的 `POST /login` /
+> `POST /mail` 不再存在。`SiteController` 雖有 `update` / `destroy` 方法，但 route
+> 未掛載；`/posts`、`/site-urls` 則完全不存在於此 route group。
+
 ---
 
-## GET `/posts`
+## GET `/profile`
 
-Query: `locale=zh-TW|en`
+對應 `AuthController@profile`，jwt 驗證，外掛不使用。
 
-Response:
+Response 200:
 ```json
-{ "result": true, "data": [ { "id": 1, "title": "string", "body": "string" } ] }
+{
+  "result": true,
+  "data": {
+    "user_role": "admin",
+    "end_date": "2026-12-31",
+    "domains": ["redirect.lihidev.com", "redirect2.lihidev.com"]
+  }
+}
 ```
 
-**錯誤：token 缺少或無效（HTTP 500，HTML）**
-不論是否帶 Authorization header 結果完全相同，回 HTML 頁面，`<title>` 固定為「網站升級中...」。
+- `user_role` / `end_date` 可能為 `null`（user 無 role 或 plan）
+- `domains` 為可用 redirect domain 名稱陣列
+
+**錯誤：token 缺少或無效（HTTP 500，HTML）** → `Lihi_Token_Invalid_Exception`。
 
 ---
 
 ## GET `/sites`
+
+對應 `SiteController@index`。
 
 Query params: `type`, `type_id`, `per_page`, `page`, `keyword`
 
@@ -68,7 +101,9 @@ Response:
 
 ## POST `/sites`
 
-Body（`domain` 必填，`type_id` 必須為字串）:
+對應 `SiteController@store`。伺服器端 Validator 要求 `domain`、`urls`、`type` 必填；`type_id` 可選但傳字串。
+
+Body:
 ```json
 {
   "domain": "redirect.lihidev.com",
@@ -115,139 +150,56 @@ Response:
 
 ---
 
-## PUT `/sites/{id}`
-
-批次更新 site_urls 目標 URL（不能改 wordpress_link）:
-```json
-{ "urls": [ { "id": 789, "url": "https://example.com/new" } ] }
-```
-
-Response: `{ "result": true }`
-
-**錯誤：ID 不存在（HTTP 404，HTML）**
-`<title>` 為「Page Not Found」。
-
-**錯誤：token 缺少或無效（HTTP 500，HTML）**
-`<title>` 固定為「網站升級中...」。
-
----
-
-## DELETE `/sites/{id}`
-
-Response: `{ "result": true }`
-
-**錯誤：ID 不存在（HTTP 500，HTML）**
-與其他端點不同，回 HTTP 500 而非 404，`<title>` 為「網站升級中...」。
-
-**錯誤：token 缺少或無效（HTTP 500，HTML）**
-`<title>` 固定為「網站升級中...」。
-
----
-
-## POST `/site-urls`
-
-```json
-{ "site_id": "456", "url": "https://example.com/extra" }
-```
-
-Response:
-```json
-{ "result": true, "data": { "id": 791, "site_id": 456, "url": "https://..." } }
-```
-
-**錯誤：欄位缺失（HTTP 400）**
-```json
-{
-  "result": false,
-  "msg": {
-    "site_id": ["The site id field is required."],
-    "url":     ["The url field is required."]
-  }
-}
-```
-
-**錯誤：token 缺少或無效（HTTP 500，HTML）**
-`<title>` 固定為「網站升級中...」。
-
----
-
-## PUT `/site-urls/{id}`
-
-```json
-{ "url": "https://example.com/updated" }
-```
-
-Response: `{ "result": true, "data": { "id": 791, "url": "https://..." } }`
-
-**錯誤：ID 不存在（HTTP 404，HTML）**
-`<title>` 為「Page Not Found」。
-
-**錯誤：token 缺少或無效（HTTP 500，HTML）**
-`<title>` 固定為「網站升級中...」。
-
----
-
-## DELETE `/site-urls/{id}`
-
-Response: `{ "result": true }`
-
-**錯誤：ID 不存在（HTTP 404，HTML）**
-`<title>` 為「Page Not Found」。
-
-**錯誤：token 缺少或無效（HTTP 500，HTML）**
-`<title>` 固定為「網站升級中...」。
-
----
-
 ## PHP Client 對照
 
-| PHP 方法 | Method | Path |
-|----------|--------|------|
-| `get_posts()` | GET | `/posts` |
-| `get_sites()` | GET | `/sites` |
-| `get_short_links()` | GET | `/sites` (per_page=20, type, type_id) |
-| `create_site()` | POST | `/sites` |
-| `update_site()` | PUT | `/sites/{id}` |
-| `delete_site()` | DELETE | `/sites/{id}` |
-| `create_site_url()` | POST | `/site-urls` |
-| `update_site_url()` | PUT | `/site-urls/{id}` |
-| `delete_site_url()` | DELETE | `/site-urls/{id}` |
+| PHP 方法 | Method | Path | Auth |
+|----------|--------|------|------|
+| `get_profile()` | GET | `/profile` | jwt (外掛不呼叫) |
+| `get_sites()` | GET | `/sites` | jwt |
+| `get_short_links()` | GET | `/sites` (per_page=20, type, type_id) | jwt |
+| `create_site()` | POST | `/sites` | jwt |
 
 ---
 
 # lihi Auth API（Lihi_Auth_Client）
 
-Base URL: `lihi_config( 'auth_domain' )`（例：`https://w.lihidev.com`）。
-
-`Lihi_Auth_Client` 每次呼叫都把 HTTP `Host` header 覆寫成 WP 站台本身的 host（取自 `home_url()`），auth 服務靠這個 header 判斷 tenant domain，而非 URL 中的 host。
-
-Response 一律使用 envelope `{ result: bool, data: {...} }`；失敗時 `data.message` 為錯誤字串。
+Base URL: `lihi_config( 'auth_domain' )`（例：`https://w.lihidev.com`）。**不同服務**，不要與 `api_domain`（short-URL API）混淆。
 
 完整規格見 sibling repo：`/home/wayne/lihi-wp-auth/docs/api.md`。
+
+`Lihi_Auth_Client` 每次呼叫都把 HTTP `Host` header 覆寫成 WP 站台本身的 host（取自 `home_url()`）；auth 服務靠這個 header 判斷 tenant（`Host` 會 lowercase 並去掉 `:port`），而非 URL 中的 host。
+
+Response 一律使用 envelope `{ result: bool, data: {...} }`；失敗時 `data.message` 為錯誤字串。
 
 ## POST `/auth/update-email`
 
 由外掛設定頁的「Save & Verify」按鈕觸發：`wp_ajax_lihi_update_email` handler 先呼叫本端點，成功才 `update_option('lihi_email', $email)`，避免被 auth 服務拒絕的 email 成為有效設定。
+
+伺服器行為：
+- 若 `(domain, email)` 已 `verified = true` → 直接回 `{ verified: true }`，不寫 DB、不發 token。
+- 若 row 不存在或未驗證 → 一律簽發新 JWT 並 upsert（會使先前的 token 失效）。該 JWT 由 auth 服務以 email 等方式 out-of-band 寄出，**不會**在回應中回傳。
 
 Body:
 ```json
 { "email": "alice@example.com" }
 ```
 
-Response 200（已驗證、略過）:
+Response 200:
 ```json
 { "result": true, "data": { "verified": true } }
 ```
-
-Response 200（新簽發了一份驗證 token，out-of-band 寄出）:
 ```json
 { "result": true, "data": { "verified": false } }
 ```
 
-**錯誤：欄位缺失或 email 無效（HTTP 400）** → `Lihi_Validation_Exception`
-**錯誤：Host header 缺失（HTTP 400）** → `Lihi_Validation_Exception`（auth 服務刻意回傳通用訊息以作防偽閘道）
-**錯誤：超過速率限制（HTTP 429，auth 服務對 `/auth/update-email` 每 host 10 req/min）** → `Lihi_Rate_Limit_Exception`
-**錯誤：DB 或簽章失敗（HTTP 500）** → `Lihi_Server_Exception`
+**錯誤：HTTP 400** → `Lihi_Validation_Exception`
+`data.message` 可能為：`invalid json body`、`email is required`、`invalid email`（RFC 5322 parse 失敗）、`bad request`（Host header 缺失；刻意回通用訊息以作防偽閘道）。
+
+**錯誤：HTTP 429** → `Lihi_Rate_Limit_Exception`
+每 host 10 req/min（`Host` 經 lowercase / 去 `:port` 正規化後計數）；空 Host 共用同一 fallback bucket。fixed-window、per-process。`data.message`：`too many requests`。
+
+**錯誤：HTTP 500** → `Lihi_Server_Exception`
+`data.message` ∈ `load verification`、`issue token`、`persist verification`。真正的錯誤只記在 server log，不回給 client。
 
 ---
 
@@ -265,9 +217,9 @@ Response 200:
 
 - `data.token` — lihi 上游 bearer token（上游 TTL 約 168 天）。
 
-**錯誤：欄位缺失或 email 無效（HTTP 400）** → `Lihi_Validation_Exception`
-**錯誤：email 未驗證或該 `(domain, email)` 不存在（HTTP 403）** → `Lihi_Auth_Exception`
-**錯誤：DB 或上游 lihi 失敗（HTTP 500）** → `Lihi_Server_Exception`
+**錯誤：HTTP 400** → `Lihi_Validation_Exception`（觸發條件同 `/auth/update-email`）
+**錯誤：HTTP 403** → `Lihi_Auth_Exception`。`data.message`：`email not verified`。row 不存在與 row 未驗證刻意回傳同一訊息，避免 caller 透過這個端點試探 email 是否存在。
+**錯誤：HTTP 500** → `Lihi_Server_Exception`。`data.message` ∈ `load verification`、`issue token`；`issue token` 把所有上游失敗模式（validation、bad api_key、upstream 維護頁、network error）收斂到同一個訊息，避免 caller fingerprint 上游狀態。
 
 ---
 
@@ -277,3 +229,6 @@ Response 200:
 |----------|--------|------|
 | `Lihi_Auth_Client::update_email()` | POST | `/auth/update-email` |
 | `Lihi_Auth_Client::login()` | POST | `/auth/login` |
+
+> 不實作 `GET /healthz`、`GET /readyz`（監控用）、`GET /auth/verify-email`（使用者在
+> 瀏覽器點信件中連結的 HTML flow）— 外掛不會呼叫這些 endpoint。

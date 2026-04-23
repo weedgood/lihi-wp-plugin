@@ -26,12 +26,12 @@ class Lihi_Client implements Lihi_Client_Interface {
     }
 
     // -------------------------------------------------------------------------
-    // Posts
+    // Profile
     // -------------------------------------------------------------------------
 
     /** @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
-    public function get_posts( string $token, string $locale = 'zh-TW' ): array {
-        [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/posts', [ 'locale' => $locale ], $token );
+    public function get_profile( string $token ): array {
+        [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/profile', [], $token );
         return $this->decode( $code, $body );
     }
 
@@ -68,63 +68,6 @@ class Lihi_Client implements Lihi_Client_Interface {
         }
 
         return $data;
-    }
-
-    /**
-     * @throws Lihi_Not_Found_Exception  ID not found (HTTP 404 HTML)
-     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
-     */
-    public function update_site( string $token, int $id, array $body ): array {
-        [ 'code' => $code, 'body' => $raw ] = $this->request( 'PUT', "/api/wordpress/v1/sites/{$id}", $body, $token );
-        return $this->decode( $code, $raw );
-    }
-
-    /**
-     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
-     * ID not found returns HTTP 500 HTML (API inconsistency).
-     */
-    public function delete_site( string $token, int $id ): bool {
-        [ 'code' => $code, 'body' => $body ] = $this->request( 'DELETE', "/api/wordpress/v1/sites/{$id}", [], $token );
-        $this->decode( $code, $body );
-        return true;
-    }
-
-    // -------------------------------------------------------------------------
-    // Site URLs
-    // -------------------------------------------------------------------------
-
-    /**
-     * @throws Lihi_Validation_Exception missing required fields (HTTP 400)
-     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
-     */
-    public function create_site_url( string $token, array $body ): array {
-        [ 'code' => $code, 'body' => $raw ] = $this->request( 'POST', '/api/wordpress/v1/site-urls', $body, $token );
-        $data = $this->decode( $code, $raw );
-
-        if ( $code === 400 ) {
-            throw new Lihi_Validation_Exception( $this->msg( $data ) );
-        }
-
-        return $data;
-    }
-
-    /**
-     * @throws Lihi_Not_Found_Exception  ID not found (HTTP 404 HTML)
-     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
-     */
-    public function update_site_url( string $token, int $id, array $body ): array {
-        [ 'code' => $code, 'body' => $raw ] = $this->request( 'PUT', "/api/wordpress/v1/site-urls/{$id}", $body, $token );
-        return $this->decode( $code, $raw );
-    }
-
-    /**
-     * @throws Lihi_Not_Found_Exception  ID not found (HTTP 404 HTML)
-     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
-     */
-    public function delete_site_url( string $token, int $id ): bool {
-        [ 'code' => $code, 'body' => $body ] = $this->request( 'DELETE', "/api/wordpress/v1/site-urls/{$id}", [], $token );
-        $this->decode( $code, $body );
-        return true;
     }
 
     // -------------------------------------------------------------------------

@@ -92,14 +92,17 @@
 - [x] wp_remote_request 回傳 WP_Error → 拋出 RuntimeException
 
 ### 各方法路徑與 HTTP method
-- [x] get_posts() → GET /api/wordpress/v1/posts，locale 傳為 query param
+- [x] get_profile() → GET /api/wordpress/v1/profile，帶 Authorization: Bearer
+- [x] get_sites() → GET /api/wordpress/v1/sites，params 編為 query string
 - [x] get_short_links() → GET /api/wordpress/v1/sites，帶 type/type_id/per_page
-- [x] update_site() → PUT /api/wordpress/v1/sites/{id}
-- [x] delete_site() → DELETE /api/wordpress/v1/sites/{id}，回傳 true
-- [x] create_site_url() → POST /api/wordpress/v1/site-urls
-- [x] create_site_url() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
-- [x] update_site_url() → PUT /api/wordpress/v1/site-urls/{id}
-- [x] delete_site_url() → DELETE /api/wordpress/v1/site-urls/{id}，回傳 true
+- [x] create_site() → POST /api/wordpress/v1/sites，body 為 JSON
+- [x] create_site() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
+
+> `Lihi_Client_Interface` 只涵蓋 `wordpress/v1` 下**非 auth 的 jwt endpoints**：
+> `profile`、`sites`（index/store）。Auth（`login` / `update-email`）屬於另一個服務
+> （lihi-wp-auth），由 `Lihi_Auth_Client_Interface` 負責。`POST /auth/mail` 外掛無用途，
+> 不納入契約；`SiteController::update`/`destroy` 未掛 route；`/posts`、`/site-urls`
+> 不存在於本群組。
 
 ---
 

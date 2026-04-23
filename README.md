@@ -73,9 +73,9 @@ lihi-shorturl/
     ├── settings.php           Settings page under Settings → lihi Short URL; "Save & Verify" triggers wp_ajax_lihi_update_email which calls Lihi_Auth_Client::update_email() first and only persists the option on success; flushes the cached token on add/update/delete of lihi_email
     ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler
     ├── client/
-    │   ├── lihi-client-interface.php       Interface with full phpDoc; every method except login() takes $token as first param
+    │   ├── lihi-client-interface.php       Short-URL API contract; mirrors the non-auth jwt endpoints in lihi-admin's wordpress/v1 routes (get_profile, get_sites, get_short_links, create_site). Auth (login / update-email) lives in Lihi_Auth_Client_Interface and references the separate lihi-wp-auth service. Only get_short_links / create_site are actually called today
     │   ├── lihi-client.php                 Production HTTP client; token passed per-call, not stored on instance
-    │   ├── lihi-auth-client-interface.php  Interface for the lihi auth service (update_email, login)
+    │   ├── lihi-auth-client-interface.php  Auth service contract (update_email, login); mirrors /home/wayne/lihi-wp-auth/docs/api.md
     │   ├── lihi-auth-client.php            Production auth HTTP client; overrides HTTP Host header with home_url() host so the auth service can identify the tenant
     │   └── lihi-exceptions.php             Typed exception hierarchy (Auth / Validation / NotFound / RateLimit / TokenInvalid / Server)
     └── service/

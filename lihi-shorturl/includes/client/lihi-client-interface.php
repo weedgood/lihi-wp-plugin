@@ -4,11 +4,25 @@ namespace Lihi\ShortUrl;
 /**
  * lihi short-url API client contract.
  *
- * All client implementations (production and mock) must satisfy this interface.
  * Base URL: lihi_config( 'api_domain' ) + /api/wordpress/v1.
+ * Mirrors the non-auth endpoints wired in lihi-admin's `wordpress/v1` group
+ * (`routes/api.php`). Authentication (`login`, `update-email`) belongs to a
+ * separate lihi auth service and is handled by `Lihi_Auth_Client_Interface`
+ * — see `/home/wayne/lihi-wp-auth/docs/api.md` for that contract.
  *
- * Every method requires a bearer $token obtained from Lihi_Auth_Client::login().
- * The service layer is responsible for acquiring and refreshing the token.
+ * `SiteController::update` / `destroy` exist in source but are not routed,
+ * and `/posts` / `/site-urls` do not exist in this group — so they are
+ * intentionally absent from this interface. `POST /auth/mail` (legacy api_key
+ * `WordpressUrlMail` sender) also exists in the route group but the plugin
+ * has no use for it and it is omitted here.
+ *
+ * All methods below sit behind `jwt.auth` middleware and require a bearer
+ * token obtained from `Lihi_Auth_Client::login()`. The service layer is
+ * responsible for acquiring and refreshing the token.
+ *
+ * Plugin usage note: the current plugin only calls the two Site endpoints
+ * (`get_sites` via `get_short_links`, and `create_site`). `get_profile` is
+ * kept here to keep the contract aligned with the service surface.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -18,30 +32,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 interface Lihi_Client_Interface {
 
     // -------------------------------------------------------------------------
-    // Posts（系統公告）
+    // Profile (jwt)
     // -------------------------------------------------------------------------
 
     /**
-     * Retrieve system announcements visible to the current user.
+     * Current user's role, plan expiry, and accessible redirect domains.
      *
-     * GET /api/wordpress/v1/posts
+     * GET /api/wordpress/v1/profile (AuthController@profile)
      *
-     * @param string $token  JWT bearer token.
-     * @param string $locale Optional. 'zh-TW' (default) or 'en'.
-     * @return array{result: bool, data: list<array{id: int, title: string, body: string}>}
+     * Tenant is resolved via the bearer token's `sub` claim; no query params.
+     * Not used by the plugin; kept here for contract completeness.
+     *
+     * @param string $token JWT bearer token.
+     *
+     * @return array{
+     *   result: bool,
+     *   data: array{
+     *     user_role: ?string,
+     *     end_date:  ?string,
+     *     domains:   list<string>,
+     *   },
+     * }
+     *
+     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
-    public function get_posts( string $token, string $locale = 'zh-TW' ): array;
+    public function get_profile( string $token ): array;
 
     // -------------------------------------------------------------------------
-    // Sites（短連結主體）
+    // Sites (jwt)
     // -------------------------------------------------------------------------
 
     /**
      * Retrieve sites with optional filters.
      *
-     * GET /api/wordpress/v1/sites
+     * GET /api/wordpress/v1/sites (SiteController@index)
      *
-     * @param string $token  JWT bearer token.
+     * @param string $token JWT bearer token.
      * @param array{
      *   type?:     string,
      *   type_id?:  string,
@@ -53,24 +79,26 @@ interface Lihi_Client_Interface {
      * @return array{
      *   result: bool,
      *   data: array{
-     *     domains: list<string>,
-     *     total_sites: int,
-     *     limit_sites: int,
      *     sites: array{
      *       current_page: int,
      *       total:        int,
      *       per_page:     int,
      *       data: list<array{
      *         id:             int,
-     *         domain:         string,
+     *         domain_name:    string,
      *         short_url:      string,
      *         wordpress_link: array{type: string, type_id: string},
      *         site_urls:      list<array{id: int, url: string}>,
      *         site_tags:      list<mixed>,
      *       }>,
      *     },
+     *     domains:     list<array{id: mixed, name: string}>,
+     *     total_sites: int,
+     *     limit_sites: int,
      *   },
      * }
+     *
+     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function get_sites( string $token, array $params = [] ): array;
 
@@ -91,14 +119,17 @@ interface Lihi_Client_Interface {
     /**
      * Create a new site (short link).
      *
-     * POST /api/wordpress/v1/sites
+     * POST /api/wordpress/v1/sites (SiteController@store)
+     *
+     * Server-side Validator requires `domain`, `urls`, `type`; `type_id` is
+     * optional but must be a string when present.
      *
      * @param string $token JWT bearer token.
      * @param array{
+     *   domain:   string,
      *   urls:     list<string>,
      *   type:     string,
      *   type_id?: string|int,
-     *   domain?:  string,
      *   tags?:    string,
      * } $body Request body. `tags` is a comma-separated string (e.g. "wordpress,blog").
      *
@@ -106,75 +137,15 @@ interface Lihi_Client_Interface {
      *   result: bool,
      *   data: array{
      *     id:             int,
-     *     domain:         string,
+     *     domain_name:    string,
      *     short_url:      string,
      *     site_urls:      list<array{id: int, url: string}>,
      *     wordpress_link: array{type: string, type_id: string},
      *   },
      * }
+     *
+     * @throws Lihi_Validation_Exception on HTTP 400 (missing required fields).
+     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function create_site( string $token, array $body ): array;
-
-    /**
-     * Batch-update the target URLs of all site_urls under a site.
-     *
-     * PUT /api/wordpress/v1/sites/{id}
-     *
-     * @param string $token JWT bearer token.
-     * @param int    $id    Site ID.
-     * @param array{
-     *   urls: list<array{id: int, url: string}>,
-     * } $body Request body.
-     * @return array{result: bool}
-     */
-    public function update_site( string $token, int $id, array $body ): array;
-
-    /**
-     * Delete a site by ID (cascades to wordpress_link and site_urls).
-     *
-     * DELETE /api/wordpress/v1/sites/{id}
-     *
-     * @param string $token JWT bearer token.
-     * @param int    $id    Site ID.
-     * @return bool Always true; throws on failure.
-     */
-    public function delete_site( string $token, int $id ): bool;
-
-    // -------------------------------------------------------------------------
-    // Site URLs（個別分流連結）
-    // -------------------------------------------------------------------------
-
-    /**
-     * Add a new target URL to an existing site.
-     *
-     * POST /api/wordpress/v1/site-urls
-     *
-     * @param string $token JWT bearer token.
-     * @param array{site_id: string|int, url: string} $body Request body.
-     * @return array{result: bool, data: array{id: int, site_id: int, url: string}}
-     */
-    public function create_site_url( string $token, array $body ): array;
-
-    /**
-     * Update a single site URL's target.
-     *
-     * PUT /api/wordpress/v1/site-urls/{id}
-     *
-     * @param string             $token JWT bearer token.
-     * @param int                $id    Site URL ID.
-     * @param array{url: string} $body  Request body.
-     * @return array{result: bool, data: array{id: int, url: string}}
-     */
-    public function update_site_url( string $token, int $id, array $body ): array;
-
-    /**
-     * Delete a single site URL by ID.
-     *
-     * DELETE /api/wordpress/v1/site-urls/{id}
-     *
-     * @param string $token JWT bearer token.
-     * @param int    $id    Site URL ID.
-     * @return bool Always true; throws on failure.
-     */
-    public function delete_site_url( string $token, int $id ): bool;
 }
