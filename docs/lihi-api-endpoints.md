@@ -114,7 +114,7 @@ Body:
 }
 ```
 
-本外掛送出的 `type` 會帶上 WP 站台 host（格式 `"{type}:{host}"`），與 `GET /sites` 的查詢條件一致；`tags` 仍使用未串接的原始 `type`。
+本外掛送出的 `type` 會帶上 WP 站台 host（格式 `"{type}:{host}"`），與 `GET /sites` 的查詢條件一致；`tags` 仍使用未串接的原始 `type`。`domain` 讀自 `lihi_domain` wp_option（admin 在設定頁從 profile 下拉選擇），未設定時送空字串 — lihi-admin 對 `domain` 是 `required` 驗證，若此時 admin 還沒選擇就按 lihi 按鈕，會得到 400 欄位缺失錯誤。
 
 Response:
 ```json

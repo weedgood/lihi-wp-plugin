@@ -130,8 +130,32 @@ msgid "Plan End Date"
 msgstr "方案到期日"
 
 #: includes/settings.php
-msgid "Redirect domains"
-msgstr "可用短網址網域"
+msgid "Redirect domain"
+msgstr "短網址網域"
+
+#: includes/settings.php
+msgid "Redirect domain used when creating new lihi short URLs."
+msgstr "建立新 lihi 短網址時使用的網域。"
+
+#: includes/settings.php
+msgid "Save"
+msgstr "儲存"
+
+#: includes/settings.php
+msgid "Invalid redirect domain."
+msgstr "無效的短網址網域。"
+
+#: includes/settings.php
+msgid "Redirect domain saved."
+msgstr "短網址網域已儲存。"
+
+#: includes/settings.php
+msgid "Redirect domain cleared."
+msgstr "已清除短網址網域。"
+
+#: includes/settings.php
+msgid "— Please Choose —"
+msgstr "— 請選擇 —"
 
 #: includes/settings.php
 msgid "(none)"

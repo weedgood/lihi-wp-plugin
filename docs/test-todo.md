@@ -11,6 +11,7 @@
 | `AuthClientTest` | `TestCase` + Brain\Monkey | 純單元，mock `wp_remote_request`（尚未撰寫） |
 | `AjaxCopyUrlTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
 | `AjaxUpdateEmailTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式與 auth client |
+| `AjaxUpdateDomainTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
 | `AdminNoticeTest` | `WP_UnitTestCase` | 整合，需要 DB |
 | `HelperTest` | `WP_UnitTestCase` | 整合，需要 DB |
 | `PluginHooksTest` | `WP_UnitTestCase` | 整合，需要 DB |
@@ -71,6 +72,8 @@
 - [x] create_site 回傳空 `short_url` → 拋出 RuntimeException
 - [x] get_short_links 有多筆結果 → 回傳第一筆相符的 `short_url`
 - [x] create_site 的 body 包含正確的 permalink、type、type_id
+- [x] `lihi_domain` option 已設 → create_site body 的 `domain` 為該值
+- [x] `lihi_domain` option 未設 → create_site body 的 `domain` 為空字串（`redirect_domain` config key 已棄用，改由 wp_option 決定）
 - [x] type 為 `attachment` → 使用 `wp_get_attachment_url()` 而非 `get_permalink()`
 - [x] get_short_links 的 type 參數為 `"{type}:{host}"`（host 取自 `home_url()`）
 - [x] create_site 的 body `type` 為 `"{type}:{host}"`，`tags` 仍使用原始 `type`
@@ -142,6 +145,16 @@
 
 ---
 
+## AJAX Handler: lihi_update_domain
+
+- [x] 無 `manage_options` 權限 → wp_send_json_error，不呼叫 update_option / delete_option
+- [x] domain 為空 → 呼叫 `delete_option('lihi_domain')`，wp_send_json_success 訊息含「cleared」
+- [x] domain 全為空白字元 → 同上，視為清除
+- [x] domain 格式無效（非 hostname 樣式）→ wp_send_json_error「Invalid」，不呼叫 update_option / delete_option
+- [x] domain 格式合法 → 呼叫 `update_option('lihi_domain', …)`，wp_send_json_success 訊息含「saved」
+
+---
+
 ## AJAX Handler: lihi_update_email
 
 - [x] 無 `manage_options` 權限 → wp_send_json_error，不呼叫 `update_option`
@@ -171,3 +184,5 @@
 - [x] `admin_init` 註冊 `lihi_email` setting
 - [x] `admin_menu` 註冊 Settings → lihi Short URL 頁面
 - [x] `update_option('lihi_email', …)` → `lihi_token` transient 被清除
+- [x] `update_option('lihi_email', …)` → `lihi_domain` option 被清除
+- [x] `delete_option('lihi_email')` → `lihi_domain` option 被清除

@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * The config file is required once and cached for the request lifetime.
  *
- * @param string $key Configuration key (e.g. "api_domain", "redirect_domain", "auth_domain").
+ * @param string $key Configuration key (e.g. "api_domain", "auth_domain").
  * @return mixed Value for the key, or null if the key is unknown.
  */
 function lihi_config( string $key ) {

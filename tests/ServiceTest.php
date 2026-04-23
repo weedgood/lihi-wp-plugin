@@ -13,8 +13,7 @@ use PHPUnit\Framework\TestCase;
 class ServiceTest extends TestCase
 {
     private array $configDefaults = [
-        'redirect_domain' => 'redirect.lihidev.com',
-        'api_domain'      => 'https://app.lihidev.com',
+        'api_domain' => 'https://app.lihidev.com',
     ];
 
     protected function setUp(): void
@@ -25,6 +24,10 @@ class ServiceTest extends TestCase
         // API type; default both so tests don't have to repeat themselves.
         Functions\when('home_url')->justReturn('https://example.com');
         Functions\when('wp_parse_url')->justReturn('example.com');
+        // Default get_option to the caller's default value. Individual tests
+        // override with Functions\when('get_option')->... when they need a
+        // specific value (e.g. a saved lihi_domain).
+        Functions\when('get_option')->alias(fn($key, $default = false) => $default);
         $this->mockConfig();
     }
 
@@ -487,9 +490,38 @@ class ServiceTest extends TestCase
         $this->assertSame(['https://example.com/?p=42'], $capturedBody['urls']);
         $this->assertSame('post:example.com', $capturedBody['type']);
         $this->assertSame('42', $capturedBody['type_id']);
-        $this->assertSame('redirect.lihidev.com', $capturedBody['domain']);
+        // No lihi_domain saved in this test → empty string; lihi-admin
+        // silently substitutes its account-valid default on the backend.
+        $this->assertSame('', $capturedBody['domain']);
         // tags keeps the bare $type, not the host-namespaced form
         $this->assertSame('wordpress,example.com,post', $capturedBody['tags']);
+    }
+
+    /** @test */
+    public function get_or_create_sends_saved_lihi_domain_when_option_is_set(): void
+    {
+        Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
+        Functions\when('get_option')->alias(function ($key, $default = false) {
+            return $key === 'lihi_domain' ? 'custom.lihidev.com' : $default;
+        });
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->andReturn($this->makeSitesResponse([]));
+
+        $capturedBody = null;
+        $client->shouldReceive('create_site')
+            ->once()
+            ->andReturnUsing(function ($token, $body) use (&$capturedBody) {
+                $capturedBody = $body;
+                return ['data' => ['short_url' => 'https://lihi.io/new']];
+            });
+
+        Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
+
+        $this->makeService($client)->get_or_create_short_url(42, 'post');
+
+        $this->assertSame('custom.lihidev.com', $capturedBody['domain']);
     }
 
     /** @test */

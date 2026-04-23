@@ -175,4 +175,19 @@ class PluginHooksTest extends \WP_UnitTestCase
         update_option('lihi_email', 'new@example.com');
         $this->assertFalse(get_transient('lihi_token'));
     }
+
+    public function test_email_change_clears_lihi_domain_option(): void
+    {
+        update_option('lihi_domain', 'redirect.lihidev.com');
+        update_option('lihi_email', 'new@example.com');
+        $this->assertFalse(get_option('lihi_domain'));
+    }
+
+    public function test_email_delete_clears_lihi_domain_option(): void
+    {
+        update_option('lihi_email', 'old@example.com');
+        update_option('lihi_domain', 'redirect.lihidev.com');
+        delete_option('lihi_email');
+        $this->assertFalse(get_option('lihi_domain'));
+    }
 }

@@ -9,7 +9,7 @@ A WordPress admin plugin that integrates with the [lihi](https://lihi.io) URL sh
 - **Get-or-create** — fetches the existing short link for a post from lihi; creates one automatically if none exists.
 - **One-click copy** — button copies the short URL to the clipboard and briefly shows "Copied!".
 - **Lazy auth** — authenticates against the lihi API only when a short URL is actually needed; caches the JWT in a site-scoped transient shared across all admins and refreshes it automatically when expired or when the configured email changes.
-- **Settings page** — configure the lihi API email under Settings → lihi Short URL; once an email is verified, the page also shows the account's role, plan end date, and available redirect domains (fetched via the same login-then-call flow as the lihi button). Until the email is saved, an admin notice links directly to the settings page and the plugin's features are disabled.
+- **Settings page** — configure the lihi API email under Settings → lihi Short URL; once an email is verified, the page also shows the account's plan tier, plan end date, and a redirect-domain selector (choice is persisted to the `lihi_domain` option). Until the email is saved, an admin notice links directly to the settings page and the plugin's features are disabled.
 - **i18n ready** — full Traditional Chinese (zh_TW) translation included; text domain `lihi-shorturl`.
 
 ## Requirements
@@ -66,9 +66,9 @@ lihi-shorturl/
 ├── bootstrap.php              Loads class files unconditionally; registers an admin notice when email is unset (UI hooks self-guard in add-shorturl-column.php)
 ├── assets/
 │   ├── lihi-button.js         Async delegated click handler; splits disable window (300 ms) from "Copied!" label duration (1200 ms); errors shown via auto-dismissing WP .notice.notice-error
-│   └── lihi-settings.js       Settings page "Save & Verify" button; POSTs email to lihi_update_email AJAX, renders inline .notice-success / .notice-error with verified / sent / error message
+│   └── lihi-settings.js       Settings page button handlers; shared bindSaver helper wires Save & Verify (email → lihi_update_email) and Save (domain → lihi_update_domain) to admin-ajax and renders inline .notice-success / .notice-error feedback. On verified:true the email handler triggers window.location.reload() so render_settings_page() can call get_profile() and paint the account section inline
 └── includes/
-    ├── config.php             Flat array of plugin config (api_domain, redirect_domain, auth_domain); read via lihi_config()
+    ├── config.php             Flat array of plugin config (api_domain, auth_domain); read via lihi_config(). Redirect domain comes from the lihi_domain wp_option instead — admin picks from the profile selector on the settings page
     ├── helper.php             lihi_config($key), lihi_email() (reads lihi_email option), lihi_client() / lihi_auth_client() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
     ├── settings.php           Settings page under Settings → lihi Short URL; "Save & Verify" triggers wp_ajax_lihi_update_email which calls Lihi_Auth_Client::update_email() first and only persists the option on success; flushes the cached token on add/update/delete of lihi_email
     ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler

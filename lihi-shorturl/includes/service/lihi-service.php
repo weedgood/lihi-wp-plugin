@@ -114,7 +114,7 @@ class Lihi_Service {
             'urls'    => [ $this->resolve_url( $item_id, $type ) ],
             'type'    => $api_type,
             'type_id' => (string) $item_id,
-            'domain'  => lihi_config( 'redirect_domain' ),
+            'domain'  => (string) get_option( 'lihi_domain', '' ),
             'tags'    => 'wordpress,' . $host . ',' . $type,
         ] );
 
