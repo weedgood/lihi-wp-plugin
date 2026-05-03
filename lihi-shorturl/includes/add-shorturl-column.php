@@ -12,10 +12,12 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// UI hooks (column, button, enqueue) only register when the plugin is configured.
+// UI hooks (column, button, enqueue) only register when the plugin is fully
+// configured — both the auth email AND the redirect domain must be set.
+// Either missing piece surfaces a setup notice via bootstrap.php instead.
 // The AJAX handler below is registered unconditionally so any stale button
 // clicks get a friendly error rather than WordPress's bare "0" response.
-if ( lihi_email() !== '' ) {
+if ( lihi_email() !== '' && lihi_domain() !== '' ) {
 
 // Enqueue lihi-button.js on list screens, media library, and post edit
 // (so the button works inside the media modal opened from the editor).
@@ -99,7 +101,7 @@ add_filter( 'attachment_fields_to_edit', function ( $form_fields, $post ) {
     return $form_fields;
 }, 10, 2 );
 
-} // end lihi_email() guard
+} // end lihi_email() && lihi_domain() guard
 
 /**
  * AJAX handler: fetch or create a lihi short URL for a post and return it
@@ -113,6 +115,11 @@ function ajax_copy_url(): void {
 
     if ( lihi_email() === '' ) {
         wp_send_json_error( __( 'lihi email is not configured. Please set it in Settings → lihi Short URL.', 'lihi-shorturl' ) );
+        return;
+    }
+
+    if ( lihi_domain() === '' ) {
+        wp_send_json_error( __( 'lihi redirect domain is not configured. Please choose one in Settings → lihi Short URL.', 'lihi-shorturl' ) );
         return;
     }
 

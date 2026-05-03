@@ -23,12 +23,18 @@
 
 - [x] `lihi_email()` — option 已設定 → 回傳 option 值
 - [x] `lihi_email()` — option 為空字串 → 回傳空字串
+- [x] `lihi_domain()` — option 已設定 → 回傳 option 值
+- [x] `lihi_domain()` — option 為空字串 → 回傳空字串
 - [x] `lihi_config( $key )` — 載入 `includes/config.php` 並回傳對應 key 的值（由 `Lihi_Client` 建構子與 `Lihi_Service` 透過實際呼叫驗證）
 - [x] `lihi_config( $key )` — 未知 key 回傳 null（透過 `mockConfig()` 預設邏輯涵蓋）
-- [n/a] UI hooks — email 空 → column/enqueue/attachment panel 未掛（是否註冊取決於 bootstrap 載入瞬間的 email 值，由程式碼審查保證）
-- [x] bootstrap guard — email 空 → 註冊 `admin_notices` action
-- [x] admin notice — 有 `manage_options` 權限 → 輸出含設定頁連結的 warning notice
-- [x] admin notice — 無 `manage_options` 權限 → 無輸出
+- [n/a] UI hooks — email 或 domain 任一空 → column/enqueue/attachment panel 未掛（是否註冊取決於 bootstrap 載入瞬間的 option 值，由程式碼審查保證）
+- [x] bootstrap guard — email 空 → 註冊 `admin_notices` action（email 訊息）
+- [x] bootstrap guard — email 已設、domain 空 → 註冊 `admin_notices` action（domain 訊息）
+- [x] bootstrap guard — email 與 domain 都已設 → 不註冊 `admin_notices` action
+- [x] admin notice (email 空) — 有 `manage_options` 權限 → 輸出含設定頁連結的 warning notice，文字含「configure your email address」
+- [x] admin notice (email 空) — 無 `manage_options` 權限 → 無輸出
+- [x] admin notice (domain 空) — 有 `manage_options` 權限 → 輸出含設定頁連結的 warning notice，文字含「choose a redirect domain」
+- [x] admin notice (domain 空) — 無 `manage_options` 權限 → 無輸出
 
 ---
 
@@ -137,6 +143,7 @@
 ## AJAX Handler: lihi_copy_url
 
 - [x] email 為空 → wp_send_json_error「lihi email is not configured…」
+- [x] domain 為空（email 已設）→ wp_send_json_error「lihi redirect domain is not configured…」
 - [x] item_id 為 0 → wp_send_json_error
 - [x] type 為空 → wp_send_json_error
 - [x] service 正常回傳 url → wp_send_json_success(['url' => ...])

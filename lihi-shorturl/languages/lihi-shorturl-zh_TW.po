@@ -45,6 +45,10 @@ msgid "lihi email is not configured. Please set it in Settings → lihi Short UR
 msgstr "lihi 尚未設定 Email，請至「設定 → lihi 短網址」填寫。"
 
 #: includes/add-shorturl-column.php
+msgid "lihi redirect domain is not configured. Please choose one in Settings → lihi Short URL."
+msgstr "lihi 尚未選擇短網址網域，請至「設定 → lihi 短網址」選擇。"
+
+#: includes/add-shorturl-column.php
 #. translators: %s: validation error message returned by the lihi API.
 msgid "lihi API rejected the request: %s"
 msgstr "lihi API 拒絕此請求：%s"
@@ -173,6 +177,10 @@ msgstr "（尚無）"
 #: bootstrap.php
 msgid "lihi Short URL: please <a href=\"%s\">configure your email address</a> to enable the plugin."
 msgstr "lihi 短網址：請先至 <a href=\"%s\">設定頁</a> 填寫 Email 以啟用外掛。"
+
+#: bootstrap.php
+msgid "lihi Short URL: please <a href=\"%s\">choose a redirect domain</a> to enable the plugin."
+msgstr "lihi 短網址：請先至 <a href=\"%s\">設定頁</a> 選擇短網址網域以啟用外掛。"
 
 #. Description of the plugin
 msgid "Adds a one-click \"lihi\" button to generate and copy short URLs, including posts, pages, media and all post-type list tables."

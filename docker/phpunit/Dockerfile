@@ -4,6 +4,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         unzip \
         libzip-dev \
+        gettext \
+        make \
     && docker-php-ext-install zip mysqli \
     && pecl install pcov \
     && docker-php-ext-enable pcov \

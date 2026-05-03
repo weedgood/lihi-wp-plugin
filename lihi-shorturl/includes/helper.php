@@ -37,6 +37,19 @@ function lihi_email(): string {
 }
 
 /**
+ * Return the redirect domain selected for new lihi short URLs.
+ *
+ * Reads the value stored in the plugin settings (Options API). Cleared
+ * automatically whenever lihi_email changes (see settings.php), so the
+ * domain always belongs to the currently-configured account.
+ *
+ * @return string Redirect domain (empty when unset).
+ */
+function lihi_domain(): string {
+    return (string) get_option( 'lihi_domain', '' );
+}
+
+/**
  * Internal singleton store. Keyed by class/interface name.
  *
  * @param string      $key     Store key.

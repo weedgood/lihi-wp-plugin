@@ -9,7 +9,7 @@ A WordPress admin plugin that integrates with the [lihi](https://lihi.io) URL sh
 - **Get-or-create** — fetches the existing short link for a post from lihi; creates one automatically if none exists.
 - **One-click copy** — button copies the short URL to the clipboard and briefly shows "Copied!".
 - **Lazy auth** — authenticates against the lihi API only when a short URL is actually needed; caches the JWT in a site-scoped transient shared across all admins and refreshes it automatically when expired or when the configured email changes.
-- **Settings page** — configure the lihi API email under Settings → lihi Short URL; once an email is verified, the page also shows the account's plan tier, plan end date, and a redirect-domain selector (choice is persisted to the `lihi_domain` option). Until the email is saved, an admin notice links directly to the settings page and the plugin's features are disabled.
+- **Settings page** — configure the lihi API email under Settings → lihi Short URL; once an email is verified, the page also shows the account's plan tier, plan end date, and a redirect-domain selector (choice is persisted to the `lihi_domain` option). Both the email and a redirect domain must be set before the lihi button appears: until they are, an admin notice links directly to the settings page (one notice for missing email, a parallel one for missing domain) and the plugin's UI hooks stay unregistered.
 - **i18n ready** — full Traditional Chinese (zh_TW) translation included; text domain `lihi-shorturl`.
 
 ## Requirements
@@ -63,15 +63,15 @@ docker compose --profile test exec phpunit vendor/bin/phpunit -c phpunit.xml
 ```
 lihi-shorturl/
 ├── lihi-shorturl.php          Plugin entry point; admin-only guard, text domain loading
-├── bootstrap.php              Loads class files unconditionally; registers an admin notice when email is unset (UI hooks self-guard in add-shorturl-column.php)
+├── bootstrap.php              Loads class files unconditionally; registers an admin notice when either lihi_email or lihi_domain is unset (UI hooks self-guard on both options in add-shorturl-column.php)
 ├── assets/
 │   ├── lihi-button.js         Async delegated click handler; splits disable window (300 ms) from "Copied!" label duration (1200 ms); errors shown via auto-dismissing WP .notice.notice-error
 │   └── lihi-settings.js       Settings page button handlers; shared bindSaver helper wires Save & Verify (email → lihi_update_email) and Save (domain → lihi_update_domain) to admin-ajax and renders inline .notice-success / .notice-error feedback. The email handler always blanks #lihi-account-section on success (so the prior account's role / end date / domain selector can't linger) and on verified:true schedules a 2 s delayed window.location.reload() so the admin sees the success notice before render_settings_page() repaints the account section
 └── includes/
     ├── config.php             Flat array of plugin config (api_domain, auth_domain); read via lihi_config(). Redirect domain comes from the lihi_domain wp_option instead — admin picks from the profile selector on the settings page
-    ├── helper.php             lihi_config($key), lihi_email() (reads lihi_email option), lihi_client() / lihi_auth_client() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
+    ├── helper.php             lihi_config($key), lihi_email() (reads lihi_email option), lihi_domain() (reads lihi_domain option), lihi_client() / lihi_auth_client() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
     ├── settings.php           Settings page under Settings → lihi Short URL; "Save & Verify" triggers wp_ajax_lihi_update_email which calls Lihi_Auth_Client::update_email() first and only persists the option on success; flushes the cached token on add/update/delete of lihi_email
-    ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler
+    ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email() && lihi_domain()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler that returns friendly errors when either option is unset
     ├── client/
     │   ├── lihi-client-interface.php       Short-URL API contract; mirrors the non-auth jwt endpoints in lihi-admin's wordpress/v1 routes (get_profile, get_sites, get_short_links, create_site). Auth (login / update-email) lives in Lihi_Auth_Client_Interface and references the separate lihi-wp-auth service. Only get_short_links / create_site are actually called today
     │   ├── lihi-client.php                 Production HTTP client; token passed per-call, not stored on instance

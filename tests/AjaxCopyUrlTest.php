@@ -61,6 +61,27 @@ class AjaxCopyUrlTest extends TestCase
     }
 
     /** @test */
+    public function returns_error_when_domain_is_not_configured(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['type']    = 'post';
+
+        Functions\when('check_ajax_referer')->justReturn(true);
+        Functions\when('Lihi\\ShortUrl\\lihi_domain')->justReturn('');
+
+        $errorMsg = null;
+        Functions\expect('wp_send_json_error')
+            ->once()
+            ->andReturnUsing(function ($msg) use (&$errorMsg) {
+                $errorMsg = $msg;
+            });
+
+        \Lihi\ShortUrl\ajax_copy_url();
+
+        $this->assertStringContainsString('lihi redirect domain is not configured', $errorMsg);
+    }
+
+    /** @test */
     public function returns_error_when_item_id_is_zero(): void
     {
         $_POST['item_id'] = '0';

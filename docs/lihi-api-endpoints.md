@@ -114,7 +114,7 @@ Body:
 }
 ```
 
-本外掛送出的 `type` 會帶上 WP 站台 host（格式 `"{type}:{host}"`），與 `GET /sites` 的查詢條件一致；`tags` 仍使用未串接的原始 `type`。`domain` 讀自 `lihi_domain` wp_option（admin 在設定頁從 profile 下拉選擇），未設定時送空字串 — lihi-admin 對 `domain` 是 `required` 驗證，若此時 admin 還沒選擇就按 lihi 按鈕，會得到 400 欄位缺失錯誤。
+本外掛送出的 `type` 會帶上 WP 站台 host（格式 `"{type}:{host}"`），與 `GET /sites` 的查詢條件一致；`tags` 仍使用未串接的原始 `type`。`domain` 讀自 `lihi_domain` wp_option（admin 在設定頁從 profile 下拉選擇）。lihi-admin 對 `domain` 是 `required` 驗證，外掛因此在 `lihi_domain` 未設定時就完全不註冊 lihi 按鈕、`bootstrap.php` 改顯示「請先選擇短網址網域」的 admin notice、`wp_ajax_lihi_copy_url` 也提早回傳友善錯誤 — 任何到達此端點的 `create_site` 呼叫都已保證 `domain` 非空。
 
 Response:
 ```json
