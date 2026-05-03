@@ -170,6 +170,13 @@
 
 ---
 
+## Settings page rendering
+
+- [n/a] `render_settings_page()` 把 profile / 錯誤通知區塊包在 `<div id="lihi-account-section">` 內（前端 JS 依靠這個 id 在 email 更新成功時清空舊帳號資料；由程式碼審查保證）
+- [n/a] `lihi-settings.js` email 存檔成功時，先清空 `#lihi-account-section`，verified 時延遲 2 秒再 reload（避免「驗證信已寄出」時舊帳號的 role / end_date / domain selector 殘留；2 秒延遲讓 admin 來得及讀到「✓ Email verified」訊息；由程式碼審查保證）
+
+---
+
 ## Plugin hooks (整合)
 
 - [x] `wp_ajax_lihi_copy_url` 已註冊

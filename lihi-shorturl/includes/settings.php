@@ -113,53 +113,55 @@ function render_settings_page(): void {
             </tbody>
         </table>
 
-        <?php if ( $profile !== null ) : ?>
-            <?php
-            $domains        = $profile['domains'] ?? [];
-            $current_domain = get_option( 'lihi_domain', '' );
-            ?>
-            <h2><?php esc_html_e( 'Account', 'lihi-shorturl' ); ?></h2>
-            <table class="form-table" role="presentation">
-                <tbody>
-                    <tr>
-                        <th scope="row"><?php esc_html_e( 'Subscribe Plan', 'lihi-shorturl' ); ?></th>
-                        <td><?php echo esc_html( $profile['user_role'] ?? __( '(none)', 'lihi-shorturl' ) ); ?></td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><?php esc_html_e( 'Plan End Date', 'lihi-shorturl' ); ?></th>
-                        <td><?php echo esc_html( $profile['end_date'] ?? __( '—', 'lihi-shorturl' ) ); ?></td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="lihi_domain"><?php esc_html_e( 'Redirect domain', 'lihi-shorturl' ); ?></label></th>
-                        <td>
-                            <?php if ( empty( $domains ) ) : ?>
-                                <?php esc_html_e( '(none available)', 'lihi-shorturl' ); ?>
-                            <?php else : ?>
-                                <select id="lihi_domain" name="lihi_domain">
-                                    <option value="" <?php selected( $current_domain, '' ); ?>>
-                                        <?php esc_html_e( '— Please Choose —', 'lihi-shorturl' ); ?>
-                                    </option>
-                                    <?php foreach ( $domains as $domain ) : ?>
-                                        <option value="<?php echo esc_attr( $domain ); ?>" <?php selected( $current_domain, $domain ); ?>>
-                                            <?php echo esc_html( $domain ); ?>
+        <div id="lihi-account-section">
+            <?php if ( $profile !== null ) : ?>
+                <?php
+                $domains        = $profile['domains'] ?? [];
+                $current_domain = get_option( 'lihi_domain', '' );
+                ?>
+                <h2><?php esc_html_e( 'Account', 'lihi-shorturl' ); ?></h2>
+                <table class="form-table" role="presentation">
+                    <tbody>
+                        <tr>
+                            <th scope="row"><?php esc_html_e( 'Subscribe Plan', 'lihi-shorturl' ); ?></th>
+                            <td><?php echo esc_html( $profile['user_role'] ?? __( '(none)', 'lihi-shorturl' ) ); ?></td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e( 'Plan End Date', 'lihi-shorturl' ); ?></th>
+                            <td><?php echo esc_html( $profile['end_date'] ?? __( '—', 'lihi-shorturl' ) ); ?></td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label for="lihi_domain"><?php esc_html_e( 'Redirect domain', 'lihi-shorturl' ); ?></label></th>
+                            <td>
+                                <?php if ( empty( $domains ) ) : ?>
+                                    <?php esc_html_e( '(none available)', 'lihi-shorturl' ); ?>
+                                <?php else : ?>
+                                    <select id="lihi_domain" name="lihi_domain">
+                                        <option value="" <?php selected( $current_domain, '' ); ?>>
+                                            <?php esc_html_e( '— Please Choose —', 'lihi-shorturl' ); ?>
                                         </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <button type="button" id="lihi-save-domain" class="button button-primary">
-                                    <?php esc_html_e( 'Save', 'lihi-shorturl' ); ?>
-                                </button>
-                                <p class="description">
-                                    <?php esc_html_e( 'Redirect domain used when creating new lihi short URLs.', 'lihi-shorturl' ); ?>
-                                </p>
-                                <div id="lihi-domain-status" role="status" aria-live="polite"></div>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        <?php elseif ( $profile_error !== '' ) : ?>
-            <div class="notice notice-error inline"><p><?php echo esc_html( $profile_error ); ?></p></div>
-        <?php endif; ?>
+                                        <?php foreach ( $domains as $domain ) : ?>
+                                            <option value="<?php echo esc_attr( $domain ); ?>" <?php selected( $current_domain, $domain ); ?>>
+                                                <?php echo esc_html( $domain ); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button type="button" id="lihi-save-domain" class="button button-primary">
+                                        <?php esc_html_e( 'Save', 'lihi-shorturl' ); ?>
+                                    </button>
+                                    <p class="description">
+                                        <?php esc_html_e( 'Redirect domain used when creating new lihi short URLs.', 'lihi-shorturl' ); ?>
+                                    </p>
+                                    <div id="lihi-domain-status" role="status" aria-live="polite"></div>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            <?php elseif ( $profile_error !== '' ) : ?>
+                <div class="notice notice-error inline"><p><?php echo esc_html( $profile_error ); ?></p></div>
+            <?php endif; ?>
+        </div>
     </div>
     <?php
 }

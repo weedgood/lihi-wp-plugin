@@ -9,12 +9,17 @@ document.addEventListener( 'DOMContentLoaded', () => {
 			return { email: input.value };
 		},
 		successMessage: ( data ) => data.message,
-		// When the email is already verified server-side, reload so
-		// render_settings_page() can call get_profile() with the fresh
-		// JWT and paint the account summary / domain selector inline.
+		// The Account section (role / end date / domain selector) belongs to
+		// the previous JWT — clear it on every successful email update so a
+		// "verification email sent" response can't leave stale account data
+		// from the prior email visible. When verified server-side, reload so
+		// render_settings_page() can call get_profile() with the fresh JWT
+		// and repaint the section inline. Delay the reload so the admin can
+		// actually read the "✓ Email verified" notice before the page repaints.
 		onSuccess: ( data ) => {
+			document.getElementById( 'lihi-account-section' )?.replaceChildren();
 			if ( data.verified ) {
-				window.location.reload();
+				setTimeout( () => window.location.reload(), 2000 );
 			}
 		},
 	} );
