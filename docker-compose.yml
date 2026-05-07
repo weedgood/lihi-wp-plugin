@@ -1,7 +1,7 @@
 services:
   db:
     image: mysql:9
-    restart: always
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: wordpress
@@ -17,7 +17,7 @@ services:
 
   wordpress:
     image: wordpress:latest
-    restart: always
+    restart: unless-stopped
     ports:
       - "8080:80"
     depends_on:

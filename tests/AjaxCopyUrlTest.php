@@ -15,6 +15,8 @@ class AjaxCopyUrlTest extends TestCase
         parent::setUp();
         Monkey\setUp();
         $_POST = [];
+
+        Functions\when('check_ajax_referer')->justReturn(true);
     }
 
     protected function tearDown(): void

@@ -142,6 +142,8 @@
 
 ## AJAX Handler: lihi_copy_url
 
+> 政策：產生短網址視為任何登入後台使用者皆可使用的功能，handler 內**不做** `current_user_can()` 檢查。未登入請求由 `wp_ajax_lihi_copy_url` action（未註冊 `wp_ajax_nopriv_*` 變體）擋下，無法抵達此 handler。因此本節**沒有**權限拒絕的 test case，這是有意為之；只有 `lihi_update_email` / `lihi_update_domain` 兩個設定端點才驗 `manage_options`。
+
 - [x] email 為空 → wp_send_json_error「lihi email is not configured…」
 - [x] domain 為空（email 已設）→ wp_send_json_error「lihi redirect domain is not configured…」
 - [x] item_id 為 0 → wp_send_json_error
@@ -149,6 +151,7 @@
 - [x] service 正常回傳 url → wp_send_json_success(['url' => ...])
 - [x] service 拋出一般例外 → wp_send_json_error 友善訊息（不暴露內部細節）
 - [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「email has not been verified」訊息（auth service 回 403，表示 email 尚未驗證）
+- [n/a] `current_user_can()` 拒絕 → 不適用（handler 刻意不做 cap 檢查；hook 註冊機制保證未登入請求不會抵達）
 
 ---
 

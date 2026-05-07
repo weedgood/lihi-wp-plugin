@@ -62,7 +62,10 @@ docker compose --profile test exec phpunit vendor/bin/phpunit -c phpunit.xml
 
 ```
 lihi-shorturl/
-├── lihi-shorturl.php          Plugin entry point; admin-only guard, text domain loading
+├── lihi-shorturl.php          Plugin entry point; admin-only guard; loads bootstrap.php (text domain is auto-loaded by WordPress for plugins hosted on .org)
+├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag, External services disclosure, FAQ, Changelog)
+├── LICENSE                    GPL-2.0-or-later license text
+├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / lihi_domain options and lihi_token transient
 ├── bootstrap.php              Loads class files unconditionally; registers an admin notice when either lihi_email or lihi_domain is unset (UI hooks self-guard on both options in add-shorturl-column.php)
 ├── assets/
 │   ├── lihi-button.js         Async delegated click handler; splits disable window (300 ms) from "Copied!" label duration (1200 ms); errors shown via auto-dismissing WP .notice.notice-error
