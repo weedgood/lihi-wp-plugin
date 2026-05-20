@@ -64,7 +64,7 @@ class Lihi_Client implements Lihi_Client_Interface {
         $data = $this->decode( $code, $raw );
 
         if ( $code === 400 ) {
-            throw new Lihi_Validation_Exception( $this->msg( $data ) );
+            throw new Lihi_Validation_Exception( esc_html( $this->msg( $data ) ) );
         }
 
         return $data;
@@ -108,7 +108,7 @@ class Lihi_Client implements Lihi_Client_Interface {
         $response = wp_remote_request( $url, $args );
 
         if ( is_wp_error( $response ) ) {
-            throw new Lihi_Server_Exception( $response->get_error_message() );
+            throw new Lihi_Server_Exception( esc_html( $response->get_error_message() ) );
         }
 
         return [
@@ -135,17 +135,17 @@ class Lihi_Client implements Lihi_Client_Interface {
             preg_match( '/<title>([^<]*)<\/title>/i', $body, $m );
             $title   = isset( $m[1] ) ? trim( $m[1] ) : '';
             $detail  = $title ?: substr( $body, 0, 100 );
-            $message = "HTTP {$code}: {$detail}";
+            $message = sprintf( 'HTTP %d: %s', $code, $detail );
 
             if ( $code === 404 ) {
-                throw new Lihi_Not_Found_Exception( $message );
+                throw new Lihi_Not_Found_Exception( esc_html( $message ) );
             }
 
             if ( $authenticated && $title === '網站升級中...' ) {
-                throw new Lihi_Token_Invalid_Exception( $message );
+                throw new Lihi_Token_Invalid_Exception( esc_html( $message ) );
             }
 
-            throw new Lihi_Server_Exception( $message );
+            throw new Lihi_Server_Exception( esc_html( $message ) );
         }
 
         return $decoded;

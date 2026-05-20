@@ -25,13 +25,13 @@ class Lihi_Auth_Client implements Lihi_Auth_Client_Interface {
         [ 'code' => $code, 'data' => $data ] = $this->post( '/auth/update-email', [ 'email' => $email ] );
 
         if ( $code === 400 ) {
-            throw new Lihi_Validation_Exception( $this->message( $data ) );
+            throw new Lihi_Validation_Exception( esc_html( $this->message( $data ) ) );
         }
         if ( $code === 429 ) {
-            throw new Lihi_Rate_Limit_Exception( $this->message( $data ) );
+            throw new Lihi_Rate_Limit_Exception( esc_html( $this->message( $data ) ) );
         }
         if ( $code >= 500 ) {
-            throw new Lihi_Server_Exception( $this->message( $data ) );
+            throw new Lihi_Server_Exception( esc_html( $this->message( $data ) ) );
         }
 
         return $data;
@@ -41,13 +41,13 @@ class Lihi_Auth_Client implements Lihi_Auth_Client_Interface {
         [ 'code' => $code, 'data' => $data ] = $this->post( '/auth/login', [ 'email' => $email ] );
 
         if ( $code === 400 ) {
-            throw new Lihi_Validation_Exception( $this->message( $data ) );
+            throw new Lihi_Validation_Exception( esc_html( $this->message( $data ) ) );
         }
         if ( $code === 403 ) {
-            throw new Lihi_Auth_Exception( $this->message( $data ) );
+            throw new Lihi_Auth_Exception( esc_html( $this->message( $data ) ) );
         }
         if ( $code >= 500 ) {
-            throw new Lihi_Server_Exception( $this->message( $data ) );
+            throw new Lihi_Server_Exception( esc_html( $this->message( $data ) ) );
         }
 
         return $data;
@@ -72,7 +72,7 @@ class Lihi_Auth_Client implements Lihi_Auth_Client_Interface {
         $response = wp_remote_request( $this->base_url . $path, $args );
 
         if ( is_wp_error( $response ) ) {
-            throw new Lihi_Server_Exception( $response->get_error_message() );
+            throw new Lihi_Server_Exception( esc_html( $response->get_error_message() ) );
         }
 
         $code = wp_remote_retrieve_response_code( $response );
@@ -80,7 +80,7 @@ class Lihi_Auth_Client implements Lihi_Auth_Client_Interface {
 
         $decoded = json_decode( $raw, true );
         if ( ! is_array( $decoded ) ) {
-            throw new Lihi_Server_Exception( "HTTP {$code}: unexpected response body" );
+            throw new Lihi_Server_Exception( esc_html( sprintf( 'HTTP %d: unexpected response body', $code ) ) );
         }
 
         $data = $decoded['data'] ?? [];

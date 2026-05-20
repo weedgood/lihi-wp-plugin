@@ -86,11 +86,13 @@ function render_settings_page(): void {
             $profile_error = __( 'Email not verified yet. Click Save & Verify to resend the verification email.', 'lihi-shorturl' );
         } catch ( Lihi_Server_Exception $e ) {
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only diagnostics gated behind WP_DEBUG.
                 error_log( '[lihi] profile fetch failed: ' . $e->getMessage() );
             }
             $profile_error = __( 'The lihi service is temporarily unavailable. Please try again later.', 'lihi-shorturl' );
         } catch ( \Exception $e ) {
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only diagnostics gated behind WP_DEBUG.
                 error_log( '[lihi] profile fetch failed: ' . $e->getMessage() );
             }
             $profile_error = __( 'Could not load account information.', 'lihi-shorturl' );
@@ -185,7 +187,9 @@ function ajax_update_email(): void {
         return;
     }
 
-    $raw = trim( (string) wp_unslash( $_POST['email'] ?? '' ) );
+    $raw = isset( $_POST['email'] )
+        ? trim( sanitize_text_field( wp_unslash( $_POST['email'] ) ) )
+        : '';
     if ( $raw === '' ) {
         delete_option( 'lihi_email' );
         wp_send_json_success( [
@@ -211,6 +215,7 @@ function ajax_update_email(): void {
         return;
     } catch ( Lihi_Server_Exception $e ) {
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only diagnostics gated behind WP_DEBUG.
             error_log( '[lihi] update_email failed: ' . $e->getMessage() );
         }
         wp_send_json_error( __( 'The lihi auth service is unavailable. Please try again later.', 'lihi-shorturl' ) );
@@ -250,7 +255,9 @@ function ajax_update_domain(): void {
         return;
     }
 
-    $domain = trim( (string) wp_unslash( $_POST['domain'] ?? '' ) );
+    $domain = isset( $_POST['domain'] )
+        ? trim( sanitize_text_field( wp_unslash( $_POST['domain'] ) ) )
+        : '';
 
     if ( $domain === '' ) {
         delete_option( 'lihi_domain' );

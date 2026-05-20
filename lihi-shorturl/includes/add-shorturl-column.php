@@ -141,10 +141,13 @@ function ajax_copy_url(): void {
     } catch ( Lihi_Auth_Exception $e ) {
         wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email.', 'lihi-shorturl' ) );
     } catch ( Lihi_Validation_Exception $e ) {
+        // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- JSON payload is rendered with textContent in lihi-button.js.
         /* translators: %s: validation error message returned by the lihi API. */
         wp_send_json_error( sprintf( __( 'lihi API rejected the request: %s', 'lihi-shorturl' ), $e->getMessage() ) );
+        // phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
     } catch ( \Exception $e ) {
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only diagnostics gated behind WP_DEBUG.
             error_log( '[lihi] ' . $e->getMessage() );
         }
         wp_send_json_error( __( 'Failed to generate short URL. Please try again later.', 'lihi-shorturl' ) );

@@ -114,9 +114,8 @@
 
 > `Lihi_Client_Interface` 只涵蓋 `wordpress/v1` 下**非 auth 的 jwt endpoints**：
 > `profile`、`sites`（index/store）。Auth（`login` / `update-email`）屬於另一個服務
-> （lihi-wp-auth），由 `Lihi_Auth_Client_Interface` 負責。`POST /auth/mail` 外掛無用途，
-> 不納入契約；`SiteController::update`/`destroy` 未掛 route；`/posts`、`/site-urls`
-> 不存在於本群組。
+> （lihi Auth API），由 `Lihi_Auth_Client_Interface` 負責。`POST /auth/mail` 外掛無用途，
+> 不納入契約；`PUT/PATCH/DELETE /sites`、`/posts`、`/site-urls` 不屬於本 API contract。
 
 ---
 
