@@ -80,7 +80,7 @@ lihi-shorturl/
     ├── config.php             Flat array of plugin config (api_domain, auth_domain); read via lihi_config(). Redirect domain comes from the lihi_domain wp_option instead — admin picks from the profile selector on the settings page
     ├── helper.php             lihi_config($key), lihi_email() (reads lihi_email option), lihi_domain() (reads lihi_domain option), lihi_client() / lihi_auth_client() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
     ├── settings.php           Settings page under Settings → lihi Short URL; "Save & Verify" triggers wp_ajax_lihi_update_email which calls Lihi_Auth_Client::update_email() first and only persists the option on success; flushes the cached token on add/update/delete of lihi_email
-    ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email() && lihi_domain()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler that returns friendly errors when either option is unset
+    ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email() && lihi_domain()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler gated by read_post for the target item; JSON errors include explicit HTTP status codes
     ├── client/
     │   ├── lihi-client-interface.php       Short-URL API contract; covers the non-auth JWT endpoints (get_profile, get_sites, get_short_links, create_site). Auth (login / update-email) lives in Lihi_Auth_Client_Interface. Only get_short_links / create_site are actually called today
     │   ├── lihi-client.php                 Production HTTP client; token passed per-call, not stored on instance
@@ -103,8 +103,9 @@ lihi-shorturl/
 
 1. Editor clicks the **lihi** button in the post list or media attachment panel.
 2. `lihi-button.js` sends a nonce-protected AJAX request to `wp_ajax_lihi_copy_url`.
-3. `Lihi_Service::get_or_create_short_url()` checks for an existing short link via `get_short_links()`; creates one with `create_site()` if none is found. The API `type` field is namespaced as `"{type}:{host}"` (e.g. `post:example.com`) so the same `type_id` on different WP sites under one lihi account stays distinct. URL resolution uses `wp_get_attachment_url()` for attachments and `get_permalink()` for all other post types.
-4. The returned `short_url` is written to the clipboard.
+3. The AJAX handler derives the item type with `get_post_type( $item_id )` and requires `current_user_can( 'read_post', $item_id )` before calling the lihi service. Error JSON responses include explicit HTTP status codes for bad input, permission failures, incomplete setup, and service failures.
+4. `Lihi_Service::get_or_create_short_url()` checks for an existing short link via `get_short_links()`; creates one with `create_site()` if none is found. The API `type` field is namespaced as `"{type}:{host}"` (e.g. `post:example.com`) so the same `type_id` on different WP sites under one lihi account stays distinct. URL resolution uses `wp_get_attachment_url()` for attachments and `get_permalink()` for all other post types.
+5. The returned `short_url` is written to the clipboard.
 
 ## API Reference
 

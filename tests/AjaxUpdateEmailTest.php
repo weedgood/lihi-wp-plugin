@@ -50,6 +50,16 @@ class AjaxUpdateEmailTest extends TestCase
         return $client;
     }
 
+    private function expectJsonError(?string &$message, ?int &$statusCode): void
+    {
+        Functions\expect('wp_send_json_error')
+            ->once()
+            ->andReturnUsing(function ($msg, $status = null) use (&$message, &$statusCode) {
+                $message    = $msg;
+                $statusCode = $status;
+            });
+    }
+
     /** @test */
     public function returns_error_when_user_lacks_manage_options(): void
     {
@@ -58,16 +68,14 @@ class AjaxUpdateEmailTest extends TestCase
 
         Functions\expect('update_option')->never();
 
-        $captured = null;
-        Functions\expect('wp_send_json_error')
-            ->once()
-            ->andReturnUsing(function ($msg) use (&$captured) {
-                $captured = $msg;
-            });
+        $captured   = null;
+        $statusCode = null;
+        $this->expectJsonError($captured, $statusCode);
 
         \Lihi\ShortUrl\ajax_update_email();
 
         $this->assertStringContainsString('permission', $captured);
+        $this->assertSame(403, $statusCode);
     }
 
     /** @test */
@@ -128,16 +136,14 @@ class AjaxUpdateEmailTest extends TestCase
 
         Functions\expect('update_option')->never();
 
-        $captured = null;
-        Functions\expect('wp_send_json_error')
-            ->once()
-            ->andReturnUsing(function ($msg) use (&$captured) {
-                $captured = $msg;
-            });
+        $captured   = null;
+        $statusCode = null;
+        $this->expectJsonError($captured, $statusCode);
 
         \Lihi\ShortUrl\ajax_update_email();
 
         $this->assertStringContainsString('valid email', $captured);
+        $this->assertSame(400, $statusCode);
     }
 
     /** @test */
@@ -152,16 +158,14 @@ class AjaxUpdateEmailTest extends TestCase
 
         Functions\expect('update_option')->never();
 
-        $captured = null;
-        Functions\expect('wp_send_json_error')
-            ->once()
-            ->andReturnUsing(function ($msg) use (&$captured) {
-                $captured = $msg;
-            });
+        $captured   = null;
+        $statusCode = null;
+        $this->expectJsonError($captured, $statusCode);
 
         \Lihi\ShortUrl\ajax_update_email();
 
         $this->assertStringContainsString('valid email', $captured);
+        $this->assertSame(400, $statusCode);
     }
 
     /** @test */
@@ -177,16 +181,14 @@ class AjaxUpdateEmailTest extends TestCase
 
         Functions\expect('update_option')->never();
 
-        $captured = null;
-        Functions\expect('wp_send_json_error')
-            ->once()
-            ->andReturnUsing(function ($msg) use (&$captured) {
-                $captured = $msg;
-            });
+        $captured   = null;
+        $statusCode = null;
+        $this->expectJsonError($captured, $statusCode);
 
         \Lihi\ShortUrl\ajax_update_email();
 
         $this->assertStringContainsString('rejected the email', $captured);
+        $this->assertSame(400, $statusCode);
     }
 
     /** @test */
@@ -201,16 +203,14 @@ class AjaxUpdateEmailTest extends TestCase
 
         Functions\expect('update_option')->never();
 
-        $captured = null;
-        Functions\expect('wp_send_json_error')
-            ->once()
-            ->andReturnUsing(function ($msg) use (&$captured) {
-                $captured = $msg;
-            });
+        $captured   = null;
+        $statusCode = null;
+        $this->expectJsonError($captured, $statusCode);
 
         \Lihi\ShortUrl\ajax_update_email();
 
         $this->assertStringContainsString('Too many', $captured);
+        $this->assertSame(429, $statusCode);
     }
 
     /** @test */
@@ -225,16 +225,14 @@ class AjaxUpdateEmailTest extends TestCase
 
         Functions\expect('update_option')->never();
 
-        $captured = null;
-        Functions\expect('wp_send_json_error')
-            ->once()
-            ->andReturnUsing(function ($msg) use (&$captured) {
-                $captured = $msg;
-            });
+        $captured   = null;
+        $statusCode = null;
+        $this->expectJsonError($captured, $statusCode);
 
         \Lihi\ShortUrl\ajax_update_email();
 
         $this->assertStringContainsString('unavailable', $captured);
+        $this->assertSame(503, $statusCode);
     }
 
     /** @test */

@@ -201,24 +201,24 @@ function ajax_update_email(): void {
 
     $email = sanitize_email( $raw );
     if ( $email === '' || ! is_email( $email ) ) {
-        wp_send_json_error( __( 'Please enter a valid email address.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'Please enter a valid email address.', 'lihi-shorturl' ), 400 );
         return;
     }
 
     try {
         $result = lihi_auth_client()->update_email( $email );
     } catch ( Lihi_Validation_Exception $e ) {
-        wp_send_json_error( __( 'lihi rejected the email address. Please check the format and try again.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'lihi rejected the email address. Please check the format and try again.', 'lihi-shorturl' ), 400 );
         return;
     } catch ( Lihi_Rate_Limit_Exception $e ) {
-        wp_send_json_error( __( 'Too many verification attempts. Please wait a moment and try again.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'Too many verification attempts. Please wait a moment and try again.', 'lihi-shorturl' ), 429 );
         return;
     } catch ( Lihi_Server_Exception $e ) {
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
             // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only diagnostics gated behind WP_DEBUG.
             error_log( '[lihi] update_email failed: ' . $e->getMessage() );
         }
-        wp_send_json_error( __( 'The lihi auth service is unavailable. Please try again later.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'The lihi auth service is unavailable. Please try again later.', 'lihi-shorturl' ), 503 );
         return;
     }
 
@@ -269,7 +269,7 @@ function ajax_update_domain(): void {
 
     // Reject anything that isn't a plausible hostname (letters, digits, dots, hyphens).
     if ( ! preg_match( '/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i', $domain ) ) {
-        wp_send_json_error( __( 'Invalid redirect domain.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'Invalid redirect domain.', 'lihi-shorturl' ), 400 );
         return;
     }
 

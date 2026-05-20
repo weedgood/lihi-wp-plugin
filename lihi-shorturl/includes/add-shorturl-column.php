@@ -114,24 +114,30 @@ function ajax_copy_url(): void {
     check_ajax_referer( 'lihi_copy_url', 'nonce' );
 
     $item_id = intval( wp_unslash( $_POST['item_id'] ?? 0 ) );
-    $type    = sanitize_key( wp_unslash( $_POST['type'] ?? '' ) );
 
-    if ( ! $item_id || ! $type ) {
-        wp_send_json_error( __( 'Invalid post ID or type.', 'lihi-shorturl' ) );
+    if ( ! $item_id ) {
+        wp_send_json_error( __( 'Invalid post ID or type.', 'lihi-shorturl' ), 400 );
         return;
     }
 
-    // No capability check: any logged-in user can generate a short URL.
-    // The wp_ajax_lihi_copy_url hook is registered without a nopriv variant,
-    // so unauthenticated requests never reach this handler.
+    $type = get_post_type( $item_id );
+    if ( ! is_string( $type ) || $type === '' ) {
+        wp_send_json_error( __( 'Invalid post ID or type.', 'lihi-shorturl' ), 400 );
+        return;
+    }
+
+    if ( ! current_user_can( 'read_post', $item_id ) ) {
+        wp_send_json_error( __( 'You do not have permission to generate a short URL for this item.', 'lihi-shorturl' ), 403 );
+        return;
+    }
 
     if ( lihi_email() === '' ) {
-        wp_send_json_error( __( 'lihi email is not configured. Please set it in Settings → lihi Short URL.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'lihi email is not configured. Please set it in Settings → lihi Short URL.', 'lihi-shorturl' ), 409 );
         return;
     }
 
     if ( lihi_domain() === '' ) {
-        wp_send_json_error( __( 'lihi redirect domain is not configured. Please choose one in Settings → lihi Short URL.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'lihi redirect domain is not configured. Please choose one in Settings → lihi Short URL.', 'lihi-shorturl' ), 409 );
         return;
     }
 
@@ -139,18 +145,24 @@ function ajax_copy_url(): void {
         $url = lihi_service()->get_or_create_short_url( $item_id, $type );
         wp_send_json_success( [ 'url' => $url ] );
     } catch ( Lihi_Auth_Exception $e ) {
-        wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email.', 'lihi-shorturl' ), 403 );
     } catch ( Lihi_Validation_Exception $e ) {
         // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- JSON payload is rendered with textContent in lihi-button.js.
         /* translators: %s: validation error message returned by the lihi API. */
-        wp_send_json_error( sprintf( __( 'lihi API rejected the request: %s', 'lihi-shorturl' ), $e->getMessage() ) );
+        wp_send_json_error( sprintf( __( 'lihi API rejected the request: %s', 'lihi-shorturl' ), $e->getMessage() ), 400 );
         // phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
+    } catch ( Lihi_Server_Exception $e ) {
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only diagnostics gated behind WP_DEBUG.
+            error_log( '[lihi] ' . $e->getMessage() );
+        }
+        wp_send_json_error( __( 'The lihi service is unavailable. Please try again later.', 'lihi-shorturl' ), 503 );
     } catch ( \Exception $e ) {
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
             // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only diagnostics gated behind WP_DEBUG.
             error_log( '[lihi] ' . $e->getMessage() );
         }
-        wp_send_json_error( __( 'Failed to generate short URL. Please try again later.', 'lihi-shorturl' ) );
+        wp_send_json_error( __( 'Failed to generate short URL. Please try again later.', 'lihi-shorturl' ), 500 );
     }
 }
 

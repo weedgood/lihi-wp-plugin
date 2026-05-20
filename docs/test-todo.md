@@ -142,39 +142,42 @@ Composer 僅在官方 `php:*-cli` 測試 container 內執行；PHP 7.4 與 PHP 8
 
 ## AJAX Handler: lihi_copy_url
 
-> 政策：產生短網址視為任何登入後台使用者皆可使用的功能，handler 內**不做** `current_user_can()` 檢查。未登入請求由 `wp_ajax_lihi_copy_url` action（未註冊 `wp_ajax_nopriv_*` 變體）擋下，無法抵達此 handler。因此本節**沒有**權限拒絕的 test case，這是有意為之；只有 `lihi_update_email` / `lihi_update_domain` 兩個設定端點才驗 `manage_options`。
+> 政策：產生短網址需要通過 nonce，且使用者必須對目標文章 / 媒體具備 `read_post` 權限。未登入請求仍由 `wp_ajax_lihi_copy_url` action（未註冊 `wp_ajax_nopriv_*` 變體）擋下，無法抵達此 handler。
 
-- [x] email 為空 → wp_send_json_error「lihi email is not configured…」
-- [x] domain 為空（email 已設）→ wp_send_json_error「lihi redirect domain is not configured…」
-- [x] item_id 為 0 → wp_send_json_error
-- [x] type 為空 → wp_send_json_error
+- [x] email 為空 → wp_send_json_error「lihi email is not configured…」，HTTP 409
+- [x] domain 為空（email 已設）→ wp_send_json_error「lihi redirect domain is not configured…」，HTTP 409
+- [x] item_id 為 0 → wp_send_json_error，HTTP 400
+- [x] `get_post_type( $item_id )` 無法解析 type → wp_send_json_error，HTTP 400
+- [x] client payload 偽造 type → handler 忽略 payload，使用 `get_post_type( $item_id )` 的 server-side type 呼叫 service
+- [x] `current_user_can( 'read_post', $item_id )` 拒絕 → wp_send_json_error，HTTP 403，不呼叫 service
 - [x] service 正常回傳 url → wp_send_json_success(['url' => ...])
-- [x] service 拋出一般例外 → wp_send_json_error 友善訊息（不暴露內部細節）
-- [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「email has not been verified」訊息（auth service 回 403，表示 email 尚未驗證）
-- [n/a] `current_user_can()` 拒絕 → 不適用（handler 刻意不做 cap 檢查；hook 註冊機制保證未登入請求不會抵達）
+- [x] service 拋出一般例外 → wp_send_json_error 友善訊息（不暴露內部細節），HTTP 500
+- [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「email has not been verified」訊息（auth service 回 403，表示 email 尚未驗證），HTTP 403
+- [x] service 拋出 `Lihi_Validation_Exception` → wp_send_json_error「lihi API rejected…」訊息，HTTP 400
+- [x] service 拋出 `Lihi_Server_Exception` → wp_send_json_error「lihi service is unavailable」訊息，HTTP 503
 
 ---
 
 ## AJAX Handler: lihi_update_domain
 
-- [x] 無 `manage_options` 權限 → wp_send_json_error，不呼叫 update_option / delete_option
+- [x] 無 `manage_options` 權限 → wp_send_json_error，HTTP 403，不呼叫 update_option / delete_option
 - [x] domain 為空 → 呼叫 `delete_option('lihi_domain')`，wp_send_json_success 訊息含「cleared」
 - [x] domain 全為空白字元 → 同上，視為清除
-- [x] domain 格式無效（非 hostname 樣式）→ wp_send_json_error「Invalid」，不呼叫 update_option / delete_option
+- [x] domain 格式無效（非 hostname 樣式）→ wp_send_json_error「Invalid」，HTTP 400，不呼叫 update_option / delete_option
 - [x] domain 格式合法 → 呼叫 `update_option('lihi_domain', …)`，wp_send_json_success 訊息含「saved」
 
 ---
 
 ## AJAX Handler: lihi_update_email
 
-- [x] 無 `manage_options` 權限 → wp_send_json_error，不呼叫 `update_option`
+- [x] 無 `manage_options` 權限 → wp_send_json_error，HTTP 403，不呼叫 `update_option`
 - [x] email 為空 → 呼叫 `delete_option('lihi_email')`，wp_send_json_success 訊息含「cleared」，不呼叫 auth client
 - [x] email 全為空白字元 → 同上，視為清除
-- [x] email 格式無效 → wp_send_json_error，不呼叫 auth client 與 `update_option`
-- [x] email 被 `sanitize_email()` 清洗過後仍通不過 `is_email()`（例：`alice @example`）→ wp_send_json_error，不呼叫 auth client 與 `update_option`
-- [x] auth client 拋出 `Lihi_Validation_Exception` → wp_send_json_error「rejected the email」訊息，`update_option` 不被呼叫
-- [x] auth client 拋出 `Lihi_Rate_Limit_Exception` → wp_send_json_error「Too many」訊息，`update_option` 不被呼叫
-- [x] auth client 拋出 `Lihi_Server_Exception` → wp_send_json_error「unavailable」訊息，`update_option` 不被呼叫
+- [x] email 格式無效 → wp_send_json_error，HTTP 400，不呼叫 auth client 與 `update_option`
+- [x] email 被 `sanitize_email()` 清洗過後仍通不過 `is_email()`（例：`alice @example`）→ wp_send_json_error，HTTP 400，不呼叫 auth client 與 `update_option`
+- [x] auth client 拋出 `Lihi_Validation_Exception` → wp_send_json_error「rejected the email」訊息，HTTP 400，`update_option` 不被呼叫
+- [x] auth client 拋出 `Lihi_Rate_Limit_Exception` → wp_send_json_error「Too many」訊息，HTTP 429，`update_option` 不被呼叫
+- [x] auth client 拋出 `Lihi_Server_Exception` → wp_send_json_error「unavailable」訊息，HTTP 503，`update_option` 不被呼叫
 - [x] auth client 回傳 `verified: true` → 呼叫 `update_option('lihi_email', …)`，wp_send_json_success(['verified' => true])
 - [x] auth client 回傳 `verified: false` → 呼叫 `update_option('lihi_email', …)`，wp_send_json_success(['verified' => false])
 

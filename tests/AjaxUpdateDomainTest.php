@@ -27,6 +27,16 @@ class AjaxUpdateDomainTest extends TestCase
         parent::tearDown();
     }
 
+    private function expectJsonError(?string &$message, ?int &$statusCode): void
+    {
+        Functions\expect('wp_send_json_error')
+            ->once()
+            ->andReturnUsing(function ($msg, $status = null) use (&$message, &$statusCode) {
+                $message    = $msg;
+                $statusCode = $status;
+            });
+    }
+
     /** @test */
     public function returns_error_when_user_lacks_manage_options(): void
     {
@@ -36,16 +46,14 @@ class AjaxUpdateDomainTest extends TestCase
         Functions\expect('update_option')->never();
         Functions\expect('delete_option')->never();
 
-        $captured = null;
-        Functions\expect('wp_send_json_error')
-            ->once()
-            ->andReturnUsing(function ($msg) use (&$captured) {
-                $captured = $msg;
-            });
+        $captured   = null;
+        $statusCode = null;
+        $this->expectJsonError($captured, $statusCode);
 
         \Lihi\ShortUrl\ajax_update_domain();
 
         $this->assertStringContainsString('permission', $captured);
+        $this->assertSame(403, $statusCode);
     }
 
     /** @test */
@@ -93,16 +101,14 @@ class AjaxUpdateDomainTest extends TestCase
         Functions\expect('update_option')->never();
         Functions\expect('delete_option')->never();
 
-        $captured = null;
-        Functions\expect('wp_send_json_error')
-            ->once()
-            ->andReturnUsing(function ($msg) use (&$captured) {
-                $captured = $msg;
-            });
+        $captured   = null;
+        $statusCode = null;
+        $this->expectJsonError($captured, $statusCode);
 
         \Lihi\ShortUrl\ajax_update_domain();
 
         $this->assertStringContainsString('Invalid', $captured);
+        $this->assertSame(400, $statusCode);
     }
 
     /** @test */
