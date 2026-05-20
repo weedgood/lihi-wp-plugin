@@ -112,6 +112,7 @@ class PluginHooksTest extends \WP_UnitTestCase
         $html = ob_get_clean();
 
         $this->assertStringContainsString('data-lihi', $html);
+        $this->assertStringContainsString('type="button"', $html);
         $this->assertStringContainsString('data-id="' . $post_id . '"', $html);
         $this->assertStringContainsString('data-type="post"', $html);
     }
@@ -136,6 +137,7 @@ class PluginHooksTest extends \WP_UnitTestCase
         $html = ob_get_clean();
 
         $this->assertStringContainsString('data-type="attachment"', $html);
+        $this->assertStringContainsString('type="button"', $html);
     }
 
     public function test_attachment_edit_panel_has_lihi_field(): void
@@ -149,6 +151,7 @@ class PluginHooksTest extends \WP_UnitTestCase
 
         $this->assertArrayHasKey('lihi', $fields);
         $this->assertStringContainsString('data-lihi', $fields['lihi']['html']);
+        $this->assertStringContainsString('type="button"', $fields['lihi']['html']);
     }
 
     // -------------------------------------------------------------------------

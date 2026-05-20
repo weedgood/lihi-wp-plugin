@@ -15,7 +15,7 @@ A WordPress admin plugin that integrates with the [lihi](https://lihi.io) URL sh
 ## Requirements
 
 - WordPress 5.8+
-- PHP 8.0+
+- PHP 7.4+
 - Docker & Docker Compose (for local development)
 - `gettext` / `msgfmt` (for compiling translations)
 
@@ -42,20 +42,26 @@ Translation files live in `lihi-shorturl/languages/`.
 
 ## Testing
 
-Tests use PHPUnit with Brain\Monkey to mock WordPress functions. A dedicated Docker profile spins up the test database and a PHPUnit container.
+Tests use PHPUnit with Brain\Monkey to mock WordPress functions. A dedicated Docker profile spins up the test database plus separate PHP 7.4 and PHP 8.2 PHPUnit containers built from official `php:*-cli` images. Composer is run only inside those containers. The containers mount only `lihi-shorturl/`, `tests/`, `patchwork.json`, and `phpunit.xml` read-only under `/app/code`; each service exposes its version-specific Composer file and lock as `/app/composer.json` and `/app/composer.lock`, while vendor dependencies and WordPress core installs live in that service's Docker-managed `/app` volume.
 
 ```bash
-# Run the test suite
-make test
+docker compose --profile test up -d --build --force-recreate --remove-orphans db_test phpunit74 phpunit82
 
-# Run with HTML + text coverage report (output goes to coverage/)
-make coverage
+docker compose --profile test exec phpunit74 composer install --working-dir=/app
+docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
+
+docker compose --profile test exec phpunit82 composer install --working-dir=/app
+docker compose --profile test exec phpunit82 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
 ```
 
-Or run PHPUnit directly inside the container:
+The PHP 7.4 container covers the plugin's minimum supported PHP version. The PHP 8.2 container catches compatibility issues on a modern runtime.
+
+After the test profile is running, `make test` runs both suites. `make coverage` runs both coverage jobs and writes reports under `/app/coverage` inside each matching container workspace.
+
+For a single-version run, execute the matching service only:
 
 ```bash
-docker compose --profile test exec phpunit vendor/bin/phpunit -c phpunit.xml
+docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
 ```
 
 ## Architecture

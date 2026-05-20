@@ -40,7 +40,10 @@ class AjaxUpdateEmailTest extends TestCase
         parent::tearDown();
     }
 
-    private function mockAuthClient(): \Mockery\MockInterface&Lihi_Auth_Client_Interface
+    /**
+     * @return \Mockery\MockInterface&Lihi_Auth_Client_Interface
+     */
+    private function mockAuthClient(): Lihi_Auth_Client_Interface
     {
         $client = Mockery::mock(Lihi_Auth_Client_Interface::class);
         \Lihi\ShortUrl\lihi_auth_client_set($client);

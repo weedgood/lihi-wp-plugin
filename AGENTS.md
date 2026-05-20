@@ -23,14 +23,19 @@ WordPress is available at http://localhost:8080. The plugin directory (`lihi-sho
 
 ## Testing
 
-Tests run inside Docker using a dedicated test database. Start the test profile first, then execute PHPUnit inside the container:
+Tests run inside Docker using a dedicated test database plus separate PHP 7.4 and PHP 8.2 PHPUnit containers built from official `php:*-cli` images. Composer must be run only inside those containers. Each PHP version mounts only `lihi-shorturl/`, `tests/`, `patchwork.json`, and `phpunit.xml` read-only under `/app/code`, exposes its version-specific Composer file/lock as `/app/composer.json` and `/app/composer.lock`, and stores `vendor/` plus the WordPress core install in that service's Docker-managed `/app` volume. Dependency installs should not create `vendor-*` or `wordpress-*` directories in the repository working tree.
 
 ```bash
-docker compose --profile test up -d --force-recreate
-docker compose --profile test exec phpunit vendor/bin/phpunit -c phpunit.xml
+docker compose --profile test up -d --build --force-recreate --remove-orphans db_test phpunit74 phpunit82
+
+docker compose --profile test exec phpunit74 composer install --working-dir=/app
+docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
+
+docker compose --profile test exec phpunit82 composer install --working-dir=/app
+docker compose --profile test exec phpunit82 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
 ```
 
-`make test` and `make coverage` require PHP installed locally and are not the primary way to run tests.
+The PHP 7.4 container covers the plugin's minimum supported PHP version; the PHP 8.2 container catches compatibility issues on a modern runtime. After the test profile is running, `make test` runs both containerized PHPUnit suites. `make coverage` runs both coverage targets; `make coverage74` and `make coverage82` generate coverage under `/app/coverage` in the matching container workspace.
 
 ## Translations
 

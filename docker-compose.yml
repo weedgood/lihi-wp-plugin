@@ -56,13 +56,53 @@ services:
     profiles:
       - test
 
-  phpunit:
+  phpunit74:
     build:
       context: .
       dockerfile: docker/phpunit/Dockerfile
-    working_dir: /app
+      args:
+        PHP_IMAGE: php:7.4-cli-bullseye
+    working_dir: /app/code
+    environment:
+      COMPOSER_ROOT_VERSION: 1.0.0
+      LIHI_VENDOR_DIR: /app/vendor
+      LIHI_WORDPRESS_DIR: /app/wordpress
+      XDEBUG_MODE: "off"
     volumes:
-      - .:/app
+      - phpunit74_app:/app
+      - ./lihi-shorturl:/app/code/lihi-shorturl:ro
+      - ./tests:/app/code/tests:ro
+      - ./patchwork.json:/app/code/patchwork.json:ro
+      - ./phpunit.xml:/app/code/phpunit.xml:ro
+      - ./composer.7.4.json:/app/composer.json:ro
+      - ./composer.7.4.lock:/app/composer.lock:ro
+    depends_on:
+      db_test:
+        condition: service_healthy
+    command: [ "tail", "-f", "/dev/null" ]
+    profiles:
+      - test
+
+  phpunit82:
+    build:
+      context: .
+      dockerfile: docker/phpunit/Dockerfile
+      args:
+        PHP_IMAGE: php:8.2-cli-bookworm
+    working_dir: /app/code
+    environment:
+      COMPOSER_ROOT_VERSION: 1.0.0
+      LIHI_VENDOR_DIR: /app/vendor
+      LIHI_WORDPRESS_DIR: /app/wordpress
+      XDEBUG_MODE: "off"
+    volumes:
+      - phpunit82_app:/app
+      - ./lihi-shorturl:/app/code/lihi-shorturl:ro
+      - ./tests:/app/code/tests:ro
+      - ./patchwork.json:/app/code/patchwork.json:ro
+      - ./phpunit.xml:/app/code/phpunit.xml:ro
+      - ./composer.8.2.json:/app/composer.json:ro
+      - ./composer.8.2.lock:/app/composer.lock:ro
     depends_on:
       db_test:
         condition: service_healthy
@@ -73,3 +113,5 @@ services:
 volumes:
   db_data:
   wp_uploads:
+  phpunit74_app:
+  phpunit82_app:

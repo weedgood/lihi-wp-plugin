@@ -1,4 +1,10 @@
+# Normal test dependencies live in Docker named volumes; keep these ignored for
+# accidental local Composer installs or older worktrees.
 vendor/
+vendor-php74/
+vendor-php82/
 wordpress/
+wordpress-php74/
+wordpress-php82/
 .phpunit.result.cache
 coverage/

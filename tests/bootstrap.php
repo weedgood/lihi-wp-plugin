@@ -1,12 +1,15 @@
 <?php
 
-require_once dirname(__DIR__) . '/vendor/antecedent/patchwork/Patchwork.php';
-require_once dirname(__DIR__) . '/vendor/autoload.php';
+$vendor_dir = getenv('LIHI_VENDOR_DIR') ?: dirname(__DIR__) . '/vendor';
+$vendor_dir = rtrim($vendor_dir, '/\\');
+
+require_once $vendor_dir . '/antecedent/patchwork/Patchwork.php';
+require_once $vendor_dir . '/autoload.php';
 
 $_tests_dir = getenv('WP_TESTS_DIR') ?: getenv('WP_PHPUNIT__DIR');
 
 if (!$_tests_dir) {
-    $_tests_dir = dirname(__DIR__) . '/vendor/wp-phpunit/wp-phpunit';
+    $_tests_dir = $vendor_dir . '/wp-phpunit/wp-phpunit';
 }
 
 $_tests_dir = rtrim($_tests_dir, '/\\');

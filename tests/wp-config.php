@@ -19,4 +19,5 @@ define('WP_TESTS_EMAIL', 'admin@example.org');
 define('WP_TESTS_TITLE', 'Test Blog');
 define('WP_PHP_BINARY', PHP_BINARY);
 
-define('ABSPATH', dirname(__DIR__) . '/wordpress/');
+$wordpress_dir = getenv('LIHI_WORDPRESS_DIR') ?: dirname(__DIR__) . '/wordpress';
+define('ABSPATH', rtrim($wordpress_dir, '/\\') . '/');

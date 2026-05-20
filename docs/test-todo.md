@@ -1,6 +1,7 @@
 # Test TODO
 
-測試框架：PHPUnit 9 + Brain\Monkey（mock WordPress 函式）+ WP_UnitTestCase（整合測試，需要 DB）
+測試框架：PHP 7.4 / PHP 8.2 PHPUnit containers + PHPUnit 9 + Brain\Monkey（mock WordPress 函式）+ WP_UnitTestCase（整合測試，需要 DB）
+Composer 僅在官方 `php:*-cli` 測試 container 內執行；PHP 7.4 與 PHP 8.2 分別使用獨立 Composer file / lock file，只有 `lihi-shorturl/`、`tests/`、`patchwork.json`、`phpunit.xml` 以唯讀方式掛到 `/app/code`，版本專屬 Composer file / lock 在 container 內映射成 `/app/composer.json` / `/app/composer.lock`，vendor directory 與 WordPress core install 存在 Docker named volumes，不寫入 repo 工作樹。
 測試位置：`tests/`
 
 | Test class | 基底 | 說明 |

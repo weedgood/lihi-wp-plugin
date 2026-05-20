@@ -58,7 +58,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 // pair (manage_media_columns / manage_media_custom_column), handled separately.
 add_action( 'admin_init', function () {
     $render_button = function ( $post_id, $post_type ) {
-        echo '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post_id ) . '" data-type="' . esc_attr( $post_type ) . '">lihi</button>';
+        echo '<button type="button" class="button button-secondary" data-lihi data-id="' . esc_attr( $post_id ) . '" data-type="' . esc_attr( $post_type ) . '">lihi</button>';
     };
 
     foreach ( get_post_types( [ 'public' => true ], 'names' ) as $post_type ) {
@@ -96,7 +96,7 @@ add_filter( 'attachment_fields_to_edit', function ( $form_fields, $post ) {
     $form_fields['lihi'] = [
         'label' => __( 'Short URL', 'lihi-shorturl' ),
         'input' => 'html',
-        'html'  => '<button class="button button-secondary" data-lihi data-id="' . esc_attr( $post->ID ) . '" data-type="' . esc_attr( $post->post_type ) . '">lihi</button>',
+        'html'  => '<button type="button" class="button button-secondary" data-lihi data-id="' . esc_attr( $post->ID ) . '" data-type="' . esc_attr( $post->post_type ) . '">lihi</button>',
     ];
     return $form_fields;
 }, 10, 2 );

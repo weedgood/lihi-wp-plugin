@@ -32,7 +32,10 @@ class AjaxCopyUrlTest extends TestCase
     // Helpers
     // -------------------------------------------------------------------------
 
-    private function mockService(): \Mockery\MockInterface&Lihi_Service
+    /**
+     * @return \Mockery\MockInterface&Lihi_Service
+     */
+    private function mockService(): Lihi_Service
     {
         return Mockery::mock(Lihi_Service::class);
     }
