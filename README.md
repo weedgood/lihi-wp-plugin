@@ -64,6 +64,12 @@ For a single-version run, execute the matching service only:
 docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
 ```
 
+## Packaging
+
+GitHub Actions automatically builds the distributable plugin ZIP via `.github/workflows/package-plugin.yml` only when a tag is pushed.
+
+The tag workflow uploads an artifact named `lihi-shorturl-plugin` containing `build/lihi-shorturl.zip`, then the release job downloads that same artifact and creates or updates the GitHub Release for the tag. The ZIP keeps the WordPress-required top-level `lihi-shorturl/` directory and verifies that `lihi-shorturl.php` and `readme.txt` are present before release.
+
 ## Architecture
 
 ```

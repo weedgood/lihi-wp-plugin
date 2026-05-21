@@ -37,6 +37,10 @@ docker compose --profile test exec phpunit82 sh -lc 'cd /app/code && /app/vendor
 
 The PHP 7.4 container covers the plugin's minimum supported PHP version; the PHP 8.2 container catches compatibility issues on a modern runtime. After the test profile is running, `make test` runs both containerized PHPUnit suites. `make coverage` runs both coverage targets; `make coverage74` and `make coverage82` generate coverage under `/app/coverage` in the matching container workspace.
 
+## Packaging
+
+GitHub Actions workflow `.github/workflows/package-plugin.yml` runs only on tag pushes. The package job builds `build/lihi-shorturl.zip`, validates that the ZIP contains `lihi-shorturl/lihi-shorturl.php` and `lihi-shorturl/readme.txt`, and uploads artifact `lihi-shorturl-plugin`; the release job downloads that same artifact and publishes a GitHub Release for the tag. If a release for the tag already exists, the ZIP asset is replaced with `gh release upload --clobber`.
+
 ## Translations
 
 Compile `.po` files to `.mo` binaries (requires `gettext` / `msgfmt`):

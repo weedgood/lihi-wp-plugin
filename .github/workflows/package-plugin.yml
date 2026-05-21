@@ -1,0 +1,72 @@
+name: Package Plugin
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Build plugin zip
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate plugin files
+        run: |
+          test -f lihi-shorturl/lihi-shorturl.php
+          test -f lihi-shorturl/readme.txt
+
+      - name: Create plugin zip
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          zip -r build/lihi-shorturl.zip lihi-shorturl \
+            -x 'lihi-shorturl/.DS_Store' \
+            -x 'lihi-shorturl/**/.DS_Store'
+
+          unzip -t build/lihi-shorturl.zip
+          unzip -Z1 build/lihi-shorturl.zip | grep -qx 'lihi-shorturl/lihi-shorturl.php'
+          unzip -Z1 build/lihi-shorturl.zip | grep -qx 'lihi-shorturl/readme.txt'
+
+      - name: Upload plugin zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lihi-shorturl-plugin
+          path: build/lihi-shorturl.zip
+          if-no-files-found: error
+          compression-level: 0
+
+  release:
+    name: Publish GitHub release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download plugin zip artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lihi-shorturl-plugin
+          path: build
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" build/lihi-shorturl.zip --clobber
+          else
+            gh release create "$TAG_NAME" build/lihi-shorturl.zip \
+              --title "$TAG_NAME" \
+              --generate-notes
+          fi

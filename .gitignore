@@ -8,3 +8,4 @@ wordpress-php74/
 wordpress-php82/
 .phpunit.result.cache
 coverage/
+build/
