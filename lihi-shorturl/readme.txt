@@ -4,7 +4,7 @@ Tags: short url, url shortener, lihi, admin, media
 Requires at least: 5.5
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Adds a one-click "lihi" button to generate and copy short URLs from the WordPres
 
 == Description ==
 
-`lihi Short URL` integrates the [lihi](https://lihi.io) short-link service into the WordPress admin. With one click on a "lihi" button next to any post, page, custom post type, or media item, the plugin asks the lihi service for a short URL (creating one on first use, reusing it on subsequent clicks) and copies it to the clipboard.
+`lihi Short URL` integrates the [lihi](https://lihi.io) short-link service into the WordPress admin. With one click on a "lihi" button next to any post, page, custom post type, or media item, the plugin asks the lihi service for a short URL (creating one on first use, reusing it on subsequent clicks) and copies it to the clipboard. This plugin is open source and maintained at [weedgood/lihi-wp-plugin](https://github.com/weedgood/lihi-wp-plugin).
 
 The plugin runs only inside `wp-admin`; it adds no front-end output and enqueues no scripts on public pages.
 
@@ -85,7 +85,7 @@ Yes — two options (`lihi_email`, `lihi_domain`) and one transient (`lihi_token
 
 == Changelog ==
 
-= 0.1.0 =
+= 1.0.0 =
 * Initial release.
 * Adds a "lihi" short-URL button to all public post-type list tables and the Media Library.
 * Settings page with email verification flow and per-account redirect domain selection.
@@ -93,5 +93,5 @@ Yes — two options (`lihi_email`, `lihi_domain`) and one transient (`lihi_token
 
 == Upgrade Notice ==
 
-= 0.1.0 =
+= 1.0.0 =
 Initial release.

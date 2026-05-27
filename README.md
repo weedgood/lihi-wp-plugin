@@ -68,14 +68,16 @@ docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor
 
 GitHub Actions automatically builds the distributable plugin ZIP via `.github/workflows/package-plugin.yml` only when a tag is pushed.
 
+Current release metadata is `1.0.0`: the plugin header, WordPress.org `Stable tag`, asset enqueue versions, changelog, upgrade notice, Traditional Chinese translation header, and WordPress.org readme maintenance link to `weedgood/lihi-wp-plugin` are kept in sync for the release package.
+
 The tag workflow uploads an artifact named `lihi-shorturl-plugin` containing `build/lihi-shorturl.zip`, then the release job downloads that same artifact and creates or updates the GitHub Release for the tag. The ZIP keeps the WordPress-required top-level `lihi-shorturl/` directory and verifies that `lihi-shorturl.php` and `readme.txt` are present before release.
 
 ## Architecture
 
 ```
 lihi-shorturl/
-├── lihi-shorturl.php          Plugin entry point; admin-only guard; loads bootstrap.php (text domain is auto-loaded by WordPress for plugins hosted on .org)
-├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag, External services disclosure, FAQ, Changelog)
+├── lihi-shorturl.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.0 (text domain is auto-loaded by WordPress for plugins hosted on .org)
+├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag 1.0.0, External services disclosure, GitHub maintenance link, FAQ, Changelog)
 ├── LICENSE                    GPL-2.0-or-later license text
 ├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / lihi_domain options and lihi_token transient
 ├── bootstrap.php              Loads class files unconditionally; registers an admin notice when either lihi_email or lihi_domain is unset (UI hooks self-guard on both options in add-shorturl-column.php)

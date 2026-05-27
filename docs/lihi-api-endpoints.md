@@ -4,6 +4,8 @@
 - **lihi short-URL API** — 建立、查詢短網址與讀取帳號 profile
 - **lihi auth 服務** — email 驗證與登入取得 bearer token
 
+外掛目前發版 metadata 為 `1.0.0`，WordPress.org readme 也標示本外掛維護於 `weedgood/lihi-wp-plugin`。本次版本同步不改變 API contract；以下 endpoint、request / response shape、error mapping 仍為現行契約。
+
 ---
 
 # lihi Short-URL API

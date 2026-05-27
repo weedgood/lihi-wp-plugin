@@ -31,14 +31,14 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         'lihi-button',
         plugin_dir_url( __FILE__ ) . '../assets/lihi-button.css',
         [],
-        '0.1.0'
+        '1.0.0'
     );
 
     wp_enqueue_script(
         'lihi-button',
         plugin_dir_url( __FILE__ ) . '../assets/lihi-button.js',
         [],
-        '0.1.0',
+        '1.0.0',
         true
     );
 

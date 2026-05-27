@@ -5,6 +5,7 @@ Composer 僅在官方 `php:*-cli` 測試 container 內執行；PHP 7.4 與 PHP 8
 測試位置：`tests/`
 
 CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執行。Package job 會打包 `lihi-shorturl/` 成 `build/lihi-shorturl.zip`，驗證 ZIP 內含 `lihi-shorturl/lihi-shorturl.php` 與 `lihi-shorturl/readme.txt`，並上傳 artifact `lihi-shorturl-plugin`；release job 會下載同一個 artifact 建立或更新該 tag 的 GitHub Release，若 release 已存在則以 `--clobber` 替換 ZIP asset。
+Release metadata：目前發版版本為 `1.0.0`；`lihi-shorturl.php` header、WordPress.org `readme.txt` 的 `Stable tag` / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、以及 `zh_TW` translation header 應保持一致。
 
 | Test class | 基底 | 說明 |
 |---|---|---|
@@ -194,6 +195,7 @@ CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執�
 
 ## Plugin hooks (整合)
 
+- [n/a] release metadata 1.0.0 — plugin header、readme Stable tag / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、translation header 同步（由程式碼審查保證）
 - [x] `wp_ajax_lihi_copy_url` 已註冊
 - [x] `wp_ajax_lihi_update_email` 已註冊
 - [x] `admin_enqueue_scripts` 白名單（edit/upload/post/post-new）→ enqueue lihi-button
