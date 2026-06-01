@@ -1,0 +1,117 @@
+services:
+  db:
+    image: mysql:9
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wordpress:
+    image: wordpress:latest
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    volumes:
+      - wp_uploads:/var/www/html/wp-content/uploads
+      - ./lihi-shorturl:/var/www/html/wp-content/plugins/lihi-shorturl
+    # The named volume's mount point is created as root; WordPress's
+    # entrypoint doesn't chown into mounted volumes, so fix it before exec.
+    entrypoint:
+      - bash
+      - -c
+      - |
+        chown www-data:www-data /var/www/html/wp-content/uploads
+        exec docker-entrypoint.sh "$$0" "$$@"
+    command: apache2-foreground
+
+  db_test:
+    image: mysql:9
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wordpress_test
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - test
+
+  phpunit74:
+    build:
+      context: .
+      dockerfile: docker/phpunit/Dockerfile
+      args:
+        PHP_IMAGE: php:7.4-cli-bullseye
+    working_dir: /app/code
+    environment:
+      COMPOSER_ROOT_VERSION: 1.0.0
+      LIHI_VENDOR_DIR: /app/vendor
+      LIHI_WORDPRESS_DIR: /app/wordpress
+      XDEBUG_MODE: "off"
+    volumes:
+      - phpunit74_app:/app
+      - ./lihi-shorturl:/app/code/lihi-shorturl:ro
+      - ./tests:/app/code/tests:ro
+      - ./patchwork.json:/app/code/patchwork.json:ro
+      - ./phpunit.xml:/app/code/phpunit.xml:ro
+      - ./composer.7.4.json:/app/composer.json:ro
+      - ./composer.7.4.lock:/app/composer.lock:ro
+    depends_on:
+      db_test:
+        condition: service_healthy
+    command: [ "tail", "-f", "/dev/null" ]
+    profiles:
+      - test
+
+  phpunit82:
+    build:
+      context: .
+      dockerfile: docker/phpunit/Dockerfile
+      args:
+        PHP_IMAGE: php:8.2-cli-bookworm
+    working_dir: /app/code
+    environment:
+      COMPOSER_ROOT_VERSION: 1.0.0
+      LIHI_VENDOR_DIR: /app/vendor
+      LIHI_WORDPRESS_DIR: /app/wordpress
+      XDEBUG_MODE: "off"
+    volumes:
+      - phpunit82_app:/app
+      - ./lihi-shorturl:/app/code/lihi-shorturl:ro
+      - ./tests:/app/code/tests:ro
+      - ./patchwork.json:/app/code/patchwork.json:ro
+      - ./phpunit.xml:/app/code/phpunit.xml:ro
+      - ./composer.8.2.json:/app/composer.json:ro
+      - ./composer.8.2.lock:/app/composer.lock:ro
+    depends_on:
+      db_test:
+        condition: service_healthy
+    command: [ "tail", "-f", "/dev/null" ]
+    profiles:
+      - test
+
+volumes:
+  db_data:
+  wp_uploads:
+  phpunit74_app:
+  phpunit82_app:

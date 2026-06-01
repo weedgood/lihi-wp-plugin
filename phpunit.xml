@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="tests/bootstrap.php"
+         cacheResultFile="/app/.phpunit.result.cache"
+         colors="true">
+    <testsuites>
+        <testsuite name="lihi-shorturl">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="WP_PHPUNIT__TESTS_CONFIG" value="tests/wp-config.php" />
+    </php>
+    <coverage>
+        <include>
+            <directory suffix=".php">lihi-shorturl/includes</directory>
+        </include>
+
+    </coverage>
+</phpunit>

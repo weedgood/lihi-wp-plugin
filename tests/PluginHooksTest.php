@@ -1,0 +1,196 @@
+<?php
+
+namespace Lihi\ShortUrl\Tests;
+
+class PluginHooksTest extends \WP_UnitTestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $GLOBALS['wp_scripts'] = null;
+        $GLOBALS['wp_styles']  = null;
+
+        if (!function_exists('set_current_screen')) {
+            require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
+            require_once ABSPATH . 'wp-admin/includes/screen.php';
+        }
+        set_current_screen('dashboard');
+
+        // do_action('admin_init') triggers WP update checks that make outbound
+        // HTTP calls and hit a known reference-arg bug under patchwork. Strip
+        // the network-touching callbacks so tests only exercise our hooks.
+        remove_action('admin_init', 'wp_version_check');
+        remove_action('admin_init', 'wp_update_plugins');
+        remove_action('admin_init', 'wp_update_themes');
+        remove_action('admin_init', 'wp_schedule_update_checks');
+        remove_action('admin_init', '_maybe_update_core');
+        remove_action('admin_init', '_maybe_update_plugins');
+        remove_action('admin_init', '_maybe_update_themes');
+    }
+
+    protected function tearDown(): void
+    {
+        $GLOBALS['current_screen'] = null;
+        parent::tearDown();
+    }
+
+    // -------------------------------------------------------------------------
+    // AJAX actions registered
+    // -------------------------------------------------------------------------
+
+    public function test_wp_ajax_lihi_copy_url_handler_is_registered(): void
+    {
+        $this->assertNotFalse(has_action('wp_ajax_lihi_copy_url'));
+    }
+
+    public function test_wp_ajax_lihi_update_email_handler_is_registered(): void
+    {
+        $this->assertNotFalse(has_action('wp_ajax_lihi_update_email'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Script enqueue via admin_enqueue_scripts
+    // -------------------------------------------------------------------------
+
+    public function test_lihi_admin_script_enqueued_on_edit_screen(): void
+    {
+        do_action('admin_enqueue_scripts', 'edit.php');
+        $this->assertTrue(wp_script_is('lihi-button', 'enqueued'));
+    }
+
+    public function test_lihi_admin_script_enqueued_on_upload_screen(): void
+    {
+        do_action('admin_enqueue_scripts', 'upload.php');
+        $this->assertTrue(wp_script_is('lihi-button', 'enqueued'));
+    }
+
+    public function test_lihi_admin_script_enqueued_on_post_edit_screen(): void
+    {
+        do_action('admin_enqueue_scripts', 'post.php');
+        $this->assertTrue(wp_script_is('lihi-button', 'enqueued'));
+    }
+
+    public function test_lihi_admin_script_enqueued_on_new_post_screen(): void
+    {
+        do_action('admin_enqueue_scripts', 'post-new.php');
+        $this->assertTrue(wp_script_is('lihi-button', 'enqueued'));
+    }
+
+    public function test_lihi_admin_script_not_enqueued_on_unrelated_screens(): void
+    {
+        do_action('admin_enqueue_scripts', 'index.php');
+        $this->assertFalse(wp_script_is('lihi-button', 'enqueued'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Post-type column registration (add-shorturl-column.php admin_init)
+    // -------------------------------------------------------------------------
+
+    private function runAdminInit(): void
+    {
+        // admin_init has callbacks that try to send headers; buffer to prevent
+        // fatal errors from output already emitted by the test runner bootstrap.
+        ob_start();
+        @do_action('admin_init');
+        ob_end_clean();
+    }
+
+    public function test_post_list_has_short_url_column(): void
+    {
+        $this->runAdminInit();
+        $columns = apply_filters('manage_post_posts_columns', []);
+        $this->assertArrayHasKey('lihi', $columns);
+    }
+
+    public function test_post_column_renders_lihi_button(): void
+    {
+        $this->runAdminInit();
+        $post_id = self::factory()->post->create();
+
+        ob_start();
+        do_action('manage_post_posts_custom_column', 'lihi', $post_id);
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('data-lihi', $html);
+        $this->assertStringContainsString('type="button"', $html);
+        $this->assertStringContainsString('data-id="' . $post_id . '"', $html);
+        $this->assertStringContainsString('data-type="post"', $html);
+    }
+
+    public function test_media_library_has_short_url_column(): void
+    {
+        $this->runAdminInit();
+        $columns = apply_filters('manage_media_columns', []);
+        $this->assertArrayHasKey('lihi', $columns);
+    }
+
+    public function test_media_column_renders_attachment_button(): void
+    {
+        $this->runAdminInit();
+        $att_id = self::factory()->attachment->create_object('photo.jpg', 0, [
+            'post_mime_type' => 'image/jpeg',
+            'post_type'      => 'attachment',
+        ]);
+
+        ob_start();
+        do_action('manage_media_custom_column', 'lihi', $att_id);
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('data-type="attachment"', $html);
+        $this->assertStringContainsString('type="button"', $html);
+    }
+
+    public function test_attachment_edit_panel_has_lihi_field(): void
+    {
+        $att_id = self::factory()->attachment->create_object('photo.jpg', 0, [
+            'post_mime_type' => 'image/jpeg',
+            'post_type'      => 'attachment',
+        ]);
+        $post   = get_post($att_id);
+        $fields = apply_filters('attachment_fields_to_edit', [], $post);
+
+        $this->assertArrayHasKey('lihi', $fields);
+        $this->assertStringContainsString('data-lihi', $fields['lihi']['html']);
+        $this->assertStringContainsString('type="button"', $fields['lihi']['html']);
+    }
+
+    // -------------------------------------------------------------------------
+    // Settings page registration (settings.php)
+    // -------------------------------------------------------------------------
+
+    public function test_admin_init_registers_lihi_email_setting(): void
+    {
+        global $wp_registered_settings;
+        $this->runAdminInit();
+        $this->assertArrayHasKey('lihi_email', $wp_registered_settings);
+    }
+
+    public function test_admin_menu_registers_settings_page(): void
+    {
+        wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+        do_action('admin_menu');
+        $this->assertNotFalse(menu_page_url('lihi-settings', false));
+    }
+
+    public function test_email_change_flushes_token_transient(): void
+    {
+        set_transient('lihi_token', 'stale-jwt', HOUR_IN_SECONDS);
+        update_option('lihi_email', 'new@example.com');
+        $this->assertFalse(get_transient('lihi_token'));
+    }
+
+    public function test_email_change_clears_lihi_domain_option(): void
+    {
+        update_option('lihi_domain', 'redirect.lihidev.com');
+        update_option('lihi_email', 'new@example.com');
+        $this->assertFalse(get_option('lihi_domain'));
+    }
+
+    public function test_email_delete_clears_lihi_domain_option(): void
+    {
+        update_option('lihi_email', 'old@example.com');
+        update_option('lihi_domain', 'redirect.lihidev.com');
+        delete_option('lihi_email');
+        $this->assertFalse(get_option('lihi_domain'));
+    }
+}

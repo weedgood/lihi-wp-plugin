@@ -1,0 +1,23 @@
+@keyframes lihi-spin {
+    to { transform: rotate( 360deg ); }
+}
+
+.lihi-btn-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.lihi-btn-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border: 2px solid #c3c4c7;
+    border-top-color: #2271b1;
+    border-radius: 50%;
+    animation: lihi-spin 0.6s linear infinite;
+}
