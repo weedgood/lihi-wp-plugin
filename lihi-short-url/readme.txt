@@ -48,7 +48,7 @@ By using the plugin you agree that the data above is transmitted to the lihi ser
 
 == Installation ==
 
-1. Upload the `lihi-shorturl` folder to the `/wp-content/plugins/` directory, or install the plugin through the WordPress **Plugins** screen.
+1. Upload the `lihi-short-url` folder to the `/wp-content/plugins/` directory, or install the plugin through the WordPress **Plugins** screen.
 2. Activate the plugin through the **Plugins** screen.
 3. Go to **Settings → lihi Short URL**.
 4. Enter your lihi account email address and click **Save & Verify**. A verification email will be sent if the address is not yet verified.

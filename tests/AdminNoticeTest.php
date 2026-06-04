@@ -27,7 +27,7 @@ class AdminNoticeTest extends \WP_UnitTestCase
      */
     private function loadBootstrap(): void
     {
-        include dirname( __DIR__ ) . '/lihi-shorturl/bootstrap.php';
+        include dirname( __DIR__ ) . '/lihi-short-url/bootstrap.php';
     }
 
     public function test_no_global_admin_notice_when_email_empty(): void

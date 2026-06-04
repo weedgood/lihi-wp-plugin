@@ -1,11 +1,11 @@
 # Test TODO
 
 測試框架：PHP 7.4 / PHP 8.2 PHPUnit containers + PHPUnit 9 + Brain\Monkey（mock WordPress 函式）+ WP_UnitTestCase（整合測試，需要 DB）
-Composer 僅在官方 `php:*-cli` 測試 container 內執行；PHP 7.4 與 PHP 8.2 分別使用獨立 Composer file / lock file，只有 `lihi-shorturl/`、`tests/`、`patchwork.json`、`phpunit.xml` 以唯讀方式掛到 `/app/code`，版本專屬 Composer file / lock 在 container 內映射成 `/app/composer.json` / `/app/composer.lock`，vendor directory 與 WordPress core install 存在 Docker named volumes，不寫入 repo 工作樹。
+Composer 僅在官方 `php:*-cli` 測試 container 內執行；PHP 7.4 與 PHP 8.2 分別使用獨立 Composer file / lock file，只有 `lihi-short-url/`、`tests/`、`patchwork.json`、`phpunit.xml` 以唯讀方式掛到 `/app/code`，版本專屬 Composer file / lock 在 container 內映射成 `/app/composer.json` / `/app/composer.lock`，vendor directory 與 WordPress core install 存在 Docker named volumes，不寫入 repo 工作樹。
 測試位置：`tests/`
 
-CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執行。Package job 會打包 `lihi-shorturl/` 成 `build/lihi-shorturl.zip`，驗證 ZIP 內含 `lihi-shorturl/lihi-shorturl.php` 與 `lihi-shorturl/readme.txt`，並上傳 artifact `lihi-shorturl-plugin`；release job 會下載同一個 artifact 建立或更新該 tag 的 GitHub Release，若 release 已存在則以 `--clobber` 替換 ZIP asset。
-Release metadata：目前發版版本為 `1.0.0`；`lihi-shorturl.php` header、WordPress.org `readme.txt` 的 `Stable tag` / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、以及 `zh_TW` translation header 應保持一致。
+CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執行。Package job 會打包 `lihi-short-url/` 成 `build/lihi-short-url.zip`，驗證 ZIP 內含 `lihi-short-url/lihi-short-url.php` 與 `lihi-short-url/readme.txt`，並上傳 artifact `lihi-short-url-plugin`；release job 會下載同一個 artifact 建立或更新該 tag 的 GitHub Release，若 release 已存在則以 `--clobber` 替換 ZIP asset。
+Release metadata：目前發版版本為 `1.0.0`；`lihi-short-url.php` header、WordPress.org `readme.txt` 的 `Stable tag` / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、以及 `zh_TW` translation header 應保持一致。
 
 | Test class | 基底 | 說明 |
 |---|---|---|

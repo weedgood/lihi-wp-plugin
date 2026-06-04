@@ -29,7 +29,7 @@ docker compose up -d
 
 WordPress is available at **http://localhost:8080**.
 
-The plugin directory (`lihi-shorturl/`) is bind-mounted into the container at `wp-content/plugins/lihi-shorturl`, so changes take effect immediately without rebuilding.
+The plugin directory (`lihi-short-url/`) is bind-mounted into the container at `wp-content/plugins/lihi-short-url`, so changes take effect immediately without rebuilding.
 
 ### Compile translations
 
@@ -38,11 +38,11 @@ make          # compile all .mo files from .po sources
 make clean    # remove compiled .mo files
 ```
 
-Translation files live in `lihi-shorturl/languages/`.
+Translation files live in `lihi-short-url/languages/`.
 
 ## Testing
 
-Tests use PHPUnit with Brain\Monkey to mock WordPress functions. A dedicated Docker profile spins up the test database plus separate PHP 7.4 and PHP 8.2 PHPUnit containers built from official `php:*-cli` images. Composer is run only inside those containers. The containers mount only `lihi-shorturl/`, `tests/`, `patchwork.json`, and `phpunit.xml` read-only under `/app/code`; each service exposes its version-specific Composer file and lock as `/app/composer.json` and `/app/composer.lock`, while vendor dependencies and WordPress core installs live in that service's Docker-managed `/app` volume.
+Tests use PHPUnit with Brain\Monkey to mock WordPress functions. A dedicated Docker profile spins up the test database plus separate PHP 7.4 and PHP 8.2 PHPUnit containers built from official `php:*-cli` images. Composer is run only inside those containers. The containers mount only `lihi-short-url/`, `tests/`, `patchwork.json`, and `phpunit.xml` read-only under `/app/code`; each service exposes its version-specific Composer file and lock as `/app/composer.json` and `/app/composer.lock`, while vendor dependencies and WordPress core installs live in that service's Docker-managed `/app` volume.
 
 ```bash
 docker compose --profile test up -d --build --force-recreate --remove-orphans db_test phpunit74 phpunit82
@@ -70,13 +70,13 @@ GitHub Actions automatically builds the distributable plugin ZIP via `.github/wo
 
 Current release metadata is `1.0.0`: the plugin header, WordPress.org `Stable tag`, asset enqueue versions, changelog, upgrade notice, Traditional Chinese translation header, WordPress.org readme maintenance link to `weedgood/lihi-wp-plugin`, and WordPress.org slug / text domain `lihi-short-url` are kept in sync for the release package.
 
-The tag workflow uploads an artifact named `lihi-shorturl-plugin` containing `build/lihi-shorturl.zip`, then the release job downloads that same artifact and creates or updates the GitHub Release for the tag. The ZIP keeps the WordPress-required top-level `lihi-shorturl/` directory and verifies that `lihi-shorturl.php` and `readme.txt` are present before release.
+The tag workflow uploads an artifact named `lihi-short-url-plugin` containing `build/lihi-short-url.zip`, then the release job downloads that same artifact and creates or updates the GitHub Release for the tag. The ZIP keeps the WordPress-required top-level `lihi-short-url/` directory and verifies that `lihi-short-url.php` and `readme.txt` are present before release.
 
 ## Architecture
 
 ```
-lihi-shorturl/
-├── lihi-shorturl.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.0 and Text Domain lihi-short-url (auto-loaded by WordPress for plugins hosted on .org)
+lihi-short-url/
+├── lihi-short-url.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.0 and Text Domain lihi-short-url (auto-loaded by WordPress for plugins hosted on .org)
 ├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag 1.0.0, External services disclosure, GitHub maintenance link, FAQ, Changelog)
 ├── LICENSE                    GPL-2.0-or-later license text
 ├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / lihi_domain options and lihi_token transient

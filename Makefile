@@ -1,4 +1,4 @@
-POFILES := $(wildcard lihi-shorturl/languages/*.po)
+POFILES := $(wildcard lihi-short-url/languages/*.po)
 MOFILES := $(POFILES:.po=.mo)
 COMPOSER_WORKDIR := /app
 CODE_DIR := /app/code
@@ -8,7 +8,7 @@ PHPUNIT := /app/vendor/bin/phpunit
 
 all: $(MOFILES)
 
-lihi-shorturl/languages/%.mo: lihi-shorturl/languages/%.po
+lihi-short-url/languages/%.mo: lihi-short-url/languages/%.po
 	msgfmt $< -o $@
 
 clean:
