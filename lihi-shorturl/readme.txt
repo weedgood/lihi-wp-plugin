@@ -61,7 +61,7 @@ The plugin requires the `manage_options` capability to view or change settings. 
 
 = Why don't I see the "lihi" button in my list tables? =
 
-The UI hooks only register once the plugin is fully configured — both the lihi email and the redirect domain must be set. If either is missing, an admin notice on every admin page links you to **Settings → lihi Short URL**.
+The UI hooks only register once the plugin is fully configured — both the lihi email and the redirect domain must be set. Open **Settings → lihi Short URL** to verify the email and choose a redirect domain.
 
 = What happens if I change the email address? =
 

@@ -44,7 +44,7 @@ class Lihi_Service {
         $token  = $result['token'] ?? '';
 
         if ( ! $token ) {
-            throw new \RuntimeException( esc_html__( 'No token returned from lihi API.', 'lihi-shorturl' ) );
+            throw new \RuntimeException( esc_html__( 'No token returned from lihi API.', 'lihi-short-url' ) );
         }
 
         return $token;
@@ -121,7 +121,7 @@ class Lihi_Service {
         $short_url = $created['data']['short_url'] ?? '';
 
         if ( ! $short_url ) {
-            throw new \RuntimeException( esc_html__( 'No short_url returned from lihi API.', 'lihi-shorturl' ) );
+            throw new \RuntimeException( esc_html__( 'No short_url returned from lihi API.', 'lihi-short-url' ) );
         }
 
         return $short_url;
@@ -149,7 +149,7 @@ class Lihi_Service {
             throw new \RuntimeException(
                 sprintf(
                     /* translators: 1: item type, 2: item ID */
-                    esc_html__( 'Could not resolve URL for %1$s %2$d.', 'lihi-shorturl' ),
+                    esc_html__( 'Could not resolve URL for %1$s %2$d.', 'lihi-short-url' ),
                     esc_html( $type ),
                     absint( $item_id )
                 )

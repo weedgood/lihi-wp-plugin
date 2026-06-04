@@ -9,8 +9,8 @@ A WordPress admin plugin that integrates with the [lihi](https://lihi.io) URL sh
 - **Get-or-create** — fetches the existing short link for a post from lihi; creates one automatically if none exists.
 - **One-click copy** — button copies the short URL to the clipboard and briefly shows "Copied!".
 - **Lazy auth** — authenticates against the lihi API only when a short URL is actually needed; caches the JWT in a site-scoped transient shared across all admins and refreshes it automatically when expired or when the configured email changes.
-- **Settings page** — configure the lihi API email under Settings → lihi Short URL; once an email is verified, the page also shows the account's plan tier, plan end date, and a redirect-domain selector (choice is persisted to the `lihi_domain` option). Both the email and a redirect domain must be set before the lihi button appears: until they are, an admin notice links directly to the settings page (one notice for missing email, a parallel one for missing domain) and the plugin's UI hooks stay unregistered.
-- **i18n ready** — full Traditional Chinese (zh_TW) translation included; text domain `lihi-shorturl`.
+- **Settings page** — configure the lihi API email under Settings → lihi Short URL; once an email is verified, the page also shows the account's plan tier, plan end date, and a redirect-domain selector (choice is persisted to the `lihi_domain` option). Both the email and a redirect domain must be set before the lihi button appears; when setup is incomplete, the plugin quietly leaves the admin UI hooks unregistered instead of showing dashboard-wide setup notices.
+- **i18n ready** — full Traditional Chinese (zh_TW) translation included; text domain `lihi-short-url`.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor
 
 GitHub Actions automatically builds the distributable plugin ZIP via `.github/workflows/package-plugin.yml` only when a tag is pushed.
 
-Current release metadata is `1.0.0`: the plugin header, WordPress.org `Stable tag`, asset enqueue versions, changelog, upgrade notice, Traditional Chinese translation header, and WordPress.org readme maintenance link to `weedgood/lihi-wp-plugin` are kept in sync for the release package.
+Current release metadata is `1.0.0`: the plugin header, WordPress.org `Stable tag`, asset enqueue versions, changelog, upgrade notice, Traditional Chinese translation header, WordPress.org readme maintenance link to `weedgood/lihi-wp-plugin`, and WordPress.org slug / text domain `lihi-short-url` are kept in sync for the release package.
 
 The tag workflow uploads an artifact named `lihi-shorturl-plugin` containing `build/lihi-shorturl.zip`, then the release job downloads that same artifact and creates or updates the GitHub Release for the tag. The ZIP keeps the WordPress-required top-level `lihi-shorturl/` directory and verifies that `lihi-shorturl.php` and `readme.txt` are present before release.
 
@@ -76,11 +76,11 @@ The tag workflow uploads an artifact named `lihi-shorturl-plugin` containing `bu
 
 ```
 lihi-shorturl/
-├── lihi-shorturl.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.0 (text domain is auto-loaded by WordPress for plugins hosted on .org)
+├── lihi-shorturl.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.0 and Text Domain lihi-short-url (auto-loaded by WordPress for plugins hosted on .org)
 ├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag 1.0.0, External services disclosure, GitHub maintenance link, FAQ, Changelog)
 ├── LICENSE                    GPL-2.0-or-later license text
 ├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / lihi_domain options and lihi_token transient
-├── bootstrap.php              Loads class files unconditionally; registers an admin notice when either lihi_email or lihi_domain is unset (UI hooks self-guard on both options in add-shorturl-column.php)
+├── bootstrap.php              Loads class files unconditionally; does not register dashboard-wide setup notices (UI hooks self-guard on both lihi_email and lihi_domain in add-shorturl-column.php)
 ├── assets/
 │   ├── lihi-button.js         Async delegated click handler; splits disable window (300 ms) from "Copied!" label duration (1200 ms); errors shown via auto-dismissing WP .notice.notice-error
 │   └── lihi-settings.js       Settings page button handlers; shared bindSaver helper wires Save & Verify (email → lihi_update_email) and Save (domain → lihi_update_domain) to admin-ajax and renders inline .notice-success / .notice-error feedback. The email handler always blanks #lihi-account-section on success (so the prior account's role / end date / domain selector can't linger) and on verified:true schedules a 2 s delayed window.location.reload() so the admin sees the success notice before render_settings_page() repaints the account section
