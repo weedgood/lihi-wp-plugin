@@ -4,7 +4,7 @@ Tags: short url, url shortener, lihi, admin, media
 Requires at least: 5.5
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,6 +85,11 @@ Yes — two options (`lihi_email`, `lihi_domain`) and one transient (`lihi_token
 
 == Changelog ==
 
+= 1.0.1 =
+* Aligns the plugin package directory, main file, and text domain with the WordPress.org slug.
+* Removes dashboard-wide setup notices while keeping the settings page available.
+* Updates release packaging validation for the `lihi-short-url` directory.
+
 = 1.0.0 =
 * Initial release.
 * Adds a "lihi" short-URL button to all public post-type list tables and the Media Library.
@@ -92,6 +97,9 @@ Yes — two options (`lihi_email`, `lihi_domain`) and one transient (`lihi_token
 * Traditional Chinese (`zh_TW`) translation included.
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Updates WordPress.org release metadata and package paths; no action required.
 
 = 1.0.0 =
 Initial release.

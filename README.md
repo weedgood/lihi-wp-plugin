@@ -68,7 +68,7 @@ docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor
 
 GitHub Actions automatically builds the distributable plugin ZIP via `.github/workflows/package-plugin.yml` only when a tag is pushed.
 
-Current release metadata is `1.0.0`: the plugin header, WordPress.org `Stable tag`, asset enqueue versions, changelog, upgrade notice, Traditional Chinese translation header, WordPress.org readme maintenance link to `weedgood/lihi-wp-plugin`, and WordPress.org slug / text domain `lihi-short-url` are kept in sync for the release package.
+Current release metadata is `1.0.1`: the plugin header, WordPress.org `Stable tag`, asset enqueue versions, changelog, upgrade notice, Traditional Chinese translation header, WordPress.org readme maintenance link to `weedgood/lihi-wp-plugin`, and WordPress.org slug / text domain `lihi-short-url` are kept in sync for the release package.
 
 The tag workflow uploads an artifact named `lihi-short-url-plugin` containing `build/lihi-short-url.zip`, then the release job downloads that same artifact and creates or updates the GitHub Release for the tag. The ZIP keeps the WordPress-required top-level `lihi-short-url/` directory and verifies that `lihi-short-url.php` and `readme.txt` are present before release.
 
@@ -76,8 +76,8 @@ The tag workflow uploads an artifact named `lihi-short-url-plugin` containing `b
 
 ```
 lihi-short-url/
-├── lihi-short-url.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.0 and Text Domain lihi-short-url (auto-loaded by WordPress for plugins hosted on .org)
-├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag 1.0.0, External services disclosure, GitHub maintenance link, FAQ, Changelog)
+├── lihi-short-url.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.1 and Text Domain lihi-short-url (auto-loaded by WordPress for plugins hosted on .org)
+├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag 1.0.1, External services disclosure, GitHub maintenance link, FAQ, Changelog)
 ├── LICENSE                    GPL-2.0-or-later license text
 ├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / lihi_domain options and lihi_token transient
 ├── bootstrap.php              Loads class files unconditionally; does not register dashboard-wide setup notices (UI hooks self-guard on both lihi_email and lihi_domain in add-shorturl-column.php)
