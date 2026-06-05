@@ -4,7 +4,7 @@ Tags: short url, url shortener, lihi, admin, media
 Requires at least: 5.5
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -48,7 +48,7 @@ By using the plugin you agree that the data above is transmitted to the lihi ser
 
 == Installation ==
 
-1. Upload the `lihi-shorturl` folder to the `/wp-content/plugins/` directory, or install the plugin through the WordPress **Plugins** screen.
+1. Upload the `lihi-short-url` folder to the `/wp-content/plugins/` directory, or install the plugin through the WordPress **Plugins** screen.
 2. Activate the plugin through the **Plugins** screen.
 3. Go to **Settings → lihi Short URL**.
 4. Enter your lihi account email address and click **Save & Verify**. A verification email will be sent if the address is not yet verified.
@@ -61,7 +61,7 @@ The plugin requires the `manage_options` capability to view or change settings. 
 
 = Why don't I see the "lihi" button in my list tables? =
 
-The UI hooks only register once the plugin is fully configured — both the lihi email and the redirect domain must be set. If either is missing, an admin notice on every admin page links you to **Settings → lihi Short URL**.
+The UI hooks only register once the plugin is fully configured — both the lihi email and the redirect domain must be set. Open **Settings → lihi Short URL** to verify the email and choose a redirect domain.
 
 = What happens if I change the email address? =
 
@@ -85,6 +85,11 @@ Yes — two options (`lihi_email`, `lihi_domain`) and one transient (`lihi_token
 
 == Changelog ==
 
+= 1.0.1 =
+* Aligns the plugin package directory, main file, and text domain with the WordPress.org slug.
+* Removes dashboard-wide setup notices while keeping the settings page available.
+* Updates release packaging validation for the `lihi-short-url` directory.
+
 = 1.0.0 =
 * Initial release.
 * Adds a "lihi" short-URL button to all public post-type list tables and the Media Library.
@@ -92,6 +97,9 @@ Yes — two options (`lihi_email`, `lihi_domain`) and one transient (`lihi_token
 * Traditional Chinese (`zh_TW`) translation included.
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Updates WordPress.org release metadata and package paths; no action required.
 
 = 1.0.0 =
 Initial release.

@@ -32,7 +32,7 @@ function _manually_load_plugin(): void
     // selectively cleared to exercise the empty-state branches.
     update_option( 'lihi_email', 'test@example.com' );
     update_option( 'lihi_domain', 'redirect.lihidev.com' );
-    require_once dirname(__DIR__) . '/lihi-shorturl/lihi-shorturl.php';
+    require_once dirname(__DIR__) . '/lihi-short-url/lihi-short-url.php';
 }
 
 tests_add_filter('muplugins_loaded', '_manually_load_plugin');

@@ -30,7 +30,7 @@ services:
       WORDPRESS_DB_PASSWORD: wordpress
     volumes:
       - wp_uploads:/var/www/html/wp-content/uploads
-      - ./lihi-shorturl:/var/www/html/wp-content/plugins/lihi-shorturl
+      - ./lihi-short-url:/var/www/html/wp-content/plugins/lihi-short-url
     # The named volume's mount point is created as root; WordPress's
     # entrypoint doesn't chown into mounted volumes, so fix it before exec.
     entrypoint:
@@ -64,13 +64,13 @@ services:
         PHP_IMAGE: php:7.4-cli-bullseye
     working_dir: /app/code
     environment:
-      COMPOSER_ROOT_VERSION: 1.0.0
+      COMPOSER_ROOT_VERSION: 1.0.1
       LIHI_VENDOR_DIR: /app/vendor
       LIHI_WORDPRESS_DIR: /app/wordpress
       XDEBUG_MODE: "off"
     volumes:
       - phpunit74_app:/app
-      - ./lihi-shorturl:/app/code/lihi-shorturl:ro
+      - ./lihi-short-url:/app/code/lihi-short-url:ro
       - ./tests:/app/code/tests:ro
       - ./patchwork.json:/app/code/patchwork.json:ro
       - ./phpunit.xml:/app/code/phpunit.xml:ro
@@ -91,13 +91,13 @@ services:
         PHP_IMAGE: php:8.2-cli-bookworm
     working_dir: /app/code
     environment:
-      COMPOSER_ROOT_VERSION: 1.0.0
+      COMPOSER_ROOT_VERSION: 1.0.1
       LIHI_VENDOR_DIR: /app/vendor
       LIHI_WORDPRESS_DIR: /app/wordpress
       XDEBUG_MODE: "off"
     volumes:
       - phpunit82_app:/app
-      - ./lihi-shorturl:/app/code/lihi-shorturl:ro
+      - ./lihi-short-url:/app/code/lihi-short-url:ro
       - ./tests:/app/code/tests:ro
       - ./patchwork.json:/app/code/patchwork.json:ro
       - ./phpunit.xml:/app/code/phpunit.xml:ro

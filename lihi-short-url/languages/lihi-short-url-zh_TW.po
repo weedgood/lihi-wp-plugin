@@ -2,7 +2,7 @@
 # Copyright (C) 2026 lihi
 msgid ""
 msgstr ""
-"Project-Id-Version: lihi WP Plugin 1.0.0\n"
+"Project-Id-Version: lihi WP Plugin 1.0.1\n"
 "POT-Creation-Date: 2026-04-09\n"
 "PO-Revision-Date: 2026-04-09\n"
 "MIME-Version: 1.0\n"
@@ -10,6 +10,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Language: zh_TW\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"X-Domain: lihi-short-url\n"
 
 #: includes/add-lihi-column.php
 #: includes/add-shorturl-column.php
@@ -173,14 +174,6 @@ msgstr "—"
 msgid "(none available)"
 msgstr "（尚無）"
 
-
-#: bootstrap.php
-msgid "lihi Short URL: please <a href=\"%s\">configure your email address</a> to enable the plugin."
-msgstr "lihi 短網址：請先至 <a href=\"%s\">設定頁</a> 填寫 Email 以啟用外掛。"
-
-#: bootstrap.php
-msgid "lihi Short URL: please <a href=\"%s\">choose a redirect domain</a> to enable the plugin."
-msgstr "lihi 短網址：請先至 <a href=\"%s\">設定頁</a> 選擇短網址網域以啟用外掛。"
 
 #. Description of the plugin
 msgid "Adds a one-click \"lihi\" button to generate and copy short URLs, including posts, pages, media and all post-type list tables."

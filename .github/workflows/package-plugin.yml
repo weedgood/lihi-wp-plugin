@@ -19,26 +19,26 @@ jobs:
 
       - name: Validate plugin files
         run: |
-          test -f lihi-shorturl/lihi-shorturl.php
-          test -f lihi-shorturl/readme.txt
+          test -f lihi-short-url/lihi-short-url.php
+          test -f lihi-short-url/readme.txt
 
       - name: Create plugin zip
         run: |
           set -euo pipefail
           mkdir -p build
-          zip -r build/lihi-shorturl.zip lihi-shorturl \
-            -x 'lihi-shorturl/.DS_Store' \
-            -x 'lihi-shorturl/**/.DS_Store'
+          zip -r build/lihi-short-url.zip lihi-short-url \
+            -x 'lihi-short-url/.DS_Store' \
+            -x 'lihi-short-url/**/.DS_Store'
 
-          unzip -t build/lihi-shorturl.zip
-          unzip -Z1 build/lihi-shorturl.zip | grep -qx 'lihi-shorturl/lihi-shorturl.php'
-          unzip -Z1 build/lihi-shorturl.zip | grep -qx 'lihi-shorturl/readme.txt'
+          unzip -t build/lihi-short-url.zip
+          unzip -Z1 build/lihi-short-url.zip | grep -qx 'lihi-short-url/lihi-short-url.php'
+          unzip -Z1 build/lihi-short-url.zip | grep -qx 'lihi-short-url/readme.txt'
 
       - name: Upload plugin zip artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lihi-shorturl-plugin
-          path: build/lihi-shorturl.zip
+          name: lihi-short-url-plugin
+          path: build/lihi-short-url.zip
           if-no-files-found: error
           compression-level: 0
 
@@ -53,7 +53,7 @@ jobs:
       - name: Download plugin zip artifact
         uses: actions/download-artifact@v4
         with:
-          name: lihi-shorturl-plugin
+          name: lihi-short-url-plugin
           path: build
 
       - name: Publish GitHub release
@@ -65,9 +65,9 @@ jobs:
           set -euo pipefail
 
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release upload "$TAG_NAME" build/lihi-shorturl.zip --clobber
+            gh release upload "$TAG_NAME" build/lihi-short-url.zip --clobber
           else
-            gh release create "$TAG_NAME" build/lihi-shorturl.zip \
+            gh release create "$TAG_NAME" build/lihi-short-url.zip \
               --title "$TAG_NAME" \
               --generate-notes
           fi

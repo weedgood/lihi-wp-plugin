@@ -1,11 +1,11 @@
 # Test TODO
 
 測試框架：PHP 7.4 / PHP 8.2 PHPUnit containers + PHPUnit 9 + Brain\Monkey（mock WordPress 函式）+ WP_UnitTestCase（整合測試，需要 DB）
-Composer 僅在官方 `php:*-cli` 測試 container 內執行；PHP 7.4 與 PHP 8.2 分別使用獨立 Composer file / lock file，只有 `lihi-shorturl/`、`tests/`、`patchwork.json`、`phpunit.xml` 以唯讀方式掛到 `/app/code`，版本專屬 Composer file / lock 在 container 內映射成 `/app/composer.json` / `/app/composer.lock`，vendor directory 與 WordPress core install 存在 Docker named volumes，不寫入 repo 工作樹。
+Composer 僅在官方 `php:*-cli` 測試 container 內執行；PHP 7.4 與 PHP 8.2 分別使用獨立 Composer file / lock file，只有 `lihi-short-url/`、`tests/`、`patchwork.json`、`phpunit.xml` 以唯讀方式掛到 `/app/code`，版本專屬 Composer file / lock 在 container 內映射成 `/app/composer.json` / `/app/composer.lock`，vendor directory 與 WordPress core install 存在 Docker named volumes，不寫入 repo 工作樹。
 測試位置：`tests/`
 
-CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執行。Package job 會打包 `lihi-shorturl/` 成 `build/lihi-shorturl.zip`，驗證 ZIP 內含 `lihi-shorturl/lihi-shorturl.php` 與 `lihi-shorturl/readme.txt`，並上傳 artifact `lihi-shorturl-plugin`；release job 會下載同一個 artifact 建立或更新該 tag 的 GitHub Release，若 release 已存在則以 `--clobber` 替換 ZIP asset。
-Release metadata：目前發版版本為 `1.0.0`；`lihi-shorturl.php` header、WordPress.org `readme.txt` 的 `Stable tag` / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、以及 `zh_TW` translation header 應保持一致。
+CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執行。Package job 會打包 `lihi-short-url/` 成 `build/lihi-short-url.zip`，驗證 ZIP 內含 `lihi-short-url/lihi-short-url.php` 與 `lihi-short-url/readme.txt`，並上傳 artifact `lihi-short-url-plugin`；release job 會下載同一個 artifact 建立或更新該 tag 的 GitHub Release，若 release 已存在則以 `--clobber` 替換 ZIP asset。
+Release metadata：目前發版版本為 `1.0.1`；`lihi-short-url.php` header、WordPress.org `readme.txt` 的 `Stable tag` / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、以及 `zh_TW` translation header 應保持一致。
 
 | Test class | 基底 | 說明 |
 |---|---|---|
@@ -16,7 +16,7 @@ Release metadata：目前發版版本為 `1.0.0`；`lihi-shorturl.php` header、
 | `AjaxCopyUrlTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
 | `AjaxUpdateEmailTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式與 auth client |
 | `AjaxUpdateDomainTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
-| `AdminNoticeTest` | `WP_UnitTestCase` | 整合，需要 DB |
+| `AdminNoticeTest` | `WP_UnitTestCase` | 整合，需要 DB；確認未設定 email/domain 時不註冊 dashboard-wide setup notice |
 | `HelperTest` | `WP_UnitTestCase` | 整合，需要 DB |
 | `PluginHooksTest` | `WP_UnitTestCase` | 整合，需要 DB |
 | `PluginLoadedTest` | `WP_UnitTestCase` | 整合，需要 DB |
@@ -32,13 +32,9 @@ Release metadata：目前發版版本為 `1.0.0`；`lihi-shorturl.php` header、
 - [x] `lihi_config( $key )` — 載入 `includes/config.php` 並回傳對應 key 的值（由 `Lihi_Client` 建構子與 `Lihi_Service` 透過實際呼叫驗證）
 - [x] `lihi_config( $key )` — 未知 key 回傳 null（透過 `mockConfig()` 預設邏輯涵蓋）
 - [n/a] UI hooks — email 或 domain 任一空 → column/enqueue/attachment panel 未掛（是否註冊取決於 bootstrap 載入瞬間的 option 值，由程式碼審查保證）
-- [x] bootstrap guard — email 空 → 註冊 `admin_notices` action（email 訊息）
-- [x] bootstrap guard — email 已設、domain 空 → 註冊 `admin_notices` action（domain 訊息）
-- [x] bootstrap guard — email 與 domain 都已設 → 不註冊 `admin_notices` action
-- [x] admin notice (email 空) — 有 `manage_options` 權限 → 輸出含設定頁連結的 warning notice，文字含「configure your email address」
-- [x] admin notice (email 空) — 無 `manage_options` 權限 → 無輸出
-- [x] admin notice (domain 空) — 有 `manage_options` 權限 → 輸出含設定頁連結的 warning notice，文字含「choose a redirect domain」
-- [x] admin notice (domain 空) — 無 `manage_options` 權限 → 無輸出
+- [x] bootstrap guard — email 空 → 不註冊 dashboard-wide `admin_notices`
+- [x] bootstrap guard — email 已設、domain 空 → 不註冊 dashboard-wide `admin_notices`
+- [x] bootstrap guard — email 與 domain 都已設 → 不註冊 dashboard-wide `admin_notices`
 
 ---
 
@@ -195,7 +191,7 @@ Release metadata：目前發版版本為 `1.0.0`；`lihi-shorturl.php` header、
 
 ## Plugin hooks (整合)
 
-- [n/a] release metadata 1.0.0 — plugin header、readme Stable tag / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、translation header 同步（由程式碼審查保證）
+- [n/a] release metadata 1.0.1 — plugin header、readme Stable tag / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、translation header 同步（由程式碼審查保證）
 - [x] `wp_ajax_lihi_copy_url` 已註冊
 - [x] `wp_ajax_lihi_update_email` 已註冊
 - [x] `admin_enqueue_scripts` 白名單（edit/upload/post/post-new）→ enqueue lihi-button
