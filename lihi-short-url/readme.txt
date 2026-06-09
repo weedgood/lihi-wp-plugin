@@ -4,7 +4,7 @@ Tags: short url, url shortener, lihi, admin, media
 Requires at least: 5.5
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -85,12 +85,14 @@ Yes — three options (`lihi_email`, `lihi_domain`, `lihi_uuid`) and one transie
 
 == Changelog ==
 
+= 1.0.2 =
+* Strengthens authentication identity checks by sending the site hostname and persistent site UUID in the authentication JSON payload instead of relying on the HTTP Host header.
+* Sends WordPress' mobile-request flag (`is_mobile`) on auth login requests.
+
 = 1.0.1 =
 * Aligns the plugin package directory, main file, and text domain with the WordPress.org slug.
 * Removes dashboard-wide setup notices while keeping the settings page available.
 * Updates release packaging validation for the `lihi-short-url` directory.
-* Sends the site hostname and site UUID in the authentication JSON payload instead of overriding the HTTP Host header.
-* Sends WordPress' mobile-request flag (`is_mobile`) on auth login requests.
 
 = 1.0.0 =
 * Initial release.
@@ -99,6 +101,9 @@ Yes — three options (`lihi_email`, `lihi_domain`, `lihi_uuid`) and one transie
 * Traditional Chinese (`zh_TW`) translation included.
 
 == Upgrade Notice ==
+
+= 1.0.2 =
+Strengthens authentication site identity verification; no action required.
 
 = 1.0.1 =
 Updates WordPress.org release metadata, package paths, and authentication site identity payload; no action required.

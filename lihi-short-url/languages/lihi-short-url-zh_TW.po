@@ -2,7 +2,7 @@
 # Copyright (C) 2026 lihi
 msgid ""
 msgstr ""
-"Project-Id-Version: lihi WP Plugin 1.0.1\n"
+"Project-Id-Version: lihi WP Plugin 1.0.2\n"
 "POT-Creation-Date: 2026-04-09\n"
 "PO-Revision-Date: 2026-04-09\n"
 "MIME-Version: 1.0\n"

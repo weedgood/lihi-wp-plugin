@@ -68,7 +68,7 @@ docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor
 
 GitHub Actions automatically builds the distributable plugin ZIP via `.github/workflows/package-plugin.yml` only when a tag is pushed.
 
-Current release metadata is `1.0.1`: the plugin header, WordPress.org `Stable tag`, asset enqueue versions, changelog, upgrade notice, Traditional Chinese translation header, WordPress.org readme maintenance link to `weedgood/lihi-wp-plugin`, and WordPress.org slug / text domain `lihi-short-url` are kept in sync for the release package.
+Current release metadata is `1.0.2`: the plugin header, WordPress.org `Stable tag`, asset enqueue versions, changelog, upgrade notice, Traditional Chinese translation header, WordPress.org readme maintenance link to `weedgood/lihi-wp-plugin`, and WordPress.org slug / text domain `lihi-short-url` are kept in sync for the release package.
 
 The tag workflow uploads an artifact named `lihi-short-url-plugin` containing `build/lihi-short-url.zip`, then the release job downloads that same artifact and creates or updates the GitHub Release for the tag. The ZIP keeps the WordPress-required top-level `lihi-short-url/` directory and verifies that `lihi-short-url.php` and `readme.txt` are present before release.
 
@@ -76,8 +76,8 @@ The tag workflow uploads an artifact named `lihi-short-url-plugin` containing `b
 
 ```
 lihi-short-url/
-├── lihi-short-url.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.1 and Text Domain lihi-short-url (auto-loaded by WordPress for plugins hosted on .org)
-├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag 1.0.1, External services disclosure, GitHub maintenance link, FAQ, Changelog)
+├── lihi-short-url.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.2 and Text Domain lihi-short-url (auto-loaded by WordPress for plugins hosted on .org)
+├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag 1.0.2, External services disclosure, GitHub maintenance link, FAQ, Changelog)
 ├── LICENSE                    GPL-2.0-or-later license text
 ├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / lihi_domain / lihi_uuid options and lihi_token transient
 ├── bootstrap.php              Loads class files unconditionally; does not register dashboard-wide setup notices (UI hooks self-guard on both lihi_email and lihi_domain in add-shorturl-column.php)
@@ -93,7 +93,7 @@ lihi-short-url/
     │   ├── lihi-client-interface.php       Short-URL API contract; covers the non-auth JWT endpoints (get_profile, get_sites, get_short_links, create_site). Auth (login / update-email) lives in Lihi_Auth_Client_Interface. Only get_short_links / create_site are actually called today
     │   ├── lihi-client.php                 Production HTTP client; token passed per-call, not stored on instance
     │   ├── lihi-auth-client-interface.php  Auth service contract (update_email, login)
-    │   ├── lihi-auth-client.php            Production auth HTTP client; sends home_url() host as JSON payload field `hostname` plus site-scoped `uuid` so the auth service can identify the tenant without relying on the HTTP Host header; login also sends `is_mobile` from wp_is_mobile()
+    │   ├── lihi-auth-client.php            Production auth HTTP client; strengthens authentication identity checks by sending home_url() host as JSON payload field `hostname` plus site-scoped `uuid` so the auth service can identify the tenant without relying on the HTTP Host header; login also sends `is_mobile` from wp_is_mobile()
     │   └── lihi-exceptions.php             Typed exception hierarchy (Auth / Validation / NotFound / RateLimit / TokenInvalid / Server)
     ├── store/
     │   ├── lihi-uuid-store.php         Lihi_Uuid_Store: encapsulates the persistent lihi_uuid option + option-backed lihi_uuid_lock; get() validates / lazily creates under lock / waits for concurrent generators / replaces invalid UUIDs / reads back persisted UUIDs after writes

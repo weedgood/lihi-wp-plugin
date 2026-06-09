@@ -58,7 +58,7 @@ function enqueue_settings_assets(): void {
         'lihi-settings',
         plugin_dir_url( __FILE__ ) . '../assets/lihi-settings.js',
         [],
-        '1.0.1',
+        '1.0.2',
         true
     );
 
