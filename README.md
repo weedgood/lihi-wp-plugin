@@ -79,24 +79,26 @@ lihi-short-url/
 ├── lihi-short-url.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.1 and Text Domain lihi-short-url (auto-loaded by WordPress for plugins hosted on .org)
 ├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag 1.0.1, External services disclosure, GitHub maintenance link, FAQ, Changelog)
 ├── LICENSE                    GPL-2.0-or-later license text
-├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / lihi_domain options and lihi_token transient
+├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / lihi_domain / lihi_uuid options and lihi_token transient
 ├── bootstrap.php              Loads class files unconditionally; does not register dashboard-wide setup notices (UI hooks self-guard on both lihi_email and lihi_domain in add-shorturl-column.php)
 ├── assets/
 │   ├── lihi-button.js         Async delegated click handler; splits disable window (300 ms) from "Copied!" label duration (1200 ms); errors shown via auto-dismissing WP .notice.notice-error
 │   └── lihi-settings.js       Settings page button handlers; shared bindSaver helper wires Save & Verify (email → lihi_update_email) and Save (domain → lihi_update_domain) to admin-ajax and renders inline .notice-success / .notice-error feedback. The email handler always blanks #lihi-account-section on success (so the prior account's role / end date / domain selector can't linger) and on verified:true schedules a 2 s delayed window.location.reload() so the admin sees the success notice before render_settings_page() repaints the account section
 └── includes/
     ├── config.php             Flat array of plugin config (api_domain, auth_domain); read via lihi_config(). Redirect domain comes from the lihi_domain wp_option instead — admin picks from the profile selector on the settings page
-    ├── helper.php             lihi_config($key), lihi_email() (reads lihi_email option), lihi_domain() (reads lihi_domain option), lihi_client() / lihi_auth_client() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
+    ├── helper.php             lihi_config($key), lihi_email() (reads lihi_email option), lihi_domain() (reads lihi_domain option), lihi_uuid() (delegates to Lihi_Uuid_Store), lihi_client() / lihi_auth_client() / lihi_uuid_store() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
     ├── settings.php           Settings page under Settings → lihi Short URL; "Save & Verify" triggers wp_ajax_lihi_update_email which calls Lihi_Auth_Client::update_email() first and only persists the option on success; flushes the cached token on add/update/delete of lihi_email
     ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email() && lihi_domain()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler gated by read_post for the target item; JSON errors include explicit HTTP status codes
     ├── client/
     │   ├── lihi-client-interface.php       Short-URL API contract; covers the non-auth JWT endpoints (get_profile, get_sites, get_short_links, create_site). Auth (login / update-email) lives in Lihi_Auth_Client_Interface. Only get_short_links / create_site are actually called today
     │   ├── lihi-client.php                 Production HTTP client; token passed per-call, not stored on instance
     │   ├── lihi-auth-client-interface.php  Auth service contract (update_email, login)
-    │   ├── lihi-auth-client.php            Production auth HTTP client; overrides HTTP Host header with home_url() host so the auth service can identify the tenant
+    │   ├── lihi-auth-client.php            Production auth HTTP client; sends home_url() host as JSON payload field `hostname` plus site-scoped `uuid` so the auth service can identify the tenant without relying on the HTTP Host header; login also sends `is_mobile` from wp_is_mobile()
     │   └── lihi-exceptions.php             Typed exception hierarchy (Auth / Validation / NotFound / RateLimit / TokenInvalid / Server)
+    ├── store/
+    │   ├── lihi-uuid-store.php         Lihi_Uuid_Store: encapsulates the persistent lihi_uuid option + option-backed lihi_uuid_lock; get() validates / lazily creates under lock / waits for concurrent generators / replaces invalid UUIDs / reads back persisted UUIDs after writes
+    │   └── lihi-token-store.php        Lihi_Token_Store: encapsulates the lihi_token transient + lihi_token_lock; get/set/delete/acquire_lock/release_lock/flush
     └── service/
-        ├── lihi-token-store.php        Lihi_Token_Store: encapsulates the lihi_token transient + lihi_token_lock; get/set/delete/acquire_lock/release_lock/flush
         └── lihi-service.php            Business logic: login() (via Lihi_Auth_Client), get_or_create_short_url(); get_token() uses Lihi_Token_Store for transient-first, lock-guarded login
 ```
 

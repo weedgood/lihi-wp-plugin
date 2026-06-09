@@ -153,7 +153,7 @@ Response:
 
 Base URL: `lihi_config( 'auth_domain' )`（例：`https://w.lihidev.com`）。**不同服務**，不要與 `api_domain`（short-URL API）混淆。
 
-每次呼叫都必須帶 HTTP `Host` header，值為 WP 站台本身的 host；auth 服務靠這個 header 判斷 tenant（`Host` 會 lowercase 並去掉 `:port`），而非 URL 中的 host。
+每次呼叫都必須在 JSON body 帶 `hostname` 與 `uuid` 欄位。`hostname` 值為 WP 站台本身的 hostname（由 `home_url()` 解析而來，不含 port）；`uuid` 是第一次 auth 取用時產生並保存到 `lihi_uuid` option 的站台識別碼（若 option 不存在，第一次 auth request 會補建）。auth 服務靠這些 payload 欄位判斷 tenant，而非 HTTP `Host` header，避免 proxy / load balancer 將 `Host` 改寫成 auth 服務自己的 domain。
 
 Response 一律使用 envelope `{ result: bool, data: {...} }`；失敗時 `data.message` 為錯誤字串。
 
@@ -167,7 +167,7 @@ Response 一律使用 envelope `{ result: bool, data: {...} }`；失敗時 `data
 
 Body:
 ```json
-{ "email": "alice@example.com" }
+{ "email": "alice@example.com", "hostname": "example.com", "uuid": "2df6f4f1-2a75-4d0e-9ce0-7c70e8d7bb9e" }
 ```
 
 Response 200:
@@ -179,10 +179,10 @@ Response 200:
 ```
 
 **錯誤：HTTP 400** → `Lihi_Validation_Exception`
-`data.message` 可能為：`invalid json body`、`email is required`、`invalid email`（RFC 5322 parse 失敗）、`bad request`（Host header 缺失；刻意回通用訊息以作防偽閘道）。
+`data.message` 可能為：`invalid json body`、`email is required`、`invalid email`（RFC 5322 parse 失敗）、`bad request`（payload hostname / uuid 缺失；刻意回通用訊息以作防偽閘道）。
 
 **錯誤：HTTP 429** → `Lihi_Rate_Limit_Exception`
-每 host 10 req/min（`Host` 經 lowercase / 去 `:port` 正規化後計數）；空 Host 共用同一 fallback bucket。fixed-window、per-process。`data.message`：`too many requests`。
+每 hostname 10 req/min（payload `hostname` 經 lowercase / 去 `:port` 正規化後計數）；空 hostname 共用同一 fallback bucket。fixed-window、per-process。`data.message`：`too many requests`。
 
 **錯誤：HTTP 500** → `Lihi_Server_Exception`
 `data.message` ∈ `load verification`、`issue token`、`persist verification`。真正的錯誤只記在 server log，不回給 client。
@@ -191,9 +191,11 @@ Response 200:
 
 ## POST `/auth/login`
 
+登入請求會額外帶 `is_mobile`，值來自 WordPress `wp_is_mobile()`，表示當下 request 是否被 WordPress 判斷為 mobile browser。
+
 Body:
 ```json
-{ "email": "alice@example.com" }
+{ "email": "alice@example.com", "hostname": "example.com", "uuid": "2df6f4f1-2a75-4d0e-9ce0-7c70e8d7bb9e", "is_mobile": false }
 ```
 
 Response 200:

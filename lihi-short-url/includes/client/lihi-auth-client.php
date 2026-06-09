@@ -4,9 +4,11 @@ namespace Lihi\ShortUrl;
 /**
  * Production lihi auth client.
  *
- * Every request overrides the HTTP Host header with the current WP site's
- * host (from home_url()) because the auth service identifies the tenant from
- * that header, not from the URL host.
+ * Every request includes the current WP site's host (from home_url()) and the
+ * site-scoped UUID in the JSON payload so the auth service can identify the
+ * tenant without relying on the HTTP Host header, which may be rewritten by
+ * proxies or load balancers. Login requests additionally include whether the
+ * current request appears to be from a mobile device.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -38,7 +40,10 @@ class Lihi_Auth_Client implements Lihi_Auth_Client_Interface {
     }
 
     public function login( string $email ): array {
-        [ 'code' => $code, 'data' => $data ] = $this->post( '/auth/login', [ 'email' => $email ] );
+        [ 'code' => $code, 'data' => $data ] = $this->post( '/auth/login', [
+            'email'     => $email,
+            'is_mobile' => wp_is_mobile(),
+        ] );
 
         if ( $code === 400 ) {
             throw new Lihi_Validation_Exception( esc_html( $this->message( $data ) ) );
@@ -59,13 +64,17 @@ class Lihi_Auth_Client implements Lihi_Auth_Client_Interface {
      * @throws Lihi_Server_Exception on network failure or unparseable body.
      */
     private function post( string $path, array $body ): array {
+        $payload = array_merge( $body, [
+            'hostname' => $this->tenant_host(),
+            'uuid'     => lihi_uuid(),
+        ] );
+
         $args = [
             'method'  => 'POST',
             'headers' => [
                 'Content-Type' => 'application/json',
-                'Host'         => $this->tenant_host(),
             ],
-            'body'    => wp_json_encode( $body ),
+            'body'    => wp_json_encode( $payload ),
             'timeout' => 15,
         ];
 

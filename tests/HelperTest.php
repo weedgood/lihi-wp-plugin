@@ -9,12 +9,14 @@ class HelperTest extends \WP_UnitTestCase
         parent::setUp();
         delete_option( 'lihi_email' );
         delete_option( 'lihi_domain' );
+        delete_option( 'lihi_uuid' );
     }
 
     protected function tearDown(): void
     {
         update_option( 'lihi_email', 'test@example.com' );
         update_option( 'lihi_domain', 'redirect.lihidev.com' );
+        delete_option( 'lihi_uuid' );
         parent::tearDown();
     }
 
@@ -46,5 +48,43 @@ class HelperTest extends \WP_UnitTestCase
     public function test_lihi_domain_returns_empty_string_when_option_unset(): void
     {
         $this->assertSame( '', \Lihi\ShortUrl\lihi_domain() );
+    }
+
+    // -------------------------------------------------------------------------
+    // lihi_uuid()
+    // -------------------------------------------------------------------------
+
+    public function test_lihi_uuid_returns_stored_option_value(): void
+    {
+        $stored = '2df6f4f1-2a75-4d0e-9ce0-7c70e8d7bb9e';
+        update_option( 'lihi_uuid', $stored );
+
+        $this->assertSame( $stored, \Lihi\ShortUrl\lihi_uuid() );
+    }
+
+    public function test_lihi_uuid_creates_option_when_missing(): void
+    {
+        $uuid = \Lihi\ShortUrl\lihi_uuid();
+
+        $this->assertNotSame( '', $uuid );
+        $this->assertSame( $uuid, get_option( 'lihi_uuid' ) );
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
+            $uuid
+        );
+    }
+
+    public function test_lihi_uuid_replaces_invalid_stored_option_value(): void
+    {
+        update_option( 'lihi_uuid', 'not-a-uuid' );
+
+        $uuid = \Lihi\ShortUrl\lihi_uuid();
+
+        $this->assertNotSame( 'not-a-uuid', $uuid );
+        $this->assertSame( $uuid, get_option( 'lihi_uuid' ) );
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
+            $uuid
+        );
     }
 }

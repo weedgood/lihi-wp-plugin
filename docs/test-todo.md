@@ -29,12 +29,28 @@ Release metadata：目前發版版本為 `1.0.1`；`lihi-short-url.php` header�
 - [x] `lihi_email()` — option 為空字串 → 回傳空字串
 - [x] `lihi_domain()` — option 已設定 → 回傳 option 值
 - [x] `lihi_domain()` — option 為空字串 → 回傳空字串
+- [x] `lihi_uuid()` — option 已設定 → 回傳 option 值
+- [x] `lihi_uuid()` — option 未設定 → 產生 UUID v4 並保存到 `lihi_uuid`
+- [x] `lihi_uuid()` — option 格式無效 → 重新產生 UUID v4 並替換 `lihi_uuid`
 - [x] `lihi_config( $key )` — 載入 `includes/config.php` 並回傳對應 key 的值（由 `Lihi_Client` 建構子與 `Lihi_Service` 透過實際呼叫驗證）
 - [x] `lihi_config( $key )` — 未知 key 回傳 null（透過 `mockConfig()` 預設邏輯涵蓋）
 - [n/a] UI hooks — email 或 domain 任一空 → column/enqueue/attachment panel 未掛（是否註冊取決於 bootstrap 載入瞬間的 option 值，由程式碼審查保證）
 - [x] bootstrap guard — email 空 → 不註冊 dashboard-wide `admin_notices`
 - [x] bootstrap guard — email 已設、domain 空 → 不註冊 dashboard-wide `admin_notices`
 - [x] bootstrap guard — email 與 domain 都已設 → 不註冊 dashboard-wide `admin_notices`
+
+---
+
+## Lihi_Uuid_Store
+
+- [x] `get()` → option 已設定且為 UUID v4 → 回傳既有 `lihi_uuid`
+- [x] `get()` → option 未設定且取得 option-backed `lihi_uuid_lock` → 產生 UUID v4 並以 `autoload = no` 保存到 `lihi_uuid`，讀回 persisted UUID，最後釋放 lock
+- [x] `get()` → `add_option()` 競態失敗 → 重新讀取並回傳已保存的 valid UUID
+- [x] `get()` → option 未設定且寫入後讀不到 valid UUID → 拋出 `Lihi_Server_Exception`
+- [x] `get()` → option 格式無效且取得 option-backed `lihi_uuid_lock` → 重新產生 UUID v4 並替換 `lihi_uuid`，讀回 persisted UUID，最後釋放 lock
+- [x] `get()` → option 格式無效且寫入後讀不到 valid UUID → 拋出 `Lihi_Server_Exception`
+- [x] `get()` → lock 已被其他 request 取得 → 輪詢等到既有 UUID 後直接回傳，不重複產生
+- [x] `get()` → lock 一直未釋放且 UUID 仍不存在 → 拋出 `Lihi_Server_Exception`，不產生未保存 UUID
 
 ---
 
@@ -123,7 +139,7 @@ Release metadata：目前發版版本為 `1.0.1`；`lihi-short-url.php` header�
 
 尚未建立測試。涵蓋範圍應包含：
 
-- [ ] `update_email()` → POST `/auth/update-email`，body 為 `{ email }`，Host header 為 `home_url()` 的 host
+- [x] `update_email()` → POST `/auth/update-email`，body 為 `{ email, hostname, uuid }`，且不覆寫 HTTP `Host` header
 - [ ] `update_email()` 回應 200 `{ data: { verified: true } }` → 回傳 `['verified' => true]`
 - [ ] `update_email()` 回應 200 `{ data: { verified: false } }` → 回傳 `['verified' => false]`
 - [ ] `update_email()` 回應 400 → 拋出 `Lihi_Validation_Exception`
@@ -131,7 +147,7 @@ Release metadata：目前發版版本為 `1.0.1`；`lihi-short-url.php` header�
 - [ ] `update_email()` 回應 500 → 拋出 `Lihi_Server_Exception`
 - [ ] `update_email()` 回應非 JSON → 拋出 `Lihi_Server_Exception`
 - [ ] `update_email()` `wp_remote_request` 回傳 `WP_Error` → 拋出 `Lihi_Server_Exception`
-- [ ] `login()` → POST `/auth/login`，body 為 `{ email }`，Host header 為 `home_url()` 的 host
+- [x] `login()` → POST `/auth/login`，body 為 `{ email, hostname, uuid, is_mobile }`，且不覆寫 HTTP `Host` header
 - [ ] `login()` 回應 200 → 回傳 `['token' => ...]`
 - [ ] `login()` 回應 400 → 拋出 `Lihi_Validation_Exception`
 - [ ] `login()` 回應 403 → 拋出 `Lihi_Auth_Exception`

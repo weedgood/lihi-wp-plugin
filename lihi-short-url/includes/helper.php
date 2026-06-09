@@ -50,6 +50,18 @@ function lihi_domain(): string {
 }
 
 /**
+ * Return the site-scoped lihi UUID, creating it when missing.
+ *
+ * The backing option is managed by Lihi_Uuid_Store and created lazily the
+ * first time auth needs tenant identity.
+ *
+ * @return string UUID v4 string.
+ */
+function lihi_uuid(): string {
+    return lihi_uuid_store()->get();
+}
+
+/**
  * Internal singleton store. Keyed by class/interface name.
  *
  * @param string      $key     Store key.
@@ -106,6 +118,27 @@ function lihi_auth_client(): Lihi_Auth_Client_Interface {
  */
 function lihi_auth_client_set( ?Lihi_Auth_Client_Interface $client ): void {
     _lihi_singleton( Lihi_Auth_Client_Interface::class, $client, true );
+}
+
+/**
+ * Return the shared Lihi_Uuid_Store singleton, creating it on first call.
+ */
+function lihi_uuid_store(): Lihi_Uuid_Store {
+    $instance = _lihi_singleton( Lihi_Uuid_Store::class );
+
+    if ( ! $instance instanceof Lihi_Uuid_Store ) {
+        $instance = new Lihi_Uuid_Store();
+        _lihi_singleton( Lihi_Uuid_Store::class, $instance, true );
+    }
+
+    return $instance;
+}
+
+/**
+ * Replace (or reset, by passing null) the Lihi_Uuid_Store singleton. Test helper.
+ */
+function lihi_uuid_store_set( ?Lihi_Uuid_Store $store ): void {
+    _lihi_singleton( Lihi_Uuid_Store::class, $store, true );
 }
 
 /**

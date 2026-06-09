@@ -29,12 +29,12 @@ The plugin runs only inside `wp-admin`; it adds no front-end output and enqueues
 
 == External services ==
 
-This plugin connects to the lihi short URL service to authenticate the site administrator and to create or look up short URLs. Without an internet connection the plugin cannot function.
+This plugin connects to the lihi short URL service to identify the WordPress site, authenticate the site administrator, and create or look up short URLs. Without an internet connection the plugin cannot function.
 
 **Service: lihi authentication** (`https://w.lihidev.com`)
 
 * When data is sent: when the administrator saves an email address on the settings page (Settings → lihi Short URL), and on the first short-URL request after the cached auth token expires.
-* What is sent: the administrator's email address and the site's hostname (sent as the HTTP `Host` header so the lihi service can identify the tenant).
+* What is sent: the administrator's email address, the site's hostname, and a site-scoped UUID stored in the `lihi_uuid` option. Login requests also send whether WordPress identifies the current request as mobile (`is_mobile`).
 
 **Service: lihi short URL API** (`https://app.lihidev.com`)
 
@@ -81,7 +81,7 @@ All post types registered with `public => true`, plus the Media Library (both li
 
 = Does the plugin store data in my database? =
 
-Yes — two options (`lihi_email`, `lihi_domain`) and one transient (`lihi_token`). All three are removed when the plugin is deleted from the **Plugins** screen.
+Yes — three options (`lihi_email`, `lihi_domain`, `lihi_uuid`) and one transient (`lihi_token`). All four are removed when the plugin is deleted from the **Plugins** screen.
 
 == Changelog ==
 
@@ -89,6 +89,8 @@ Yes — two options (`lihi_email`, `lihi_domain`) and one transient (`lihi_token
 * Aligns the plugin package directory, main file, and text domain with the WordPress.org slug.
 * Removes dashboard-wide setup notices while keeping the settings page available.
 * Updates release packaging validation for the `lihi-short-url` directory.
+* Sends the site hostname and site UUID in the authentication JSON payload instead of overriding the HTTP Host header.
+* Sends WordPress' mobile-request flag (`is_mobile`) on auth login requests.
 
 = 1.0.0 =
 * Initial release.
@@ -99,7 +101,7 @@ Yes — two options (`lihi_email`, `lihi_domain`) and one transient (`lihi_token
 == Upgrade Notice ==
 
 = 1.0.1 =
-Updates WordPress.org release metadata and package paths; no action required.
+Updates WordPress.org release metadata, package paths, and authentication site identity payload; no action required.
 
 = 1.0.0 =
 Initial release.
