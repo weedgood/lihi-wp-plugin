@@ -12,9 +12,9 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 | `ServiceTest` | `TestCase` + Brain\Monkey | 純單元，mock WordPress 函式 |
 | `TokenStoreTest` | `TestCase` + Brain\Monkey | 純單元，mock transient/wp_cache |
 | `ClientTest` | `TestCase` + Brain\Monkey | 純單元，mock `wp_remote_request` |
-| `AuthClientTest` | `TestCase` + Brain\Monkey | 純單元，mock `wp_remote_request`（尚未撰寫） |
+| `AuthClientTest` | `TestCase` + Brain\Monkey | 純單元，mock `wp_remote_request`，覆蓋 auth payload / Host header 邊界 |
 | `AjaxCopyUrlTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
-| `AjaxUpdateEmailTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式與 auth client |
+| `AjaxUpdateEmailTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式與 lihi client |
 | `AjaxUpdateDomainTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
 | `AdminNoticeTest` | `WP_UnitTestCase` | 整合，需要 DB；確認未設定 email/domain 時不註冊 dashboard-wide setup notice |
 | `HelperTest` | `WP_UnitTestCase` | 整合，需要 DB |
@@ -32,8 +32,13 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 - [x] `lihi_uuid()` — option 已設定 → 回傳 option 值
 - [x] `lihi_uuid()` — option 未設定 → 產生 UUID v4 並保存到 `lihi_uuid`
 - [x] `lihi_uuid()` — option 格式無效 → 重新產生 UUID v4 並替換 `lihi_uuid`
-- [x] `lihi_config( $key )` — 載入 `includes/config.php` 並回傳對應 key 的值（由 `Lihi_Client` 建構子與 `Lihi_Service` 透過實際呼叫驗證）
+- [x] `lihi_config( $key )` — 載入 `includes/config.php` 並回傳對應 key 的值（由 `Lihi_Singletons::lihi_client()` 組裝 `Lihi_Client` 時驗證）
 - [x] `lihi_config( $key )` — 未知 key 回傳 null（透過 `mockConfig()` 預設邏輯涵蓋）
+- [x] `lihi_site_host()` — 取 `home_url()` host，供 auth payload 與 short-link type namespace 使用
+- [x] `lihi_resolve_url()` — type=post/page → 使用 `get_permalink()`
+- [x] `lihi_resolve_url()` — type=attachment → 使用 `wp_get_attachment_url()`
+- [x] `lihi_resolve_url()` — 解析不到 URL → 拋出 RuntimeException
+- [n/a] helper 分工 — `helper.php` 只保留 option/context helper functions；client / service / store 一律由 `Lihi_Singletons` static composition methods 取用（由程式碼審查保證）
 - [n/a] UI hooks — email 或 domain 任一空 → column/enqueue/attachment panel 未掛（是否註冊取決於 bootstrap 載入瞬間的 option 值，由程式碼審查保證）
 - [x] bootstrap guard — email 空 → 不註冊 dashboard-wide `admin_notices`
 - [x] bootstrap guard — email 已設、domain 空 → 不註冊 dashboard-wide `admin_notices`
@@ -71,9 +76,9 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 ## Lihi_Service
 
 ### login()
-- [x] auth client 正常回傳 token → 回傳 token string
-- [x] auth client 回傳空 token → 拋出 RuntimeException
-- [x] auth client 拋出例外 → 例外向上傳遞
+- [x] lihi client 正常回傳 token，且 service `login($email)` 傳入 email → 回傳 token string
+- [x] lihi client 回傳空 token → 拋出 RuntimeException
+- [x] lihi client 拋出例外 → 例外向上傳遞
 
 ### get_token()（透過 get_or_create_short_url 測試）
 - [x] transient 有效 → 回傳 transient token，不呼叫 login
@@ -86,7 +91,7 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 ### get_profile()
 - [x] 成功 → 回傳 `data` 子陣列（user_role / end_date / domains）
 - [x] `client->get_profile()` 拋出 `Lihi_Token_Invalid_Exception` → invalidate token、重新 login、再試一次
-- [x] `auth_client->login()` 拋出 `Lihi_Auth_Exception`（email 未驗證）→ 向上傳遞
+- [x] `lihi client->login($email)` 拋出 `Lihi_Auth_Exception`（email 未驗證）→ 向上傳遞
 
 ### get_or_create_short_url()
 - [x] 已有相符 type_id 的短連結 → 直接回傳 `short_url`，不呼叫 create_site
@@ -99,15 +104,6 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 - [x] type 為 `attachment` → 使用 `wp_get_attachment_url()` 而非 `get_permalink()`
 - [x] get_short_links 的 type 參數為 `"{type}:{host}"`（host 取自 `home_url()`）
 - [x] create_site 的 body `type` 為 `"{type}:{host}"`，`tags` 仍使用原始 `type`
-
-### resolve_url()
-- [x] type=post → 使用 `get_permalink()`
-- [x] type=page → 使用 `get_permalink()`
-- [x] type=attachment → 使用 `wp_get_attachment_url()`
-- [x] `wp_get_attachment_url()` 回傳 false → 拋出 RuntimeException
-- [x] `get_permalink()` 回傳 false → 拋出 RuntimeException
-
----
 
 ## Lihi_Client
 
@@ -128,18 +124,17 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 - [x] create_site() → POST /api/wordpress/v1/sites，body 為 JSON
 - [x] create_site() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
 
-> `Lihi_Client_Interface` 只涵蓋 `wordpress/v1` 下**非 auth 的 jwt endpoints**：
-> `profile`、`sites`（index/store）。Auth（`login` / `update-email`）屬於另一個服務
-> （lihi Auth API），由 `Lihi_Auth_Client_Interface` 負責。`POST /auth/mail` 外掛無用途，
+> `Lihi_Client_Interface` 涵蓋 `wordpress/v1` 下外掛實際使用的 endpoints：
+> auth（`login` / `update-email`）與 JWT `profile`、`sites`（index/store）。`POST /mail` 外掛無用途，
 > 不納入契約；`PUT/PATCH/DELETE /sites`、`/posts`、`/site-urls` 不屬於本 API contract。
 
 ---
 
-## Lihi_Auth_Client
+## Lihi_Client auth methods
 
-尚未建立測試。涵蓋範圍應包含：
+已建立基本 payload / header 測試；剩餘錯誤映射仍待補齊：
 
-- [x] `update_email()` → POST `/auth/update-email`，body 為 `{ email, hostname, uuid }`，且不覆寫 HTTP `Host` header
+- [x] `update_email()` → POST `/api/wordpress/v1/auth/update-email`，body 為 `{ email, hostname, uuid }`，且不覆寫 HTTP `Host` header
 - [ ] `update_email()` 回應 200 `{ data: { verified: true } }` → 回傳 `['verified' => true]`
 - [ ] `update_email()` 回應 200 `{ data: { verified: false } }` → 回傳 `['verified' => false]`
 - [ ] `update_email()` 回應 400 → 拋出 `Lihi_Validation_Exception`
@@ -147,7 +142,7 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 - [ ] `update_email()` 回應 500 → 拋出 `Lihi_Server_Exception`
 - [ ] `update_email()` 回應非 JSON → 拋出 `Lihi_Server_Exception`
 - [ ] `update_email()` `wp_remote_request` 回傳 `WP_Error` → 拋出 `Lihi_Server_Exception`
-- [x] `login()` → POST `/auth/login`，body 為 `{ email, hostname, uuid, is_mobile }`，且不覆寫 HTTP `Host` header
+- [x] `login()` → POST `/api/wordpress/v1/auth/login`，body 為 `{ email, hostname, uuid, is_mobile }`，且不覆寫 HTTP `Host` header
 - [ ] `login()` 回應 200 → 回傳 `['token' => ...]`
 - [ ] `login()` 回應 400 → 拋出 `Lihi_Validation_Exception`
 - [ ] `login()` 回應 403 → 拋出 `Lihi_Auth_Exception`
@@ -167,7 +162,7 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 - [x] `current_user_can( 'read_post', $item_id )` 拒絕 → wp_send_json_error，HTTP 403，不呼叫 service
 - [x] service 正常回傳 url → wp_send_json_success(['url' => ...])
 - [x] service 拋出一般例外 → wp_send_json_error 友善訊息（不暴露內部細節），HTTP 500
-- [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「email has not been verified」訊息（auth service 回 403，表示 email 尚未驗證），HTTP 403
+- [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「email has not been verified」訊息（lihi API 回 403，表示 email 尚未驗證），HTTP 403
 - [x] service 拋出 `Lihi_Validation_Exception` → wp_send_json_error「lihi API rejected…」訊息，HTTP 400
 - [x] service 拋出 `Lihi_Server_Exception` → wp_send_json_error「lihi service is unavailable」訊息，HTTP 503
 
@@ -186,15 +181,15 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 ## AJAX Handler: lihi_update_email
 
 - [x] 無 `manage_options` 權限 → wp_send_json_error，HTTP 403，不呼叫 `update_option`
-- [x] email 為空 → 呼叫 `delete_option('lihi_email')`，wp_send_json_success 訊息含「cleared」，不呼叫 auth client
+- [x] email 為空 → 呼叫 `delete_option('lihi_email')`，wp_send_json_success 訊息含「cleared」，不呼叫 lihi client
 - [x] email 全為空白字元 → 同上，視為清除
-- [x] email 格式無效 → wp_send_json_error，HTTP 400，不呼叫 auth client 與 `update_option`
-- [x] email 被 `sanitize_email()` 清洗過後仍通不過 `is_email()`（例：`alice @example`）→ wp_send_json_error，HTTP 400，不呼叫 auth client 與 `update_option`
-- [x] auth client 拋出 `Lihi_Validation_Exception` → wp_send_json_error「rejected the email」訊息，HTTP 400，`update_option` 不被呼叫
-- [x] auth client 拋出 `Lihi_Rate_Limit_Exception` → wp_send_json_error「Too many」訊息，HTTP 429，`update_option` 不被呼叫
-- [x] auth client 拋出 `Lihi_Server_Exception` → wp_send_json_error「unavailable」訊息，HTTP 503，`update_option` 不被呼叫
-- [x] auth client 回傳 `verified: true` → 呼叫 `update_option('lihi_email', …)`，wp_send_json_success(['verified' => true])
-- [x] auth client 回傳 `verified: false` → 呼叫 `update_option('lihi_email', …)`，wp_send_json_success(['verified' => false])
+- [x] email 格式無效 → wp_send_json_error，HTTP 400，不呼叫 lihi client 與 `update_option`
+- [x] email 被 `sanitize_email()` 清洗過後仍通不過 `is_email()`（例：`alice @example`）→ wp_send_json_error，HTTP 400，不呼叫 lihi client 與 `update_option`
+- [x] lihi client 拋出 `Lihi_Validation_Exception` → wp_send_json_error「rejected the email」訊息，HTTP 400，`update_option` 不被呼叫
+- [x] lihi client 拋出 `Lihi_Rate_Limit_Exception` → wp_send_json_error「Too many」訊息，HTTP 429，`update_option` 不被呼叫
+- [x] lihi client 拋出 `Lihi_Server_Exception` → wp_send_json_error「unavailable」訊息，HTTP 503，`update_option` 不被呼叫
+- [x] lihi client 回傳 `verified: true` → 呼叫 `update_option('lihi_email', …)`，wp_send_json_success(['verified' => true])
+- [x] lihi client 回傳 `verified: false` → 呼叫 `update_option('lihi_email', …)`，wp_send_json_success(['verified' => false])
 
 ---
 

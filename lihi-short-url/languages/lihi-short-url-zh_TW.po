@@ -25,6 +25,10 @@ msgstr "lihi API 未回傳 token。"
 msgid "No short_url returned from lihi API."
 msgstr "lihi API 未回傳 short_url。"
 
+#: includes/helper.php
+msgid "Could not resolve WordPress site host."
+msgstr "無法解析 WordPress 站台主機名稱。"
+
 #: includes/service/lihi-service.php
 msgid "Could not resolve URL for %1$s %2$d."
 msgstr "無法取得 %1$s %2$d 的 URL。"
@@ -95,8 +99,8 @@ msgid "lihi rejected the email address. Please check the format and try again."
 msgstr "lihi 拒絕了此 Email 地址，請確認格式後再試一次。"
 
 #: includes/settings.php
-msgid "The lihi auth service is unavailable. Please try again later."
-msgstr "lihi 驗證服務目前無法連線，請稍後再試。"
+msgid "The lihi service is unavailable. Please try again later."
+msgstr "lihi 服務目前無法連線，請稍後再試。"
 
 #: includes/settings.php
 msgid "Too many verification attempts. Please wait a moment and try again."

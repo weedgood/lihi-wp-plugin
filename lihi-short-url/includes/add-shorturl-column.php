@@ -141,7 +141,7 @@ function ajax_copy_url(): void {
     }
 
     try {
-        $url = lihi_service()->get_or_create_short_url( $item_id, $type );
+        $url = Lihi_Singletons::lihi_service()->get_or_create_short_url( $item_id, $type );
         wp_send_json_success( [ 'url' => $url ] );
     } catch ( Lihi_Auth_Exception $e ) {
         wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email.', 'lihi-short-url' ), 403 );

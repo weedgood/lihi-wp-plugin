@@ -19,28 +19,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Lihi_Service {
 
     private Lihi_Client_Interface $client;
-    private Lihi_Auth_Client_Interface $auth_client;
     private Lihi_Token_Store $tokens;
 
     public function __construct(
         Lihi_Client_Interface $client,
-        Lihi_Auth_Client_Interface $auth_client,
-        ?Lihi_Token_Store $tokens = null
+        Lihi_Token_Store $tokens
     ) {
-        $this->client      = $client;
-        $this->auth_client = $auth_client;
-        $this->tokens      = $tokens ?? new Lihi_Token_Store();
+        $this->client = $client;
+        $this->tokens = $tokens;
     }
 
     /**
      * Exchange the configured email for a fresh upstream lihi bearer token
-     * via the lihi auth service.
+     * via the lihi Wordpress API auth endpoint.
      *
      * @return string Bearer token.
      * @throws RuntimeException If the auth call fails or returns no token.
      */
-    public function login(): string {
-        $result = $this->auth_client->login( lihi_email() );
+    public function login( string $email ): string {
+        $result = $this->client->login( $email );
         $token  = $result['token'] ?? '';
 
         if ( ! $token ) {
@@ -59,16 +56,17 @@ class Lihi_Service {
      *
      * @return array{user_role: ?string, end_date: ?string, domains: list<string>}
      *
-     * @throws Lihi_Auth_Exception       auth service rejected the login (email unverified).
-     * @throws Lihi_Server_Exception     auth service or short-URL API unavailable.
+     * @throws Lihi_Auth_Exception       lihi API rejected the login (email unverified).
+     * @throws Lihi_Server_Exception     lihi API unavailable.
      */
     public function get_profile(): array {
-        $token = $this->get_token();
+        $email = lihi_email();
+        $token = $this->get_token( $email );
         try {
             $result = $this->client->get_profile( $token );
         } catch ( Lihi_Token_Invalid_Exception $e ) {
             $this->invalidate_token();
-            $token  = $this->get_token();
+            $token  = $this->get_token( $email );
             $result = $this->client->get_profile( $token );
         }
 
@@ -82,12 +80,13 @@ class Lihi_Service {
      * call is retried once with a freshly obtained token.
      */
     public function get_or_create_short_url( int $item_id, string $type ): string {
-        $token = $this->get_token();
+        $email = lihi_email();
+        $token = $this->get_token( $email );
         try {
             return $this->fetch_or_create( $token, $item_id, $type );
         } catch ( Lihi_Token_Invalid_Exception $e ) {
             $this->invalidate_token();
-            $token = $this->get_token();
+            $token = $this->get_token( $email );
             return $this->fetch_or_create( $token, $item_id, $type );
         }
     }
@@ -99,7 +98,7 @@ class Lihi_Service {
      * @throws RuntimeException on other failures.
      */
     private function fetch_or_create( string $token, int $item_id, string $type ): string {
-        $host     = wp_parse_url( home_url(), PHP_URL_HOST );
+        $host     = lihi_site_host();
         $api_type = $type . ':' . $host;
         $result   = $this->client->get_short_links( $token, $api_type, $item_id );
         $sites    = $result['data']['sites']['data'] ?? [];
@@ -111,10 +110,10 @@ class Lihi_Service {
         }
 
         $created = $this->client->create_site( $token, [
-            'urls'    => [ $this->resolve_url( $item_id, $type ) ],
+            'urls'    => [ lihi_resolve_url( $item_id, $type ) ],
             'type'    => $api_type,
             'type_id' => (string) $item_id,
-            'domain'  => (string) get_option( 'lihi_domain', '' ),
+            'domain'  => lihi_domain(),
             'tags'    => 'wordpress,' . $host . ',' . $type,
         ] );
 
@@ -135,31 +134,6 @@ class Lihi_Service {
     }
 
     /**
-     * Resolve the permalink / file URL for a given item.
-     *
-     * @throws \RuntimeException When the item does not exist or has no URL
-     *   (wp_get_attachment_url()/get_permalink() return false).
-     */
-    public function resolve_url( int $item_id, string $type ): string {
-        $url = $type === 'attachment'
-            ? wp_get_attachment_url( $item_id )
-            : get_permalink( $item_id );
-
-        if ( ! is_string( $url ) || $url === '' ) {
-            throw new \RuntimeException(
-                sprintf(
-                    /* translators: 1: item type, 2: item ID */
-                    esc_html__( 'Could not resolve URL for %1$s %2$d.', 'lihi-short-url' ),
-                    esc_html( $type ),
-                    absint( $item_id )
-                )
-            );
-        }
-
-        return $url;
-    }
-
-    /**
      * Return a valid JWT token, logging in only when necessary.
      *
      * Lookup order:
@@ -172,7 +146,7 @@ class Lihi_Service {
      *
      * @throws RuntimeException If login fails.
      */
-    private function get_token(): string {
+    private function get_token( string $email ): string {
         $cached = $this->tokens->get();
         if ( false !== $cached ) {
             return $cached;
@@ -187,7 +161,7 @@ class Lihi_Service {
                     return $cached;
                 }
 
-                $token = $this->login();
+                $token = $this->login( $email );
                 $this->tokens->set( $token );
                 return $token;
             } finally {
@@ -212,7 +186,7 @@ class Lihi_Service {
 
         // Fallback: winner never showed up — login independently and clear the
         // stale lock so future requests don't keep waiting.
-        $token = $this->login();
+        $token = $this->login( $email );
         $this->tokens->set( $token );
         $this->tokens->release_lock();
         return $token;

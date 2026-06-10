@@ -5,8 +5,8 @@ namespace Lihi\ShortUrl;
  * Plugin settings page: allows administrators to configure the lihi email address.
  *
  * The form does not POST to options.php. Instead the "Save & Verify" button
- * fires an AJAX request that (1) calls the auth service's update_email endpoint
- * and (2) only persists the option on success, so an email the auth service
+ * fires an AJAX request that (1) calls the lihi API update_email endpoint
+ * and (2) only persists the option on success, so an email the lihi service
  * rejects never becomes the active configuration.
  */
 
@@ -33,7 +33,7 @@ add_action( 'admin_init', function () {
 // saved redirect domain belong to the previous lihi account and must not
 // leak into the next one. Covers add / update / delete of the option.
 $lihi_reset_account_state = function () {
-    lihi_token_store()->flush();
+    Lihi_Singletons::lihi_token_store()->flush();
     delete_option( 'lihi_domain' );
 };
 add_action( 'add_option_lihi_email',    $lihi_reset_account_state );
@@ -77,11 +77,11 @@ function render_settings_page(): void {
     $profile_error = '';
 
     // Same login-then-call pattern as the lihi button: Lihi_Service::get_profile()
-    // wraps get_token() (which calls Lihi_Auth_Client::login() once per cache miss)
+    // wraps get_token() (which calls Lihi_Client::login() once per cache miss)
     // and retries once on Lihi_Token_Invalid_Exception.
     if ( $value !== '' ) {
         try {
-            $profile = lihi_service()->get_profile();
+            $profile = Lihi_Singletons::lihi_service()->get_profile();
         } catch ( Lihi_Auth_Exception $e ) {
             $profile_error = __( 'Email not verified yet. Click Save & Verify to resend the verification email.', 'lihi-short-url' );
         } catch ( Lihi_Server_Exception $e ) {
@@ -176,7 +176,7 @@ function render_settings_page(): void {
  * AJAX handler: verify and persist the lihi email.
  *
  * Empty input clears the option (effectively disabling the plugin).
- * Otherwise the auth service is called first; only on success is the
+ * Otherwise the lihi API is called first; only on success is the
  * option updated, so an address the service rejects never becomes active.
  */
 function ajax_update_email(): void {
@@ -206,7 +206,7 @@ function ajax_update_email(): void {
     }
 
     try {
-        $result = lihi_auth_client()->update_email( $email );
+        $result = Lihi_Singletons::lihi_client()->update_email( $email );
     } catch ( Lihi_Validation_Exception $e ) {
         wp_send_json_error( __( 'lihi rejected the email address. Please check the format and try again.', 'lihi-short-url' ), 400 );
         return;
@@ -218,7 +218,7 @@ function ajax_update_email(): void {
             // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only diagnostics gated behind WP_DEBUG.
             error_log( '[lihi] update_email failed: ' . $e->getMessage() );
         }
-        wp_send_json_error( __( 'The lihi auth service is unavailable. Please try again later.', 'lihi-short-url' ), 503 );
+        wp_send_json_error( __( 'The lihi service is unavailable. Please try again later.', 'lihi-short-url' ), 503 );
         return;
     }
 

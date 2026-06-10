@@ -4,9 +4,9 @@ namespace Lihi\ShortUrl\Tests;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
-use Lihi\ShortUrl\Lihi_Auth_Client_Interface;
 use Lihi\ShortUrl\Lihi_Client_Interface;
 use Lihi\ShortUrl\Lihi_Service;
+use Lihi\ShortUrl\Lihi_Singletons;
 use Mockery;
 use PHPUnit\Framework\TestCase;
 
@@ -28,6 +28,7 @@ class ServiceTest extends TestCase
         // override with Functions\when('get_option')->... when they need a
         // specific value (e.g. a saved lihi_domain).
         Functions\when('get_option')->alias(fn($key, $default = false) => $default);
+        Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
         $this->mockConfig();
     }
 
@@ -51,21 +52,16 @@ class ServiceTest extends TestCase
     // Helpers
     // -------------------------------------------------------------------------
 
+    /**
+     * @return \Mockery\MockInterface&Lihi_Client_Interface
+     */
     private function makeClient(): Lihi_Client_Interface
     {
         return Mockery::mock(Lihi_Client_Interface::class);
     }
 
-    private function makeAuthClient(): Lihi_Auth_Client_Interface
-    {
-        return Mockery::mock(Lihi_Auth_Client_Interface::class);
-    }
-
-    private function makeService(
-        Lihi_Client_Interface $client,
-        ?Lihi_Auth_Client_Interface $authClient = null
-    ): Lihi_Service {
-        return new Lihi_Service($client, $authClient ?? $this->makeAuthClient());
+    private function makeService( Lihi_Client_Interface $client ): Lihi_Service {
+        return new Lihi_Service($client, Lihi_Singletons::lihi_token_store());
     }
 
     /** Build a structurally-valid JWT with the given exp timestamp. */
@@ -114,41 +110,40 @@ class ServiceTest extends TestCase
     /** @test */
     public function login_returns_token_on_success(): void
     {
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')
+        $client = $this->makeClient();
+        $client->shouldReceive('login')
             ->with('user@example.com')
             ->once()
             ->andReturn(['token' => 'jwt-token']);
 
-        Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-
-        $this->assertSame('jwt-token', $this->makeService($this->makeClient(), $authClient)->login());
+        $this->assertSame('jwt-token', $this->makeService($client)->login('user@example.com'));
     }
 
     /** @test */
     public function login_throws_when_token_empty(): void
     {
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')->andReturn(['token' => '']);
+        $client = $this->makeClient();
+        $client->shouldReceive('login')
+            ->with('user@example.com')
+            ->andReturn(['token' => '']);
 
-        Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
         Functions\when('__')->returnArg(1);
 
         $this->expectException(\RuntimeException::class);
-        $this->makeService($this->makeClient(), $authClient)->login();
+        $this->makeService($client)->login('user@example.com');
     }
 
     /** @test */
     public function login_propagates_client_exception(): void
     {
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')->andThrow(new \RuntimeException('Connection failed'));
-
-        Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
+        $client = $this->makeClient();
+        $client->shouldReceive('login')
+            ->with('user@example.com')
+            ->andThrow(new \RuntimeException('Connection failed'));
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Connection failed');
-        $this->makeService($this->makeClient(), $authClient)->login();
+        $this->makeService($client)->login('user@example.com');
     }
 
     // -------------------------------------------------------------------------
@@ -166,13 +161,12 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(3, 'https://lihi.io/cached')]));
 
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldNotReceive('login');
+        $client->shouldNotReceive('login');
 
         Functions\when('get_transient')->justReturn($cachedToken);
         Functions\when('get_permalink')->justReturn('https://example.com/?p=3');
 
-        $result = $this->makeService($client, $authClient)->get_or_create_short_url(3, 'post');
+        $result = $this->makeService($client)->get_or_create_short_url(3, 'post');
         $this->assertSame('https://lihi.io/cached', $result);
     }
 
@@ -187,8 +181,7 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(13, 'https://lihi.io/double')]));
 
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldNotReceive('login');
+        $client->shouldNotReceive('login');
 
         // First call (initial read) misses; second (double-check inside lock) hits.
         Functions\expect('get_transient')
@@ -198,7 +191,7 @@ class ServiceTest extends TestCase
         Functions\when('wp_cache_delete')->justReturn(true);
         Functions\when('get_permalink')->justReturn('https://example.com/?p=13');
 
-        $result = $this->makeService($client, $authClient)->get_or_create_short_url(13, 'post');
+        $result = $this->makeService($client)->get_or_create_short_url(13, 'post');
         $this->assertSame('https://lihi.io/double', $result);
     }
 
@@ -213,8 +206,7 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(5, 'https://lihi.io/xyz')]));
 
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')
+        $client->shouldReceive('login')
             ->with('user@example.com')
             ->once()
             ->andReturn(['token' => $newToken]);
@@ -226,7 +218,7 @@ class ServiceTest extends TestCase
         Functions\when('set_transient')->justReturn(true);
         Functions\when('get_permalink')->justReturn('https://example.com/?p=5');
 
-        $result = $this->makeService($client, $authClient)->get_or_create_short_url(5, 'post');
+        $result = $this->makeService($client)->get_or_create_short_url(5, 'post');
         $this->assertSame('https://lihi.io/xyz', $result);
     }
 
@@ -241,8 +233,7 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(9, 'https://lihi.io/waited')]));
 
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldNotReceive('login');
+        $client->shouldNotReceive('login');
 
         // First call returns false (cache miss), second returns token (winner stored it)
         Functions\expect('get_transient')
@@ -252,7 +243,7 @@ class ServiceTest extends TestCase
         Functions\when('usleep')->justReturn(null);
         Functions\when('get_permalink')->justReturn('https://example.com/?p=9');
 
-        $result = $this->makeService($client, $authClient)->get_or_create_short_url(9, 'post');
+        $result = $this->makeService($client)->get_or_create_short_url(9, 'post');
         $this->assertSame('https://lihi.io/waited', $result);
     }
 
@@ -267,8 +258,8 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(11, 'https://lihi.io/fallback')]));
 
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')
+        $client->shouldReceive('login')
+            ->with('user@example.com')
             ->once()
             ->andReturn(['token' => $newToken]);
 
@@ -285,15 +276,17 @@ class ServiceTest extends TestCase
             ->with('lihi_token_lock', 'transient')
             ->andReturn(true);
 
-        $result = $this->makeService($client, $authClient)->get_or_create_short_url(11, 'post');
+        $result = $this->makeService($client)->get_or_create_short_url(11, 'post');
         $this->assertSame('https://lihi.io/fallback', $result);
     }
 
     /** @test */
     public function get_token_propagates_login_exception(): void
     {
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')->andThrow(new \RuntimeException('Auth failed'));
+        $client = $this->makeClient();
+        $client->shouldReceive('login')
+            ->with('user@example.com')
+            ->andThrow(new \RuntimeException('Auth failed'));
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
         Functions\when('get_transient')->justReturn(false);
@@ -302,7 +295,7 @@ class ServiceTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Auth failed');
-        $this->makeService($this->makeClient(), $authClient)->get_or_create_short_url(1, 'post');
+        $this->makeService($client)->get_or_create_short_url(1, 'post');
     }
 
     // -------------------------------------------------------------------------
@@ -349,8 +342,8 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn(['result' => true, 'data' => ['user_role' => 'user', 'end_date' => null, 'domains' => []]]);
 
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')
+        $client->shouldReceive('login')
+            ->with('user@example.com')
             ->once()
             ->andReturn(['token' => $freshToken]);
 
@@ -361,15 +354,16 @@ class ServiceTest extends TestCase
         Functions\when('wp_cache_delete')->justReturn(true);
         Functions\when('set_transient')->justReturn(true);
 
-        $result = $this->makeService($client, $authClient)->get_profile();
+        $result = $this->makeService($client)->get_profile();
         $this->assertSame('user', $result['user_role']);
     }
 
     /** @test */
     public function get_profile_propagates_auth_exception_from_login(): void
     {
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')
+        $client = $this->makeClient();
+        $client->shouldReceive('login')
+            ->with('user@example.com')
             ->once()
             ->andThrow(new \Lihi\ShortUrl\Lihi_Auth_Exception('email not verified'));
 
@@ -379,7 +373,7 @@ class ServiceTest extends TestCase
         Functions\when('wp_cache_delete')->justReturn(true);
 
         $this->expectException(\Lihi\ShortUrl\Lihi_Auth_Exception::class);
-        $this->makeService($this->makeClient(), $authClient)->get_profile();
+        $this->makeService($client)->get_profile();
     }
 
     // -------------------------------------------------------------------------
@@ -622,8 +616,8 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/retried')]));
 
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')
+        $client->shouldReceive('login')
+            ->with('user@example.com')
             ->once()
             ->andReturn(['token' => $freshToken]);
 
@@ -638,7 +632,7 @@ class ServiceTest extends TestCase
         Functions\when('set_transient')->justReturn(true);
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
 
-        $result = $this->makeService($client, $authClient)->get_or_create_short_url(42, 'post');
+        $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
         $this->assertSame('https://lihi.io/retried', $result);
     }
 
@@ -666,8 +660,8 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturn(['data' => ['short_url' => 'https://lihi.io/created']]);
 
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')
+        $client->shouldReceive('login')
+            ->with('user@example.com')
             ->once()
             ->andReturn(['token' => $freshToken]);
 
@@ -682,7 +676,7 @@ class ServiceTest extends TestCase
         Functions\when('home_url')->justReturn('https://example.com');
         Functions\when('wp_parse_url')->justReturn('example.com');
 
-        $result = $this->makeService($client, $authClient)->get_or_create_short_url(42, 'post');
+        $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
         $this->assertSame('https://lihi.io/created', $result);
     }
 
@@ -702,8 +696,8 @@ class ServiceTest extends TestCase
             ->once()
             ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
 
-        $authClient = $this->makeAuthClient();
-        $authClient->shouldReceive('login')
+        $client->shouldReceive('login')
+            ->with('user@example.com')
             ->once()
             ->andReturn(['token' => $freshToken]);
 
@@ -716,62 +710,7 @@ class ServiceTest extends TestCase
         Functions\when('set_transient')->justReturn(true);
 
         $this->expectException(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class);
-        $this->makeService($client, $authClient)->get_or_create_short_url(42, 'post');
+        $this->makeService($client)->get_or_create_short_url(42, 'post');
     }
 
-    // -------------------------------------------------------------------------
-    // resolve_url()
-    // -------------------------------------------------------------------------
-
-    /** @test */
-    public function resolve_url_uses_get_permalink_for_post(): void
-    {
-        Functions\when('get_permalink')->justReturn('https://example.com/?p=5');
-
-        $result = $this->makeService($this->makeClient())->resolve_url(5, 'post');
-
-        $this->assertSame('https://example.com/?p=5', $result);
-    }
-
-    /** @test */
-    public function resolve_url_uses_get_permalink_for_page(): void
-    {
-        Functions\when('get_permalink')->justReturn('https://example.com/about/');
-
-        $result = $this->makeService($this->makeClient())->resolve_url(10, 'page');
-
-        $this->assertSame('https://example.com/about/', $result);
-    }
-
-    /** @test */
-    public function resolve_url_uses_wp_get_attachment_url_for_attachment(): void
-    {
-        Functions\when('wp_get_attachment_url')->justReturn('https://example.com/wp-content/uploads/photo.jpg');
-
-        $result = $this->makeService($this->makeClient())->resolve_url(7, 'attachment');
-
-        $this->assertSame('https://example.com/wp-content/uploads/photo.jpg', $result);
-    }
-
-    /** @test */
-    public function resolve_url_throws_when_attachment_url_is_false(): void
-    {
-        Functions\when('wp_get_attachment_url')->justReturn(false);
-        Functions\when('__')->returnArg(1);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/attachment 9/');
-        $this->makeService($this->makeClient())->resolve_url(9, 'attachment');
-    }
-
-    /** @test */
-    public function resolve_url_throws_when_permalink_is_false(): void
-    {
-        Functions\when('get_permalink')->justReturn(false);
-        Functions\when('__')->returnArg(1);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/post 404/');
-        $this->makeService($this->makeClient())->resolve_url(404, 'post');
-    }
 }

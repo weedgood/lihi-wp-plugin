@@ -9,3 +9,5 @@ wordpress-php82/
 .phpunit.result.cache
 coverage/
 build/
+composer.json
+composer.lock

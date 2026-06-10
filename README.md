@@ -85,28 +85,27 @@ lihi-short-url/
 │   ├── lihi-button.js         Async delegated click handler; splits disable window (300 ms) from "Copied!" label duration (1200 ms); errors shown via auto-dismissing WP .notice.notice-error
 │   └── lihi-settings.js       Settings page button handlers; shared bindSaver helper wires Save & Verify (email → lihi_update_email) and Save (domain → lihi_update_domain) to admin-ajax and renders inline .notice-success / .notice-error feedback. The email handler always blanks #lihi-account-section on success (so the prior account's role / end date / domain selector can't linger) and on verified:true schedules a 2 s delayed window.location.reload() so the admin sees the success notice before render_settings_page() repaints the account section
 └── includes/
-    ├── config.php             Flat array of plugin config (api_domain, auth_domain); read via lihi_config(). Redirect domain comes from the lihi_domain wp_option instead — admin picks from the profile selector on the settings page
-    ├── helper.php             lihi_config($key), lihi_email() (reads lihi_email option), lihi_domain() (reads lihi_domain option), lihi_uuid() (delegates to Lihi_Uuid_Store), lihi_client() / lihi_auth_client() / lihi_uuid_store() / lihi_token_store() / lihi_service() singletons (+ *_set() test helpers)
-    ├── settings.php           Settings page under Settings → lihi Short URL; "Save & Verify" triggers wp_ajax_lihi_update_email which calls Lihi_Auth_Client::update_email() first and only persists the option on success; flushes the cached token on add/update/delete of lihi_email
+    ├── config.php             Flat array of plugin config (api_domain); read via lihi_config(). Redirect domain comes from the lihi_domain wp_option instead — admin picks from the profile selector on the settings page
+    ├── helper.php             Option/context helpers only: lihi_config(), lihi_email(), lihi_domain(), lihi_uuid(), lihi_site_host(), lihi_resolve_url()
+    ├── lihi-singletons.php    Lihi_Singletons registry/composition class; static lihi_client(), lihi_uuid_store(), lihi_token_store(), lihi_service(), plus *_set() test helpers
+    ├── settings.php           Settings page under Settings → lihi Short URL; "Save & Verify" triggers wp_ajax_lihi_update_email which calls Lihi_Client::update_email() first and only persists the option on success; flushes the cached token on add/update/delete of lihi_email
     ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email() && lihi_domain()), attachment panel button, always-registered wp_ajax_lihi_copy_url handler gated by read_post for the target item; JSON errors include explicit HTTP status codes
     ├── client/
-    │   ├── lihi-client-interface.php       Short-URL API contract; covers the non-auth JWT endpoints (get_profile, get_sites, get_short_links, create_site). Auth (login / update-email) lives in Lihi_Auth_Client_Interface. Only get_short_links / create_site are actually called today
-    │   ├── lihi-client.php                 Production HTTP client; token passed per-call, not stored on instance
-    │   ├── lihi-auth-client-interface.php  Auth service contract (update_email, login)
-    │   ├── lihi-auth-client.php            Production auth HTTP client; strengthens authentication identity checks by sending home_url() host as JSON payload field `hostname` plus site-scoped `uuid` so the auth service can identify the tenant without relying on the HTTP Host header; login also sends `is_mobile` from wp_is_mobile()
+    │   ├── lihi-client-interface.php       Unified lihi Wordpress API contract; covers auth (update_email, login) plus JWT endpoints (get_profile, get_sites, get_short_links, create_site)
+    │   ├── lihi-client.php                 Production HTTP client; base_url and site-scoped uuid are injected by helper; auth requests send home_url() host as JSON `hostname` plus injected `uuid`; login also sends `is_mobile`; bearer token is passed per JWT call, not stored on instance
     │   └── lihi-exceptions.php             Typed exception hierarchy (Auth / Validation / NotFound / RateLimit / TokenInvalid / Server)
     ├── store/
     │   ├── lihi-uuid-store.php         Lihi_Uuid_Store: encapsulates the persistent lihi_uuid option + option-backed lihi_uuid_lock; get() validates / lazily creates under lock / waits for concurrent generators / replaces invalid UUIDs / reads back persisted UUIDs after writes
     │   └── lihi-token-store.php        Lihi_Token_Store: encapsulates the lihi_token transient + lihi_token_lock; get/set/delete/acquire_lock/release_lock/flush
     └── service/
-        └── lihi-service.php            Business logic: login() (via Lihi_Auth_Client), get_or_create_short_url(); get_token() uses Lihi_Token_Store for transient-first, lock-guarded login
+        └── lihi-service.php            Business logic: login($email), get_profile(), get_or_create_short_url(); client and token store are injected by helper.php; config is read by helper.php, not by the service
 ```
 
 ### Auth flow
 
-1. Admin opens Settings → lihi Short URL, enters an email, and clicks **Save & Verify**. `lihi-settings.js` POSTs to `wp_ajax_lihi_update_email`, which calls `Lihi_Auth_Client::update_email( $email )` first and only persists `lihi_email` on success. The UI shows "✓ Email verified" when the address is already verified, or "Verification email sent" when the auth service mints a fresh verification token and emails it out-of-band (the admin must click that link to finish).
+1. Admin opens Settings → lihi Short URL, enters an email, and clicks **Save & Verify**. `lihi-settings.js` POSTs to `wp_ajax_lihi_update_email`, which calls `Lihi_Client::update_email( $email )` first and only persists `lihi_email` on success. The UI shows "✓ Email verified" when the address is already verified, or "Verification email sent" when the lihi API mints a fresh verification token and emails it out-of-band (the admin must click that link to finish).
 2. When the editor clicks the lihi button, `lihi-button.js` triggers an AJAX call to `wp_ajax_lihi_copy_url`.
-3. `Lihi_Service::get_token()` checks in order: (a) the site-scoped `lihi_token` transient; (b) atomic `wp_cache_add` lock — only one concurrent request calls `login()` (which hits `Lihi_Auth_Client::login( lihi_email() )` against the lihi auth service), the rest poll the transient and reuse the result. After a 3 s timeout, waiters fall back to calling `login()` themselves.
+3. `Lihi_Service::get_token( $email )` checks in order: (a) the site-scoped `lihi_token` transient; (b) atomic `wp_cache_add` lock — only one concurrent request calls `login( $email )` (which hits `Lihi_Client::login( $email )` against the lihi API), the rest poll the transient and reuse the result. After a 3 s timeout, waiters fall back to calling `login( $email )` themselves.
 4. On fresh login the bearer token is stored in the transient (TTL: 1 day, well within the upstream ~168 day token TTL). Updating or clearing the `lihi_email` option flushes the transient under the same lock so a stale token can't leak across accounts.
 
 ### Short URL flow
@@ -114,7 +113,7 @@ lihi-short-url/
 1. Editor clicks the **lihi** button in the post list or media attachment panel.
 2. `lihi-button.js` sends a nonce-protected AJAX request to `wp_ajax_lihi_copy_url`.
 3. The AJAX handler derives the item type with `get_post_type( $item_id )` and requires `current_user_can( 'read_post', $item_id )` before calling the lihi service. Error JSON responses include explicit HTTP status codes for bad input, permission failures, incomplete setup, and service failures.
-4. `Lihi_Service::get_or_create_short_url()` checks for an existing short link via `get_short_links()`; creates one with `create_site()` if none is found. The API `type` field is namespaced as `"{type}:{host}"` (e.g. `post:example.com`) so the same `type_id` on different WP sites under one lihi account stays distinct. URL resolution uses `wp_get_attachment_url()` for attachments and `get_permalink()` for all other post types.
+4. `Lihi_Service::get_or_create_short_url()` checks for an existing short link via `get_short_links()`; creates one with `create_site()` if none is found. The API `type` field is namespaced as `"{type}:{host}"` (e.g. `post:example.com`) so the same `type_id` on different WP sites under one lihi account stays distinct. URL and host resolution are handled by helpers, keeping the AJAX handler thin.
 5. The returned `short_url` is written to the clipboard.
 
 ## API Reference

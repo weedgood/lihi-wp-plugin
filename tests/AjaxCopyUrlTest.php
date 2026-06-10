@@ -23,7 +23,7 @@ class AjaxCopyUrlTest extends TestCase
 
     protected function tearDown(): void
     {
-        \Lihi\ShortUrl\lihi_service_set(null);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set(null);
         $_POST = [];
         Monkey\tearDown();
         Mockery::close();
@@ -139,7 +139,7 @@ class AjaxCopyUrlTest extends TestCase
 
         $service = $this->mockService();
         $service->shouldNotReceive('get_or_create_short_url');
-        \Lihi\ShortUrl\lihi_service_set($service);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
         $checkedCap    = null;
         $checkedPostId = null;
@@ -172,7 +172,7 @@ class AjaxCopyUrlTest extends TestCase
             ->with(42, 'post')
             ->once()
             ->andReturn('abc-slug');
-        \Lihi\ShortUrl\lihi_service_set($service);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
         Functions\when('check_ajax_referer')->justReturn(true);
 
@@ -201,7 +201,7 @@ class AjaxCopyUrlTest extends TestCase
             ->with(42, 'page')
             ->once()
             ->andReturn('page-slug');
-        \Lihi\ShortUrl\lihi_service_set($service);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
         $sent = null;
         Functions\expect('wp_send_json_success')
@@ -224,7 +224,7 @@ class AjaxCopyUrlTest extends TestCase
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
             ->andThrow(new \RuntimeException('API error'));
-        \Lihi\ShortUrl\lihi_service_set($service);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
         Functions\when('check_ajax_referer')->justReturn(true);
 
@@ -247,7 +247,7 @@ class AjaxCopyUrlTest extends TestCase
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
             ->andThrow(new \Lihi\ShortUrl\Lihi_Auth_Exception('API Key error'));
-        \Lihi\ShortUrl\lihi_service_set($service);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
         Functions\when('check_ajax_referer')->justReturn(true);
 
@@ -270,7 +270,7 @@ class AjaxCopyUrlTest extends TestCase
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
             ->andThrow(new \Lihi\ShortUrl\Lihi_Validation_Exception('bad request'));
-        \Lihi\ShortUrl\lihi_service_set($service);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
         $errorMsg   = null;
         $statusCode = null;
@@ -291,7 +291,7 @@ class AjaxCopyUrlTest extends TestCase
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
             ->andThrow(new \Lihi\ShortUrl\Lihi_Server_Exception('upstream unavailable'));
-        \Lihi\ShortUrl\lihi_service_set($service);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
         $errorMsg   = null;
         $statusCode = null;

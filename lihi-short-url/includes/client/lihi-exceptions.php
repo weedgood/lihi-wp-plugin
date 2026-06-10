@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Base exception for all lihi API errors. */
 class Lihi_Exception extends \RuntimeException {}
 
-/** Authorization rejected — e.g. auth service returns 403 "email not verified". */
+/** Authorization rejected — e.g. lihi API returns 403 "email not verified". */
 class Lihi_Auth_Exception extends Lihi_Exception {}
 
 /** HTTP 400 — required fields missing or invalid. */
@@ -17,7 +17,7 @@ class Lihi_Validation_Exception extends Lihi_Exception {}
 /** HTTP 404 HTML — resource not found. */
 class Lihi_Not_Found_Exception extends Lihi_Exception {}
 
-/** HTTP 429 — per-host rate limit exceeded on the auth service. */
+/** HTTP 429 — per-host rate limit exceeded on the auth endpoint. */
 class Lihi_Rate_Limit_Exception extends Lihi_Exception {}
 
 /** HTTP 5xx HTML or other unrecoverable server error. */

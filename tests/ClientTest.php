@@ -30,7 +30,7 @@ class ClientTest extends TestCase
 
     private function makeClient(): Lihi_Client
     {
-        return new Lihi_Client();
+        return new Lihi_Client('https://app.lihidev.com', 'site-uuid');
     }
 
     /**

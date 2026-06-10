@@ -4,7 +4,7 @@ namespace Lihi\ShortUrl\Tests;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
-use Lihi\ShortUrl\Lihi_Auth_Client;
+use Lihi\ShortUrl\Lihi_Client;
 use Mockery;
 use PHPUnit\Framework\TestCase;
 
@@ -15,7 +15,6 @@ class AuthClientTest extends TestCase
         parent::setUp();
         Monkey\setUp();
         Functions\when('home_url')->justReturn('https://wp.example.com:8443');
-        Functions\when('Lihi\\ShortUrl\\lihi_uuid')->justReturn('site-uuid');
         Functions\when('wp_json_encode')->alias('json_encode');
     }
 
@@ -56,7 +55,7 @@ class AuthClientTest extends TestCase
     {
         $capture = $this->mockRequest(200, '{"result":true,"data":{"verified":false}}');
 
-        (new Lihi_Auth_Client())->update_email('admin@example.com');
+        (new Lihi_Client('https://app.lihidev.com', 'site-uuid'))->update_email('admin@example.com');
 
         $request = $capture();
         $body    = json_decode($request['args']['body'] ?? '{}', true);
@@ -77,7 +76,7 @@ class AuthClientTest extends TestCase
         Functions\when('wp_is_mobile')->justReturn(true);
         $capture = $this->mockRequest(200, '{"result":true,"data":{"token":"jwt-token"}}');
 
-        (new Lihi_Auth_Client())->login('admin@example.com');
+        (new Lihi_Client('https://app.lihidev.com', 'site-uuid'))->login('admin@example.com');
 
         $request = $capture();
         $body    = json_decode($request['args']['body'] ?? '{}', true);

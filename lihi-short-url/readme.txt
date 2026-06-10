@@ -23,7 +23,7 @@ The plugin runs only inside `wp-admin`; it adds no front-end output and enqueues
 * One-click copy: generates the short URL on demand via AJAX and writes it to the clipboard.
 * Reuses an existing short URL whenever one already exists for the item, so repeated clicks are idempotent.
 * Settings page under **Settings → lihi Short URL** for entering the lihi account email and choosing a redirect domain.
-* Email verification is round-tripped through the lihi auth service before being saved, so an address the service rejects never becomes the active configuration.
+* Email verification is round-tripped through the lihi Wordpress API before being saved, so an address the service rejects never becomes the active configuration.
 * Per-account state (auth token and saved redirect domain) is automatically cleared whenever the configured email changes.
 * Localised; ships with Traditional Chinese (`zh_TW`).
 
@@ -31,15 +31,15 @@ The plugin runs only inside `wp-admin`; it adds no front-end output and enqueues
 
 This plugin connects to the lihi short URL service to identify the WordPress site, authenticate the site administrator, and create or look up short URLs. Without an internet connection the plugin cannot function.
 
-**Service: lihi authentication** (`https://w.lihidev.com`)
+**Service: lihi Wordpress API auth endpoints** (`https://app.lihidev.com/api/wordpress/v1/auth`)
 
 * When data is sent: when the administrator saves an email address on the settings page (Settings → lihi Short URL), and on the first short-URL request after the cached auth token expires.
 * What is sent: the administrator's email address, the site's hostname, and a site-scoped UUID stored in the `lihi_uuid` option. Login requests also send whether WordPress identifies the current request as mobile (`is_mobile`).
 
-**Service: lihi short URL API** (`https://app.lihidev.com`)
+**Service: lihi Wordpress API short URL endpoints** (`https://app.lihidev.com/api/wordpress/v1`)
 
 * When data is sent: when the administrator opens the settings page after configuring an email (to display account info), and when the administrator clicks a "lihi" button to generate or look up a short URL.
-* What is sent: the bearer token returned by the auth service, the post or attachment URL (`permalink` or attachment file URL), the post type, the post ID, the configured redirect domain, and the site's hostname (included in tags).
+* What is sent: the bearer token returned by the lihi Wordpress API auth endpoint, the post or attachment URL (`permalink` or attachment file URL), the post type, the post ID, the configured redirect domain, and the site's hostname (included in tags).
 
 By using the plugin you agree that the data above is transmitted to the lihi service. Please review the lihi service's legal documents:
 

@@ -4,7 +4,7 @@ namespace Lihi\ShortUrl\Tests;
 
 use Brain\Monkey;
 use Brain\Monkey\Functions;
-use Lihi\ShortUrl\Lihi_Auth_Client_Interface;
+use Lihi\ShortUrl\Lihi_Client_Interface;
 use Lihi\ShortUrl\Lihi_Rate_Limit_Exception;
 use Lihi\ShortUrl\Lihi_Server_Exception;
 use Lihi\ShortUrl\Lihi_Validation_Exception;
@@ -33,7 +33,7 @@ class AjaxUpdateEmailTest extends TestCase
 
     protected function tearDown(): void
     {
-        \Lihi\ShortUrl\lihi_auth_client_set(null);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_client_set(null);
         $_POST = [];
         Monkey\tearDown();
         Mockery::close();
@@ -41,12 +41,12 @@ class AjaxUpdateEmailTest extends TestCase
     }
 
     /**
-     * @return \Mockery\MockInterface&Lihi_Auth_Client_Interface
+     * @return \Mockery\MockInterface&Lihi_Client_Interface
      */
-    private function mockAuthClient(): Lihi_Auth_Client_Interface
+    private function mockClient(): Lihi_Client_Interface
     {
-        $client = Mockery::mock(Lihi_Auth_Client_Interface::class);
-        \Lihi\ShortUrl\lihi_auth_client_set($client);
+        $client = Mockery::mock(Lihi_Client_Interface::class);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_client_set($client);
         return $client;
     }
 
@@ -83,8 +83,8 @@ class AjaxUpdateEmailTest extends TestCase
     {
         $_POST['email'] = '';
 
-        $authClient = $this->mockAuthClient();
-        $authClient->shouldNotReceive('update_email');
+        $client = $this->mockClient();
+        $client->shouldNotReceive('update_email');
 
         Functions\expect('update_option')->never();
         Functions\expect('delete_option')
@@ -109,8 +109,8 @@ class AjaxUpdateEmailTest extends TestCase
     {
         $_POST['email'] = "   \t\n";
 
-        $authClient = $this->mockAuthClient();
-        $authClient->shouldNotReceive('update_email');
+        $client = $this->mockClient();
+        $client->shouldNotReceive('update_email');
 
         Functions\expect('update_option')->never();
         Functions\expect('delete_option')
@@ -153,8 +153,8 @@ class AjaxUpdateEmailTest extends TestCase
         // is_email() rejects. The handler must not fall through to update_email().
         $_POST['email'] = 'alice @example';
 
-        $authClient = $this->mockAuthClient();
-        $authClient->shouldNotReceive('update_email');
+        $client = $this->mockClient();
+        $client->shouldNotReceive('update_email');
 
         Functions\expect('update_option')->never();
 
@@ -173,7 +173,7 @@ class AjaxUpdateEmailTest extends TestCase
     {
         $_POST['email'] = 'alice@example.com';
 
-        $this->mockAuthClient()
+        $this->mockClient()
             ->shouldReceive('update_email')
             ->with('alice@example.com')
             ->once()
@@ -196,7 +196,7 @@ class AjaxUpdateEmailTest extends TestCase
     {
         $_POST['email'] = 'alice@example.com';
 
-        $this->mockAuthClient()
+        $this->mockClient()
             ->shouldReceive('update_email')
             ->once()
             ->andThrow(new Lihi_Rate_Limit_Exception('too many requests'));
@@ -218,7 +218,7 @@ class AjaxUpdateEmailTest extends TestCase
     {
         $_POST['email'] = 'alice@example.com';
 
-        $this->mockAuthClient()
+        $this->mockClient()
             ->shouldReceive('update_email')
             ->once()
             ->andThrow(new Lihi_Server_Exception('500 upstream'));
@@ -240,7 +240,7 @@ class AjaxUpdateEmailTest extends TestCase
     {
         $_POST['email'] = 'alice@example.com';
 
-        $this->mockAuthClient()
+        $this->mockClient()
             ->shouldReceive('update_email')
             ->with('alice@example.com')
             ->once()
@@ -268,7 +268,7 @@ class AjaxUpdateEmailTest extends TestCase
     {
         $_POST['email'] = 'alice@example.com';
 
-        $this->mockAuthClient()
+        $this->mockClient()
             ->shouldReceive('update_email')
             ->once()
             ->andReturn(['verified' => false]);

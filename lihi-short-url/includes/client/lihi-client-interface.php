@@ -2,23 +2,21 @@
 namespace Lihi\ShortUrl;
 
 /**
- * lihi short-url API client contract.
+ * lihi Wordpress API client contract.
  *
- * Base URL: lihi_config( 'api_domain' ) + /api/wordpress/v1.
- * Mirrors the non-auth endpoints wired in lihi-admin's `wordpress/v1` group
- * (`routes/api.php`). Authentication (`login`, `update-email`) belongs to a
- * separate lihi auth service and is handled by `Lihi_Auth_Client_Interface`
- * — see `/home/wayne/lihi-wp-auth/docs/api.md` for that contract.
+ * Base URL: injected by the caller, typically lihi_config( 'api_domain' ).
+ * Mirrors the endpoints wired in lihi-admin's `wordpress/v1` group
+ * (`routes/api.php`). Auth now lives under the same API namespace and keeps
+ * the `/auth` route prefix.
  *
  * `SiteController::update` / `destroy` exist in source but are not routed,
  * and `/posts` / `/site-urls` do not exist in this group — so they are
- * intentionally absent from this interface. `POST /auth/mail` (legacy api_key
- * `WordpressUrlMail` sender) also exists in the route group but the plugin
- * has no use for it and it is omitted here.
+ * intentionally absent from this interface. `POST /mail` (legacy api_key mail
+ * sender) has no plugin use and is omitted here.
  *
- * All methods below sit behind `jwt.auth` middleware and require a bearer
- * token obtained from `Lihi_Auth_Client::login()`. The service layer is
- * responsible for acquiring and refreshing the token.
+ * JWT methods require a bearer token obtained from `login()`. The service
+ * layer is responsible for acquiring and refreshing the token. The site UUID
+ * used by auth payloads is also injected by the caller.
  *
  * Plugin usage note: the current plugin only calls the two Site endpoints
  * (`get_sites` via `get_short_links`, and `create_site`). `get_profile` is
@@ -30,6 +28,38 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 interface Lihi_Client_Interface {
+
+    // -------------------------------------------------------------------------
+    // Auth (no bearer token)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Start or refresh email verification for the current tenant.
+     *
+     * POST /api/wordpress/v1/auth/update-email (AuthController@updateEmail)
+     *
+     * @param string $email Email to verify.
+     * @return array{verified: bool}
+     *
+     * @throws Lihi_Validation_Exception on HTTP 400.
+     * @throws Lihi_Rate_Limit_Exception on HTTP 429.
+     * @throws Lihi_Server_Exception on HTTP 500 or network error.
+     */
+    public function update_email( string $email ): array;
+
+    /**
+     * Exchange a verified email for a fresh bearer token.
+     *
+     * POST /api/wordpress/v1/auth/login (AuthController@login)
+     *
+     * @param string $email Verified tenant email.
+     * @return array{token: string}
+     *
+     * @throws Lihi_Validation_Exception on HTTP 400.
+     * @throws Lihi_Auth_Exception on HTTP 403.
+     * @throws Lihi_Server_Exception on HTTP 500, network error, or result:false.
+     */
+    public function login( string $email ): array;
 
     // -------------------------------------------------------------------------
     // Profile (jwt)
