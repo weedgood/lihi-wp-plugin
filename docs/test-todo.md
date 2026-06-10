@@ -5,7 +5,7 @@ Composer 僅在官方 `php:*-cli` 測試 container 內執行；PHP 7.4 與 PHP 8
 測試位置：`tests/`
 
 CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執行。Package job 會打包 `lihi-short-url/` 成 `build/lihi-short-url.zip`，驗證 ZIP 內含 `lihi-short-url/lihi-short-url.php` 與 `lihi-short-url/readme.txt`，並上傳 artifact `lihi-short-url-plugin`；release job 會下載同一個 artifact 建立或更新該 tag 的 GitHub Release，若 release 已存在則以 `--clobber` 替換 ZIP asset。
-Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header、WordPress.org `readme.txt` 的 `Stable tag` / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、以及 `zh_TW` translation header 應保持一致。
+Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header、WordPress.org `readme.txt` 的 `Stable tag` / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、以及 `zh_TW` translation header 應保持一致。
 
 | Test class | 基底 | 說明 |
 |---|---|---|
@@ -203,7 +203,7 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 
 ## Plugin hooks (整合)
 
-- [n/a] release metadata 1.0.2 — plugin header、readme Stable tag / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、translation header 同步（由程式碼審查保證）
+- [n/a] release metadata 1.0.3 — plugin header、readme Stable tag / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、translation header 同步（由程式碼審查保證）
 - [x] `wp_ajax_lihi_copy_url` 已註冊
 - [x] `wp_ajax_lihi_update_email` 已註冊
 - [x] `register_deactivation_hook()` 已註冊停用清理 callback

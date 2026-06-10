@@ -4,7 +4,7 @@ namespace Lihi\ShortUrl;
 /**
  * Plugin Name: lihi Short URL
  * Description: Adds a one-click "lihi" button to generate and copy short URLs, including posts, pages, media and all post-type list tables.
- * Version: 1.0.2
+ * Version: 1.0.3
  * Requires at least: 5.5
  * Requires PHP: 7.4
  * Author: lihi

@@ -4,7 +4,7 @@ Tags: short url, url shortener, lihi, admin, media
 Requires at least: 5.5
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -23,7 +23,7 @@ The plugin runs only inside `wp-admin`; it adds no front-end output and enqueues
 * One-click copy: generates the short URL on demand via AJAX and writes it to the clipboard.
 * Reuses an existing short URL whenever one already exists for the item, so repeated clicks are idempotent.
 * Settings page under **Settings → lihi Short URL** for entering the lihi account email and choosing a redirect domain.
-* Email verification is round-tripped through the lihi Wordpress API before being saved, so an address the service rejects never becomes the active configuration.
+* Email verification is round-tripped through the lihi WordPress API before being saved, so an address the service rejects never becomes the active configuration.
 * Per-account state (auth token and saved redirect domain) is automatically cleared whenever the configured email changes.
 * Localised; ships with Traditional Chinese (`zh_TW`).
 
@@ -31,15 +31,15 @@ The plugin runs only inside `wp-admin`; it adds no front-end output and enqueues
 
 This plugin connects to the lihi short URL service to identify the WordPress site, authenticate the site administrator, and create or look up short URLs. Without an internet connection the plugin cannot function.
 
-**Service: lihi Wordpress API auth endpoints** (`https://app.lihidev.com/api/wordpress/v1/auth`)
+**Service: lihi WordPress API auth endpoints** (`https://app.lihidev.com/api/wordpress/v1/auth`)
 
 * When data is sent: when the administrator saves an email address on the settings page (Settings → lihi Short URL), and on the first short-URL request after the cached auth token expires.
 * What is sent: the administrator's email address, the site's hostname, and a site-scoped UUID stored in the `lihi_uuid` option. Login requests also send whether WordPress identifies the current request as mobile (`is_mobile`).
 
-**Service: lihi Wordpress API short URL endpoints** (`https://app.lihidev.com/api/wordpress/v1`)
+**Service: lihi WordPress API short URL endpoints** (`https://app.lihidev.com/api/wordpress/v1`)
 
 * When data is sent: when the administrator opens the settings page after configuring an email (to display account info), and when the administrator clicks a "lihi" button to generate or look up a short URL.
-* What is sent: the bearer token returned by the lihi Wordpress API auth endpoint, the post or attachment URL (`permalink` or attachment file URL), the post type, the post ID, the configured redirect domain, and the site's hostname (included in tags).
+* What is sent: the bearer token returned by the lihi WordPress API auth endpoint, the post or attachment URL (`permalink` or attachment file URL), the post type, the post ID, the configured redirect domain, and the site's hostname (included in tags).
 
 By using the plugin you agree that the data above is transmitted to the lihi service. Please review the lihi service's legal documents:
 
@@ -85,6 +85,11 @@ Yes — three options (`lihi_email`, `lihi_domain`, `lihi_uuid`) and one transie
 
 == Changelog ==
 
+= 1.0.3 =
+* Unifies authentication and short-URL calls under the lihi WordPress API client.
+* Updates internal dependency composition for client, service, and store singletons.
+* Clears saved settings, site UUID, and cached token when the plugin is deactivated.
+
 = 1.0.2 =
 * Strengthens authentication identity checks by sending the site hostname and persistent site UUID in the authentication JSON payload instead of relying on the HTTP Host header.
 * Sends WordPress' mobile-request flag (`is_mobile`) on auth login requests.
@@ -101,6 +106,9 @@ Yes — three options (`lihi_email`, `lihi_domain`, `lihi_uuid`) and one transie
 * Traditional Chinese (`zh_TW`) translation included.
 
 == Upgrade Notice ==
+
+= 1.0.3 =
+Unifies the lihi API client internals and clears saved plugin data on deactivation; no action required.
 
 = 1.0.2 =
 Strengthens authentication site identity verification; no action required.
