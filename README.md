@@ -76,10 +76,10 @@ The tag workflow uploads an artifact named `lihi-short-url-plugin` containing `b
 
 ```
 lihi-short-url/
-├── lihi-short-url.php          Plugin entry point; admin-only guard; loads bootstrap.php; declares Version 1.0.2 and Text Domain lihi-short-url (auto-loaded by WordPress for plugins hosted on .org)
+├── lihi-short-url.php          Plugin entry point; registers deactivation cleanup; admin-only guard; loads bootstrap.php; declares Version 1.0.2 and Text Domain lihi-short-url (auto-loaded by WordPress for plugins hosted on .org)
 ├── readme.txt                 WordPress.org-format readme rendered on the plugin directory listing (Stable tag 1.0.2, External services disclosure, GitHub maintenance link, FAQ, Changelog)
 ├── LICENSE                    GPL-2.0-or-later license text
-├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / lihi_domain / lihi_uuid options and lihi_token transient
+├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / lihi_domain / lihi_uuid / lihi_uuid_lock options and lihi_token transient
 ├── bootstrap.php              Loads class files unconditionally; does not register dashboard-wide setup notices (UI hooks self-guard on both lihi_email and lihi_domain in add-shorturl-column.php)
 ├── assets/
 │   ├── lihi-button.js         Async delegated click handler; splits disable window (300 ms) from "Copied!" label duration (1200 ms); errors shown via auto-dismissing WP .notice.notice-error

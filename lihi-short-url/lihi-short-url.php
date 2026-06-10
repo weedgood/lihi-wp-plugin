@@ -19,6 +19,19 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+/**
+ * Remove all plugin-owned site data when the plugin is deactivated.
+ */
+function deactivate(): void {
+    delete_option( 'lihi_email' );
+    delete_option( 'lihi_domain' );
+    delete_option( 'lihi_uuid' );
+    delete_option( 'lihi_uuid_lock' );
+    delete_transient( 'lihi_token' );
+}
+
+register_deactivation_hook( __FILE__, __NAMESPACE__ . '\\deactivate' );
+
 // All plugin functionality is admin-only; bail early on front-end requests.
 if ( ! is_admin() ) {
     return;

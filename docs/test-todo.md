@@ -19,6 +19,7 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 | `AdminNoticeTest` | `WP_UnitTestCase` | 整合，需要 DB；確認未設定 email/domain 時不註冊 dashboard-wide setup notice |
 | `HelperTest` | `WP_UnitTestCase` | 整合，需要 DB |
 | `PluginHooksTest` | `WP_UnitTestCase` | 整合，需要 DB |
+| `PluginLifecycleTest` | `WP_UnitTestCase` | 整合，需要 DB；確認停用 hook 清除 plugin-owned options / transient |
 | `PluginLoadedTest` | `WP_UnitTestCase` | 整合，需要 DB |
 
 ---
@@ -205,6 +206,8 @@ Release metadata：目前發版版本為 `1.0.2`；`lihi-short-url.php` header�
 - [n/a] release metadata 1.0.2 — plugin header、readme Stable tag / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、translation header 同步（由程式碼審查保證）
 - [x] `wp_ajax_lihi_copy_url` 已註冊
 - [x] `wp_ajax_lihi_update_email` 已註冊
+- [x] `register_deactivation_hook()` 已註冊停用清理 callback
+- [x] deactivation cleanup — 清除 `lihi_email` / `lihi_domain` / `lihi_uuid` / `lihi_uuid_lock` options 與 `lihi_token` transient
 - [x] `admin_enqueue_scripts` 白名單（edit/upload/post/post-new）→ enqueue lihi-button
 - [x] `admin_enqueue_scripts` 非白名單 → 不 enqueue
 - [x] `manage_post_posts_columns` 有 `lihi` 欄位

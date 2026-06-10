@@ -14,4 +14,5 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 delete_option( 'lihi_email' );
 delete_option( 'lihi_domain' );
 delete_option( 'lihi_uuid' );
+delete_option( 'lihi_uuid_lock' );
 delete_transient( 'lihi_token' );

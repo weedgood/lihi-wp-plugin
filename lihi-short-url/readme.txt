@@ -69,7 +69,7 @@ Changing the email clears the cached auth token and the previously selected redi
 
 = How do I disable the plugin without deactivating it? =
 
-Clear the email field on **Settings → lihi Short URL** and click **Save & Verify**. With no email configured the plugin stops registering its admin UI.
+Clear the email field on **Settings → lihi Short URL** and click **Save & Verify**. With no email configured the plugin stops registering its admin UI. Deactivating the plugin also clears its saved settings and site UUID.
 
 = Does the plugin run on the front-end? =
 
@@ -81,7 +81,7 @@ All post types registered with `public => true`, plus the Media Library (both li
 
 = Does the plugin store data in my database? =
 
-Yes — three options (`lihi_email`, `lihi_domain`, `lihi_uuid`) and one transient (`lihi_token`). All four are removed when the plugin is deleted from the **Plugins** screen.
+Yes — three options (`lihi_email`, `lihi_domain`, `lihi_uuid`) and one transient (`lihi_token`). These values are removed when the plugin is deactivated or deleted from the **Plugins** screen.
 
 == Changelog ==
 

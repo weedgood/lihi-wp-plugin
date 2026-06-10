@@ -2,7 +2,7 @@
 
 本外掛目前對接**單一 lihi Wordpress API**。Auth 已合併到 Short-URL API 的 `wordpress/v1` namespace；email 驗證、登入取得 bearer token、profile、短網址查詢 / 建立都走同一個 base URL。Auth routes 仍保留 `/auth` 子路徑。
 
-外掛目前發版 metadata 為 `1.0.2`，WordPress.org slug / text domain / 發佈資料夾名稱為 `lihi-short-url`，WordPress.org readme 也標示本外掛維護於 `weedgood/lihi-wp-plugin`。本版加強 auth 身份驗證，透過 payload `hostname` + site-scoped `uuid` 辨識 WP 站台，避免依賴可能被 proxy / load balancer 改寫的 HTTP `Host` header；以下 endpoint、request / response shape、error mapping 為現行契約。
+外掛目前發版 metadata 為 `1.0.2`，WordPress.org slug / text domain / 發佈資料夾名稱為 `lihi-short-url`，WordPress.org readme 也標示本外掛維護於 `weedgood/lihi-wp-plugin`。本版加強 auth 身份驗證，透過 payload `hostname` + site-scoped `uuid` 辨識 WP 站台，避免依賴可能被 proxy / load balancer 改寫的 HTTP `Host` header；停用或刪除外掛時會清除本機保存的 lihi email、redirect domain、site UUID / UUID lock 與 JWT transient。以下 endpoint、request / response shape、error mapping 為現行契約。
 
 Base URL:
 - Production: `https://app.lihi.com/api/wordpress/v1`
