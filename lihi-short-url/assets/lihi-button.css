@@ -21,3 +21,188 @@
     border-radius: 50%;
     animation: lihi-spin 0.6s linear infinite;
 }
+
+.lihi-modal[hidden] {
+    display: none;
+}
+
+.lihi-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 32px 16px;
+    overflow: auto;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.lihi-modal.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.lihi-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba( 0, 0, 0, 0.36 );
+}
+
+.lihi-modal__panel {
+    position: relative;
+    width: min( 560px, calc( 100vw - 32px ) );
+    max-height: 100%;
+    margin: 0;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 10px 30px rgba( 0, 0, 0, 0.22 );
+    transform: translateY( -8px );
+    transition: transform 180ms ease;
+}
+
+.lihi-modal.is-visible .lihi-modal__panel {
+    transform: translateY( 0 );
+}
+
+.lihi-modal__header,
+.lihi-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #dcdcde;
+}
+
+.lihi-modal__footer {
+    justify-content: flex-end;
+    border-top: 1px solid #dcdcde;
+    border-bottom: 0;
+}
+
+.lihi-modal__header h2 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+.lihi-modal__close {
+    font-size: 24px;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.lihi-modal__body {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+}
+
+.lihi-notice-modal .lihi-modal__panel {
+    width: min( 420px, calc( 100vw - 32px ) );
+}
+
+.lihi-notice-modal__message {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.lihi-field {
+    display: grid;
+    gap: 6px;
+}
+
+.lihi-field > span {
+    font-weight: 600;
+}
+
+.lihi-field select,
+.lihi-field input {
+    width: 100%;
+}
+
+.lihi-tag-control {
+    display: grid;
+    gap: 8px;
+}
+
+.lihi-tag-entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lihi-tag-entry input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.lihi-tag-entry .button {
+    flex: 0 0 auto;
+}
+
+.lihi-utm-grid {
+    display: grid;
+    grid-template-columns: repeat( 2, minmax( 0, 1fr ) );
+    gap: 12px;
+}
+
+.lihi-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.lihi-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 2px 8px;
+    border: 1px solid #c3c4c7;
+    background: #f6f7f7;
+    color: #1d2327;
+    border-radius: 3px;
+}
+
+.lihi-tag-list--modal:empty {
+    display: none;
+}
+
+.lihi-tag--removable {
+    gap: 6px;
+    padding-right: 4px;
+}
+
+.lihi-tag__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #646970;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.lihi-tag__remove:hover,
+.lihi-tag__remove:focus {
+    color: #b32d2e;
+}
+
+@media ( max-width: 600px ) {
+    .lihi-utm-grid {
+        grid-template-columns: 1fr;
+    }
+}

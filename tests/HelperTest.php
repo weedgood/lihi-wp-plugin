@@ -8,7 +8,6 @@ class HelperTest extends \WP_UnitTestCase
     {
         parent::setUp();
         delete_option( 'lihi_email' );
-        delete_option( 'lihi_domain' );
         delete_option( 'lihi_uuid' );
         \Lihi\ShortUrl\Lihi_Singletons::lihi_client_set( null );
     }
@@ -16,7 +15,6 @@ class HelperTest extends \WP_UnitTestCase
     protected function tearDown(): void
     {
         update_option( 'lihi_email', 'test@example.com' );
-        update_option( 'lihi_domain', 'redirect.lihidev.com' );
         delete_option( 'lihi_uuid' );
         \Lihi\ShortUrl\Lihi_Singletons::lihi_client_set( null );
         parent::tearDown();
@@ -35,21 +33,6 @@ class HelperTest extends \WP_UnitTestCase
     public function test_lihi_email_returns_empty_string_when_option_unset(): void
     {
         $this->assertSame( '', \Lihi\ShortUrl\lihi_email() );
-    }
-
-    // -------------------------------------------------------------------------
-    // lihi_domain()
-    // -------------------------------------------------------------------------
-
-    public function test_lihi_domain_returns_stored_option_value(): void
-    {
-        update_option( 'lihi_domain', 'redirect.lihidev.com' );
-        $this->assertSame( 'redirect.lihidev.com', \Lihi\ShortUrl\lihi_domain() );
-    }
-
-    public function test_lihi_domain_returns_empty_string_when_option_unset(): void
-    {
-        $this->assertSame( '', \Lihi\ShortUrl\lihi_domain() );
     }
 
     // -------------------------------------------------------------------------

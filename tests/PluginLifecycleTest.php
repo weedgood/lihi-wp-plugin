@@ -9,7 +9,7 @@ class PluginLifecycleTest extends \WP_UnitTestCase
         delete_option( 'lihi_uuid' );
         delete_option( 'lihi_uuid_lock' );
         update_option( 'lihi_email', 'test@example.com' );
-        update_option( 'lihi_domain', 'redirect.lihidev.com' );
+        delete_option( 'lihi_domain' );
         delete_transient( 'lihi_token' );
         parent::tearDown();
     }

@@ -35,13 +35,6 @@ function lihi_email(): string {
 }
 
 /**
- * Return the redirect domain selected for new lihi short URLs.
- */
-function lihi_domain(): string {
-    return (string) get_option( 'lihi_domain', '' );
-}
-
-/**
  * Return the site-scoped lihi UUID, creating it when missing.
  */
 function lihi_uuid(): string {

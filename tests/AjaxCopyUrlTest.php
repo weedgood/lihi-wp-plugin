@@ -53,8 +53,31 @@ class AjaxCopyUrlTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
-    // wp_ajax_lihi_copy_url
+    // wp_ajax_lihi_url_options / copy / create
     // -------------------------------------------------------------------------
+
+    /** @test */
+    public function url_options_returns_profile_domains_for_modal(): void
+    {
+        $_POST['item_id'] = '42';
+
+        $service = $this->mockService();
+        $service->shouldReceive('get_profile')
+            ->once()
+            ->andReturn(['domains' => ['go.example.com', 'go2.example.com']]);
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        $sent = null;
+        Functions\expect('wp_send_json_success')
+            ->once()
+            ->andReturnUsing(function ($data) use (&$sent) {
+                $sent = $data;
+            });
+
+        \Lihi\ShortUrl\ajax_url_options();
+
+        $this->assertSame(['go.example.com', 'go2.example.com'], $sent['domains']);
+    }
 
     /** @test */
     public function returns_error_when_email_is_not_configured(): void
@@ -72,25 +95,6 @@ class AjaxCopyUrlTest extends TestCase
         \Lihi\ShortUrl\ajax_copy_url();
 
         $this->assertStringContainsString('lihi email is not configured', $errorMsg);
-        $this->assertSame(409, $statusCode);
-    }
-
-    /** @test */
-    public function returns_error_when_domain_is_not_configured(): void
-    {
-        $_POST['item_id'] = '42';
-        $_POST['type']    = 'post';
-
-        Functions\when('check_ajax_referer')->justReturn(true);
-        Functions\when('Lihi\\ShortUrl\\lihi_domain')->justReturn('');
-
-        $errorMsg   = null;
-        $statusCode = null;
-        $this->expectJsonError($errorMsg, $statusCode);
-
-        \Lihi\ShortUrl\ajax_copy_url();
-
-        $this->assertStringContainsString('lihi redirect domain is not configured', $errorMsg);
         $this->assertSame(409, $statusCode);
     }
 
@@ -139,6 +143,7 @@ class AjaxCopyUrlTest extends TestCase
 
         $service = $this->mockService();
         $service->shouldNotReceive('get_or_create_short_url');
+        $service->shouldNotReceive('get_existing_short_url');
         \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
         $checkedCap    = null;
@@ -168,13 +173,17 @@ class AjaxCopyUrlTest extends TestCase
         $_POST['type']    = 'post';
 
         $service = $this->mockService();
-        $service->shouldReceive('get_or_create_short_url')
+        $service->shouldReceive('get_existing_short_url')
             ->with(42, 'post')
             ->once()
             ->andReturn('abc-slug');
+        $service->shouldNotReceive('get_or_create_short_url');
         \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
         Functions\when('check_ajax_referer')->justReturn(true);
+        Functions\expect('update_post_meta')
+            ->once()
+            ->with(42, 'lihi_already', '1');
 
         $sent = null;
         Functions\expect('wp_send_json_success')
@@ -185,7 +194,8 @@ class AjaxCopyUrlTest extends TestCase
 
         \Lihi\ShortUrl\ajax_copy_url();
 
-        $this->assertSame(['url' => 'abc-slug'], $sent);
+        $this->assertSame('abc-slug', $sent['url']);
+        $this->assertTrue($sent['lihi_already']);
     }
 
     /** @test */
@@ -193,15 +203,136 @@ class AjaxCopyUrlTest extends TestCase
     {
         $_POST['item_id'] = '42';
         $_POST['type']    = 'forged';
+        $_POST['domain']  = 'go.example.com';
 
         Functions\when('get_post_type')->justReturn('page');
 
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
-            ->with(42, 'page')
+            ->with(42, 'page', ['domain' => 'go.example.com', 'tags' => [], 'utm' => []])
             ->once()
             ->andReturn('page-slug');
         \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        Functions\expect('update_post_meta')
+            ->once()
+            ->with(42, 'lihi_already', '1');
+
+        $sent = null;
+        Functions\expect('wp_send_json_success')
+            ->once()
+            ->andReturnUsing(function ($data) use (&$sent) {
+                $sent = $data;
+            });
+
+        \Lihi\ShortUrl\ajax_create_url();
+
+        $this->assertSame('page-slug', $sent['url']);
+        $this->assertTrue($sent['lihi_already']);
+    }
+
+    /** @test */
+    public function passes_modal_options_to_service_on_create_request(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['domain']  = 'go.example.com';
+        $_POST['tags']    = '[" launch ","post",""]';
+        $_POST['utm']     = '{"source":"newsletter","medium":"email","ignored":"x"}';
+
+        $service = $this->mockService();
+        $service->shouldReceive('get_or_create_short_url')
+            ->with(42, 'post', [
+                'domain' => 'go.example.com',
+                'tags'   => ['launch', 'post'],
+                'utm'    => ['source' => 'newsletter', 'medium' => 'email'],
+            ])
+            ->once()
+            ->andReturn('option-slug');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        Functions\expect('update_post_meta')
+            ->once()
+            ->with(42, 'lihi_already', '1');
+        $sent = null;
+        Functions\expect('wp_send_json_success')
+            ->once()
+            ->andReturnUsing(function ($data) use (&$sent) {
+                $sent = $data;
+            });
+
+        \Lihi\ShortUrl\ajax_create_url();
+
+        $this->assertSame('option-slug', $sent['url']);
+        $this->assertTrue($sent['lihi_already']);
+    }
+
+    /** @test */
+    public function create_passes_selected_domain_to_saas_without_extra_profile_validation(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['domain']  = 'other.example.com';
+
+        $service = $this->mockService();
+        $service->shouldNotReceive('get_profile');
+        $service->shouldReceive('get_or_create_short_url')
+            ->with(42, 'post', ['domain' => 'other.example.com', 'tags' => [], 'utm' => []])
+            ->once()
+            ->andReturn('other-slug');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        Functions\expect('update_post_meta')
+            ->once()
+            ->with(42, 'lihi_already', '1');
+
+        $sent = null;
+        Functions\expect('wp_send_json_success')
+            ->once()
+            ->andReturnUsing(function ($data) use (&$sent) {
+                $sent = $data;
+            });
+
+        \Lihi\ShortUrl\ajax_create_url();
+
+        $this->assertSame('other-slug', $sent['url']);
+        $this->assertTrue($sent['lihi_already']);
+    }
+
+    /** @test */
+    public function create_requires_a_selected_domain(): void
+    {
+        $_POST['item_id'] = '42';
+
+        $service = $this->mockService();
+        $service->shouldNotReceive('get_profile');
+        $service->shouldNotReceive('get_or_create_short_url');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        $errorMsg   = null;
+        $statusCode = null;
+        $this->expectJsonError($errorMsg, $statusCode);
+
+        \Lihi\ShortUrl\ajax_create_url();
+
+        $this->assertStringContainsString('Please choose a redirect domain', $errorMsg);
+        $this->assertSame(400, $statusCode);
+    }
+
+    /** @test */
+    public function copy_returns_existing_short_url_without_creating(): void
+    {
+        $_POST['item_id'] = '42';
+
+        $service = $this->mockService();
+        $service->shouldReceive('get_existing_short_url')
+            ->with(42, 'post')
+            ->once()
+            ->andReturn('existing-slug');
+        $service->shouldNotReceive('get_or_create_short_url');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        Functions\expect('update_post_meta')
+            ->once()
+            ->with(42, 'lihi_already', '1');
 
         $sent = null;
         Functions\expect('wp_send_json_success')
@@ -212,7 +343,41 @@ class AjaxCopyUrlTest extends TestCase
 
         \Lihi\ShortUrl\ajax_copy_url();
 
-        $this->assertSame(['url' => 'page-slug'], $sent);
+        $this->assertSame('existing-slug', $sent['url']);
+        $this->assertTrue($sent['lihi_already']);
+    }
+
+    /** @test */
+    public function copy_marks_item_unready_when_existing_short_url_is_missing(): void
+    {
+        $_POST['item_id'] = '42';
+
+        $service = $this->mockService();
+        $service->shouldReceive('get_existing_short_url')
+            ->with(42, 'post')
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Not_Found_Exception('missing'));
+        $service->shouldNotReceive('get_or_create_short_url');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        Functions\expect('update_post_meta')
+            ->once()
+            ->with(42, 'lihi_already', '0');
+
+        $captured   = null;
+        $statusCode = null;
+        Functions\expect('wp_send_json_error')
+            ->once()
+            ->andReturnUsing(function ($data, $status = null) use (&$captured, &$statusCode) {
+                $captured   = $data;
+                $statusCode = $status;
+            });
+
+        \Lihi\ShortUrl\ajax_copy_url();
+
+        $this->assertSame('lihi_missing', $captured['code']);
+        $this->assertStringContainsString('removed', $captured['message']);
+        $this->assertSame(410, $statusCode);
     }
 
     /** @test */
@@ -220,6 +385,7 @@ class AjaxCopyUrlTest extends TestCase
     {
         $_POST['item_id'] = '42';
         $_POST['type']    = 'post';
+        $_POST['domain']  = 'go.example.com';
 
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
@@ -232,7 +398,7 @@ class AjaxCopyUrlTest extends TestCase
         $statusCode = null;
         $this->expectJsonError($errorMsg, $statusCode);
 
-        \Lihi\ShortUrl\ajax_copy_url();
+        \Lihi\ShortUrl\ajax_create_url();
 
         $this->assertSame('Failed to generate short URL. Please try again later.', $errorMsg);
         $this->assertSame(500, $statusCode);
@@ -243,6 +409,7 @@ class AjaxCopyUrlTest extends TestCase
     {
         $_POST['item_id'] = '42';
         $_POST['type']    = 'post';
+        $_POST['domain']  = 'go.example.com';
 
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
@@ -255,7 +422,7 @@ class AjaxCopyUrlTest extends TestCase
         $statusCode = null;
         $this->expectJsonError($errorMsg, $statusCode);
 
-        \Lihi\ShortUrl\ajax_copy_url();
+        \Lihi\ShortUrl\ajax_create_url();
 
         $this->assertStringContainsString('has not been verified', $errorMsg);
         $this->assertSame(403, $statusCode);
@@ -266,6 +433,7 @@ class AjaxCopyUrlTest extends TestCase
     {
         $_POST['item_id'] = '42';
         $_POST['type']    = 'post';
+        $_POST['domain']  = 'go.example.com';
 
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
@@ -276,7 +444,7 @@ class AjaxCopyUrlTest extends TestCase
         $statusCode = null;
         $this->expectJsonError($errorMsg, $statusCode);
 
-        \Lihi\ShortUrl\ajax_copy_url();
+        \Lihi\ShortUrl\ajax_create_url();
 
         $this->assertStringContainsString('lihi API rejected the request', $errorMsg);
         $this->assertSame(400, $statusCode);
@@ -287,6 +455,7 @@ class AjaxCopyUrlTest extends TestCase
     {
         $_POST['item_id'] = '42';
         $_POST['type']    = 'post';
+        $_POST['domain']  = 'go.example.com';
 
         $service = $this->mockService();
         $service->shouldReceive('get_or_create_short_url')
@@ -297,7 +466,7 @@ class AjaxCopyUrlTest extends TestCase
         $statusCode = null;
         $this->expectJsonError($errorMsg, $statusCode);
 
-        \Lihi\ShortUrl\ajax_copy_url();
+        \Lihi\ShortUrl\ajax_create_url();
 
         $this->assertStringContainsString('lihi service is unavailable', $errorMsg);
         $this->assertSame(503, $statusCode);

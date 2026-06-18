@@ -79,15 +79,27 @@ class Lihi_Service {
      * On Lihi_Token_Invalid_Exception the cached token is discarded and the
      * call is retried once with a freshly obtained token.
      */
-    public function get_or_create_short_url( int $item_id, string $type ): string {
+    public function get_or_create_short_url( int $item_id, string $type, array $options = [] ): string {
         $email = lihi_email();
         $token = $this->get_token( $email );
         try {
-            return $this->fetch_or_create( $token, $item_id, $type );
+            return $this->fetch_or_create( $token, $item_id, $type, $options );
         } catch ( Lihi_Token_Invalid_Exception $e ) {
             $this->invalidate_token();
             $token = $this->get_token( $email );
-            return $this->fetch_or_create( $token, $item_id, $type );
+            return $this->fetch_or_create( $token, $item_id, $type, $options );
+        }
+    }
+
+    public function get_existing_short_url( int $item_id, string $type ): string {
+        $email = lihi_email();
+        $token = $this->get_token( $email );
+        try {
+            return $this->fetch_existing( $token, $item_id, $type );
+        } catch ( Lihi_Token_Invalid_Exception $e ) {
+            $this->invalidate_token();
+            $token = $this->get_token( $email );
+            return $this->fetch_existing( $token, $item_id, $type );
         }
     }
 
@@ -97,25 +109,33 @@ class Lihi_Service {
      * @throws Lihi_Token_Invalid_Exception propagated to trigger a retry.
      * @throws RuntimeException on other failures.
      */
-    private function fetch_or_create( string $token, int $item_id, string $type ): string {
+    private function fetch_or_create( string $token, int $item_id, string $type, array $options ): string {
         $host     = lihi_site_host();
         $api_type = $type . ':' . $host;
         $result   = $this->client->get_short_links( $token, $api_type, $item_id );
         $sites    = $result['data']['sites']['data'] ?? [];
 
-        foreach ( $sites as $site ) {
-            if ( (string) ( $site['wordpress_link']['type_id'] ?? '' ) === (string) $item_id ) {
-                return $site['short_url'];
-            }
+        $existing = $this->find_existing_short_url( $sites, $item_id );
+        if ( $existing !== '' ) {
+            return $existing;
         }
 
-        $created = $this->client->create_site( $token, [
-            'urls'    => [ lihi_resolve_url( $item_id, $type ) ],
+        $domain = isset( $options['domain'] ) && is_string( $options['domain'] )
+            ? $options['domain']
+            : '';
+        $tags = $this->build_tags( $host, $type, $options['tags'] ?? [] );
+        $utm  = $this->normalize_utm( $options['utm'] ?? [] );
+        $url  = $this->apply_utm_to_url( lihi_resolve_url( $item_id, $type ), $utm );
+
+        $body = [
+            'urls'    => [ $url ],
             'type'    => $api_type,
             'type_id' => (string) $item_id,
-            'domain'  => lihi_domain(),
-            'tags'    => 'wordpress,' . $host . ',' . $type,
-        ] );
+            'domain'  => $domain,
+            'tags'    => implode( ',', $tags ),
+        ];
+
+        $created = $this->client->create_site( $token, $body );
 
         $short_url = $created['data']['short_url'] ?? '';
 
@@ -124,6 +144,80 @@ class Lihi_Service {
         }
 
         return $short_url;
+    }
+
+    private function fetch_existing( string $token, int $item_id, string $type ): string {
+        $host     = lihi_site_host();
+        $api_type = $type . ':' . $host;
+        $result   = $this->client->get_short_links( $token, $api_type, $item_id );
+        $sites    = $result['data']['sites']['data'] ?? [];
+        $existing = $this->find_existing_short_url( $sites, $item_id );
+
+        if ( $existing === '' ) {
+            throw new Lihi_Not_Found_Exception( esc_html__( 'Short URL has been removed. Please create it again.', 'lihi-short-url' ) );
+        }
+
+        return $existing;
+    }
+
+    private function find_existing_short_url( array $sites, int $item_id ): string {
+        foreach ( $sites as $site ) {
+            if ( (string) ( $site['wordpress_link']['type_id'] ?? '' ) === (string) $item_id ) {
+                return (string) ( $site['short_url'] ?? '' );
+            }
+        }
+
+        return '';
+    }
+
+    private function build_tags( string $host, string $type, array $custom_tags ): array {
+        $tags = [ 'wordpress', $host, $type ];
+
+        foreach ( $custom_tags as $tag ) {
+            if ( ! is_scalar( $tag ) ) {
+                continue;
+            }
+
+            $tag = trim( (string) $tag );
+            if ( $tag !== '' ) {
+                $tags[] = $tag;
+            }
+        }
+
+        return array_values( array_unique( $tags ) );
+    }
+
+    private function normalize_utm( $utm ): array {
+        if ( ! is_array( $utm ) ) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ( [ 'source', 'medium', 'campaign', 'term', 'content' ] as $key ) {
+            if ( ! isset( $utm[ $key ] ) || ! is_scalar( $utm[ $key ] ) ) {
+                continue;
+            }
+
+            $value = trim( (string) $utm[ $key ] );
+            if ( $value !== '' ) {
+                $normalized[ $key ] = $value;
+            }
+        }
+
+        return $normalized;
+    }
+
+    private function apply_utm_to_url( string $url, array $utm ): string {
+        if ( $utm === [] ) {
+            return $url;
+        }
+
+        $params = [];
+        foreach ( $utm as $key => $value ) {
+            $params[ 'utm_' . $key ] = $value;
+        }
+
+        return add_query_arg( $params, $url );
     }
 
     /**

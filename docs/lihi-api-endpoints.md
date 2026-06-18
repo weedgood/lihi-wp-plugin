@@ -2,7 +2,7 @@
 
 本外掛目前對接**單一 lihi Wordpress API**。Auth 已合併到 Short-URL API 的 `wordpress/v1` namespace；email 驗證、登入取得 bearer token、profile、短網址查詢 / 建立都走同一個 base URL。Auth routes 仍保留 `/auth` 子路徑。
 
-外掛目前發版 metadata 為 `1.0.3`，WordPress.org slug / text domain / 發佈資料夾名稱為 `lihi-short-url`，WordPress.org readme 也標示本外掛維護於 `weedgood/lihi-wp-plugin`。本版加強 auth 身份驗證，透過 payload `hostname` + site-scoped `uuid` 辨識 WP 站台，避免依賴可能被 proxy / load balancer 改寫的 HTTP `Host` header；停用或刪除外掛時會清除本機保存的 lihi email、redirect domain、site UUID / UUID lock 與 JWT transient。以下 endpoint、request / response shape、error mapping 為現行契約。
+外掛目前發版 metadata 為 `1.0.3`，WordPress.org slug / text domain / 發佈資料夾名稱為 `lihi-short-url`，WordPress.org readme 也標示本外掛維護於 `weedgood/lihi-wp-plugin`。本版加強 auth 身份驗證，透過 payload `hostname` + site-scoped `uuid` 辨識 WP 站台，避免依賴可能被 proxy / load balancer 改寫的 HTTP `Host` header；停用或刪除外掛時會清除本機保存的 lihi email、legacy redirect domain、site UUID / UUID lock 與 JWT transient。以下 endpoint、request / response shape、error mapping 為現行契約。
 
 Base URL:
 - Production: `https://app.lihi.com/api/wordpress/v1`
@@ -194,14 +194,14 @@ Body:
 ```json
 {
   "domain": "redirect.lihidev.com",
-  "urls": ["https://example.com/?p=42"],
+  "urls": ["https://example.com/?p=42&utm_source=newsletter&utm_medium=email&utm_campaign=spring-sale"],
   "type": "post:example.com",
   "type_id": "42",
-  "tags": "wordpress,example.com,post"
+  "tags": "wordpress,example.com,post,campaign"
 }
 ```
 
-本外掛送出的 `type` 會帶上 WP 站台 host（格式 `"{type}:{host}"`），與 `GET /sites` 的查詢條件一致；`tags` 仍使用未串接的原始 `type`。因 API 要求 `domain` 必填，外掛會在 redirect domain 未設定時停用短網址建立流程並提早回傳友善錯誤；任何到達此端點的呼叫都已保證 `domain` 非空。
+本外掛送出的 `type` 會帶上 WP 站台 host（格式 `"{type}:{host}"`），與 `GET /sites` 的查詢條件一致；預設 tag 內容為 `wordpress`、WP 站台 host、未串接的原始 `type`，會先與建立 modal 中使用者輸入的 tags 合併去重，再以逗號分隔字串送到 lihi API。建立 modal 會從 `lihi_url_options` 載入 profile domains 供前端 select 使用，沒有 account-default fallback option；送出建立請求時，外掛只要求 `domain` 為非空值，不會為了檢查 membership 再打一次 profile API，最終 domain 是否有效交由 lihi API 判斷。UTM 欄位只會附加到目的 URL query string，不會以獨立 `utm` object 送到 lihi API；lihi-admin 端會由 `site_urls.url` 的 `utm_*` query params 解析 UTM。缺少本機 `lihi_domain` option 不會阻擋 lihi button 顯示或短網址建立流程。PHP 只輸出空的 `data-lihi-container` 掛載容器，前端會把實際 button 放入 container；建立流程使用 WP AJAX action `lihi_create_url`，Copy 檢查流程使用 `lihi_copy_url`。當 `GET /sites` 找到既有短網址或 `POST /sites` 成功建立短網址後，外掛會在該 WP post / attachment 寫入 post meta `lihi_already = 1`，之後前端依 `data-lihi-already` 將按鈕文案渲染為 `Copy`。若瀏覽器阻擋 clipboard 寫入，前端會直接彈出短網址讓使用者手動複製。`Copy` 狀態點擊時仍會呼叫 `GET /sites` 確認短網址存在；若不存在，外掛會寫入 `lihi_already = 0`，回傳 HTTP 410 / `code = lihi_missing`，前端在確認 modal 顯示「Short URL has been removed. Please create it again.」，使用者按 OK 後才開啟建立 modal；其他 Copy API 錯誤只顯示錯誤訊息，不會重設按鈕狀態。
 
 Response:
 ```json

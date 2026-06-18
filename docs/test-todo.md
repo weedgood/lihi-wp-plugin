@@ -15,8 +15,7 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 | `AuthClientTest` | `TestCase` + Brain\Monkey | 純單元，mock `wp_remote_request`，覆蓋 auth payload / Host header 邊界 |
 | `AjaxCopyUrlTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
 | `AjaxUpdateEmailTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式與 lihi client |
-| `AjaxUpdateDomainTest` | `TestCase` + Brain\Monkey | 純單元，mock AJAX 函式 |
-| `AdminNoticeTest` | `WP_UnitTestCase` | 整合，需要 DB；確認未設定 email/domain 時不註冊 dashboard-wide setup notice |
+| `AdminNoticeTest` | `WP_UnitTestCase` | 整合，需要 DB；確認未設定 email 時不註冊 dashboard-wide setup notice |
 | `HelperTest` | `WP_UnitTestCase` | 整合，需要 DB |
 | `PluginHooksTest` | `WP_UnitTestCase` | 整合，需要 DB |
 | `PluginLifecycleTest` | `WP_UnitTestCase` | 整合，需要 DB；確認停用 hook 清除 plugin-owned options / transient |
@@ -28,8 +27,6 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 
 - [x] `lihi_email()` — option 已設定 → 回傳 option 值
 - [x] `lihi_email()` — option 為空字串 → 回傳空字串
-- [x] `lihi_domain()` — option 已設定 → 回傳 option 值
-- [x] `lihi_domain()` — option 為空字串 → 回傳空字串
 - [x] `lihi_uuid()` — option 已設定 → 回傳 option 值
 - [x] `lihi_uuid()` — option 未設定 → 產生 UUID v4 並保存到 `lihi_uuid`
 - [x] `lihi_uuid()` — option 格式無效 → 重新產生 UUID v4 並替換 `lihi_uuid`
@@ -40,10 +37,9 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] `lihi_resolve_url()` — type=attachment → 使用 `wp_get_attachment_url()`
 - [x] `lihi_resolve_url()` — 解析不到 URL → 拋出 RuntimeException
 - [n/a] helper 分工 — `helper.php` 只保留 option/context helper functions；client / service / store 一律由 `Lihi_Singletons` static composition methods 取用（由程式碼審查保證）
-- [n/a] UI hooks — email 或 domain 任一空 → column/enqueue/attachment panel 未掛（是否註冊取決於 bootstrap 載入瞬間的 option 值，由程式碼審查保證）
+- [n/a] UI hooks — email 空 → column/enqueue/attachment panel 未掛；email 已設時不再受 `lihi_domain` option 影響（是否註冊取決於 bootstrap 載入瞬間的 option 值，由程式碼審查保證）
 - [x] bootstrap guard — email 空 → 不註冊 dashboard-wide `admin_notices`
-- [x] bootstrap guard — email 已設、domain 空 → 不註冊 dashboard-wide `admin_notices`
-- [x] bootstrap guard — email 與 domain 都已設 → 不註冊 dashboard-wide `admin_notices`
+- [x] bootstrap guard — email 已設 → 不註冊 dashboard-wide `admin_notices`
 
 ---
 
@@ -100,11 +96,16 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] create_site 回傳空 `short_url` → 拋出 RuntimeException
 - [x] get_short_links 有多筆結果 → 回傳第一筆相符的 `short_url`
 - [x] create_site 的 body 包含正確的 permalink、type、type_id
-- [x] `lihi_domain` option 已設 → create_site body 的 `domain` 為該值
-- [x] `lihi_domain` option 未設 → create_site body 的 `domain` 為空字串（`redirect_domain` config key 已棄用，改由 wp_option 決定）
+- [x] create_site body 的 `domain` 來自 modal 選擇；create AJAX 只要求非空值，最終 domain 有效性由 lihi API 判斷
+- [x] create_site body 的 `tags` 是 comma-separated string：固定 `wordpress` / host / type，並與使用者輸入 tags 合併去重後用逗號串接
+- [x] create_site body 有 UTM 時，目的 URL 加上 `utm_*` query string，且不另外傳 `utm` object
 - [x] type 為 `attachment` → 使用 `wp_get_attachment_url()` 而非 `get_permalink()`
 - [x] get_short_links 的 type 參數為 `"{type}:{host}"`（host 取自 `home_url()`）
-- [x] create_site 的 body `type` 為 `"{type}:{host}"`，`tags` 仍使用原始 `type`
+- [x] create_site 的 body `type` 為 `"{type}:{host}"`，固定 tags 仍使用原始 `type`
+
+### get_existing_short_url()
+- [x] 已有相符 type_id 的短連結 → 回傳 `short_url`，不呼叫 create_site
+- [x] 無相符短連結 → 拋出 `Lihi_Not_Found_Exception`，不呼叫 create_site
 
 ## Lihi_Client
 
@@ -151,31 +152,31 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 
 ---
 
-## AJAX Handler: lihi_copy_url
+## AJAX Handlers: lihi_create_url / lihi_copy_url
 
-> 政策：產生短網址需要通過 nonce，且使用者必須對目標文章 / 媒體具備 `read_post` 權限。未登入請求仍由 `wp_ajax_lihi_copy_url` action（未註冊 `wp_ajax_nopriv_*` 變體）擋下，無法抵達此 handler。
+> 政策：建立與複製短網址都需要通過 nonce，且使用者必須對目標文章 / 媒體具備 `read_post` 權限。未登入請求仍由 `wp_ajax_lihi_create_url` / `wp_ajax_lihi_copy_url` action（未註冊 `wp_ajax_nopriv_*` 變體）擋下，無法抵達 handler。
 
+- [x] AJAX parsing / validation / exception mapping / action registration 拆在 `includes/shorturl-column-ajax.php`，`includes/add-shorturl-column.php` 只保留 column UI hooks
 - [x] email 為空 → wp_send_json_error「lihi email is not configured…」，HTTP 409
-- [x] domain 為空（email 已設）→ wp_send_json_error「lihi redirect domain is not configured…」，HTTP 409
 - [x] item_id 為 0 → wp_send_json_error，HTTP 400
 - [x] `get_post_type( $item_id )` 無法解析 type → wp_send_json_error，HTTP 400
 - [x] client payload 偽造 type → handler 忽略 payload，使用 `get_post_type( $item_id )` 的 server-side type 呼叫 service
 - [x] `current_user_can( 'read_post', $item_id )` 拒絕 → wp_send_json_error，HTTP 403，不呼叫 service
-- [x] service 正常回傳 url → wp_send_json_success(['url' => ...])
+- [x] `lihi_create_url` 的 domain / tags JSON array / UTM JSON object → sanitize 後傳入 service options
+- [x] `lihi_create_url` 正常回傳 url → `update_post_meta($item_id, 'lihi_already', '1')` 並 `wp_send_json_success(['url' => ..., 'lihi_already' => true])`
+- [x] `lihi_copy_url` → 呼叫 `get_existing_short_url()`，不呼叫 create flow；成功時仍回傳 url 並維持 `lihi_already = 1`
+- [x] `lihi_copy_url` 且 upstream 短網址不存在 → `update_post_meta($item_id, 'lihi_already', '0')`，HTTP 410，payload code 為 `lihi_missing`
+- [n/a] 前端 Copy 失敗只有 `code = lihi_missing` 才重設按鈕並開啟建立 modal；其他錯誤只顯示訊息、不改狀態（由程式碼審查 / JS 語法檢查保證）
+- [x] 建立 modal options → `wp_ajax_lihi_url_options` 回傳 profile domains
+- [x] AJAX exception mapping 集中於 `handle_lihi_ajax_exception()`，create / copy / options handler 不重複維護相同 catch mapping
+- [n/a] 前端 clipboard 被瀏覽器拒絕 → 已成功回傳的短網址直接以 prompt 顯示供手動複製，且按鈕狀態已先切為 `Copy`（由程式碼審查 / JS 語法檢查保證）
+- [n/a] 前端 showNotice 使用可確認的共用 modal，支援 OK 後執行 callback；Copy missing 會先顯示錯誤，再由 callback 開啟建立 modal（由程式碼審查 / JS 語法檢查保證）
+- [n/a] 前端 modal options 載入失敗 → 關閉 create modal 並顯示錯誤 modal，不會卡在 loading disabled 狀態（由程式碼審查 / JS 語法檢查保證）
+- [n/a] 前端 Tags 欄位使用同一個 chip list：預設 tags 是不可移除 chip，input + Add 新增的使用者 tags 是可移除 chip（由程式碼審查 / JS 語法檢查保證）
 - [x] service 拋出一般例外 → wp_send_json_error 友善訊息（不暴露內部細節），HTTP 500
 - [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「email has not been verified」訊息（lihi API 回 403，表示 email 尚未驗證），HTTP 403
 - [x] service 拋出 `Lihi_Validation_Exception` → wp_send_json_error「lihi API rejected…」訊息，HTTP 400
 - [x] service 拋出 `Lihi_Server_Exception` → wp_send_json_error「lihi service is unavailable」訊息，HTTP 503
-
----
-
-## AJAX Handler: lihi_update_domain
-
-- [x] 無 `manage_options` 權限 → wp_send_json_error，HTTP 403，不呼叫 update_option / delete_option
-- [x] domain 為空 → 呼叫 `delete_option('lihi_domain')`，wp_send_json_success 訊息含「cleared」
-- [x] domain 全為空白字元 → 同上，視為清除
-- [x] domain 格式無效（非 hostname 樣式）→ wp_send_json_error「Invalid」，HTTP 400，不呼叫 update_option / delete_option
-- [x] domain 格式合法 → 呼叫 `update_option('lihi_domain', …)`，wp_send_json_success 訊息含「saved」
 
 ---
 
@@ -197,7 +198,7 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 ## Settings page rendering
 
 - [n/a] `render_settings_page()` 把 profile / 錯誤通知區塊包在 `<div id="lihi-account-section">` 內（前端 JS 依靠這個 id 在 email 更新成功時清空舊帳號資料；由程式碼審查保證）
-- [n/a] `lihi-settings.js` email 存檔成功時，先清空 `#lihi-account-section`，verified 時延遲 2 秒再 reload（避免「驗證信已寄出」時舊帳號的 role / end_date / domain selector 殘留；2 秒延遲讓 admin 來得及讀到「✓ Email verified」訊息；由程式碼審查保證）
+- [n/a] `lihi-settings.js` email 存檔成功時，先清空 `#lihi-account-section`，verified 時延遲 2 秒再 reload（避免「驗證信已寄出」時舊帳號的 role / end_date 殘留；2 秒延遲讓 admin 來得及讀到「✓ Email verified」訊息；由程式碼審查保證）
 
 ---
 
@@ -205,18 +206,19 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 
 - [n/a] release metadata 1.0.3 — plugin header、readme Stable tag / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、translation header 同步（由程式碼審查保證）
 - [x] `wp_ajax_lihi_copy_url` 已註冊
+- [x] `wp_ajax_lihi_create_url` 已註冊
+- [x] `wp_ajax_lihi_url_options` 已註冊
 - [x] `wp_ajax_lihi_update_email` 已註冊
 - [x] `register_deactivation_hook()` 已註冊停用清理 callback
 - [x] deactivation cleanup — 清除 `lihi_email` / `lihi_domain` / `lihi_uuid` / `lihi_uuid_lock` options 與 `lihi_token` transient
-- [x] `admin_enqueue_scripts` 白名單（edit/upload/post/post-new）→ enqueue lihi-button
+- [x] `admin_enqueue_scripts` 白名單（edit/upload/post/post-new）→ enqueue `lihi-button-api` / `lihi-button-modal` / `lihi-button`，且 main script 依賴前兩者
 - [x] `admin_enqueue_scripts` 非白名單 → 不 enqueue
 - [x] `manage_post_posts_columns` 有 `lihi` 欄位
-- [x] `manage_post_posts_custom_column` 輸出含 `data-lihi` / `data-id` / `data-type="post"` 按鈕
+- [x] `manage_post_posts_custom_column` 輸出空的 `data-lihi-container`，含 `data-id` / `data-type="post"` / `data-lihi-already`；實際 button 由前端 JS 放入 container
+- [x] `manage_post_posts_custom_column` 在 post meta `lihi_already = 1` 時輸出 `data-lihi-already="1"`
 - [x] `manage_media_columns` 有 `lihi` 欄位
-- [x] `manage_media_custom_column` 輸出 `data-type="attachment"` 按鈕
-- [x] `attachment_fields_to_edit` 新增 `lihi` 欄位含按鈕
+- [x] `manage_media_custom_column` 輸出空的 button container，含 `data-type="attachment"`
+- [x] `attachment_fields_to_edit` 新增 `lihi` 欄位含空的 button container，並在 attachment meta `lihi_already = 1` 時輸出 `data-lihi-already="1"`
 - [x] `admin_init` 註冊 `lihi_email` setting
 - [x] `admin_menu` 註冊 Settings → lihi Short URL 頁面
 - [x] `update_option('lihi_email', …)` → `lihi_token` transient 被清除
-- [x] `update_option('lihi_email', …)` → `lihi_domain` option 被清除
-- [x] `delete_option('lihi_email')` → `lihi_domain` option 被清除

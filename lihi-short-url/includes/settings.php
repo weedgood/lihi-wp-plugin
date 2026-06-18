@@ -29,12 +29,10 @@ add_action( 'admin_init', function () {
     );
 } );
 
-// Reset per-account state when the email changes — both the JWT and the
-// saved redirect domain belong to the previous lihi account and must not
-// leak into the next one. Covers add / update / delete of the option.
+// Reset per-account state when the email changes. Covers add / update /
+// delete of the option.
 $lihi_reset_account_state = function () {
     Lihi_Singletons::lihi_token_store()->flush();
-    delete_option( 'lihi_domain' );
 };
 add_action( 'add_option_lihi_email',    $lihi_reset_account_state );
 add_action( 'update_option_lihi_email', $lihi_reset_account_state );
@@ -63,11 +61,9 @@ function enqueue_settings_assets(): void {
     );
 
     wp_localize_script( 'lihi-settings', 'lihiSettings', [
-        'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
-        'emailAction'   => 'lihi_update_email',
-        'emailNonce'    => wp_create_nonce( 'lihi_update_email' ),
-        'domainAction'  => 'lihi_update_domain',
-        'domainNonce'   => wp_create_nonce( 'lihi_update_domain' ),
+        'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+        'emailAction' => 'lihi_update_email',
+        'emailNonce'  => wp_create_nonce( 'lihi_update_email' ),
     ] );
 }
 
@@ -121,10 +117,6 @@ function render_settings_page(): void {
 
         <div id="lihi-account-section">
             <?php if ( $profile !== null ) : ?>
-                <?php
-                $domains        = $profile['domains'] ?? [];
-                $current_domain = get_option( 'lihi_domain', '' );
-                ?>
                 <h2><?php esc_html_e( 'Account', 'lihi-short-url' ); ?></h2>
                 <table class="form-table" role="presentation">
                     <tbody>
@@ -135,32 +127,6 @@ function render_settings_page(): void {
                         <tr>
                             <th scope="row"><?php esc_html_e( 'Plan End Date', 'lihi-short-url' ); ?></th>
                             <td><?php echo esc_html( $profile['end_date'] ?? __( '—', 'lihi-short-url' ) ); ?></td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="lihi_domain"><?php esc_html_e( 'Redirect domain', 'lihi-short-url' ); ?></label></th>
-                            <td>
-                                <?php if ( empty( $domains ) ) : ?>
-                                    <?php esc_html_e( '(none available)', 'lihi-short-url' ); ?>
-                                <?php else : ?>
-                                    <select id="lihi_domain" name="lihi_domain">
-                                        <option value="" <?php selected( $current_domain, '' ); ?>>
-                                            <?php esc_html_e( '— Please Choose —', 'lihi-short-url' ); ?>
-                                        </option>
-                                        <?php foreach ( $domains as $domain ) : ?>
-                                            <option value="<?php echo esc_attr( $domain ); ?>" <?php selected( $current_domain, $domain ); ?>>
-                                                <?php echo esc_html( $domain ); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <button type="button" id="lihi-save-domain" class="button button-primary">
-                                        <?php esc_html_e( 'Save', 'lihi-short-url' ); ?>
-                                    </button>
-                                    <p class="description">
-                                        <?php esc_html_e( 'Redirect domain used when creating new lihi short URLs.', 'lihi-short-url' ); ?>
-                                    </p>
-                                    <div id="lihi-domain-status" role="status" aria-live="polite"></div>
-                                <?php endif; ?>
-                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -236,48 +202,3 @@ function ajax_update_email(): void {
 }
 
 add_action( 'wp_ajax_lihi_update_email', __NAMESPACE__ . '\\ajax_update_email' );
-
-/**
- * AJAX handler: persist the selected lihi redirect domain.
- *
- * Trusts the current_user_can + nonce gate for CSRF; basic hostname format
- * check rejects obviously-malformed input. Empty input clears the option.
- * Membership in the account's actual domain list is not re-verified here —
- * the UI only offers valid domains, and lihi-admin silently substitutes an
- * invalid domain with an account-valid one on create_site, so a stale
- * selection degrades gracefully.
- */
-function ajax_update_domain(): void {
-    check_ajax_referer( 'lihi_update_domain', 'nonce' );
-
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( __( 'You do not have permission to update this setting.', 'lihi-short-url' ), 403 );
-        return;
-    }
-
-    $domain = isset( $_POST['domain'] )
-        ? trim( sanitize_text_field( wp_unslash( $_POST['domain'] ) ) )
-        : '';
-
-    if ( $domain === '' ) {
-        delete_option( 'lihi_domain' );
-        wp_send_json_success( [
-            'message' => __( 'Redirect domain cleared.', 'lihi-short-url' ),
-        ] );
-        return;
-    }
-
-    // Reject anything that isn't a plausible hostname (letters, digits, dots, hyphens).
-    if ( ! preg_match( '/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i', $domain ) ) {
-        wp_send_json_error( __( 'Invalid redirect domain.', 'lihi-short-url' ), 400 );
-        return;
-    }
-
-    update_option( 'lihi_domain', $domain );
-
-    wp_send_json_success( [
-        'message' => __( 'Redirect domain saved.', 'lihi-short-url' ),
-    ] );
-}
-
-add_action( 'wp_ajax_lihi_update_domain', __NAMESPACE__ . '\\ajax_update_domain' );

@@ -31,13 +31,13 @@ services:
     volumes:
       - wp_uploads:/var/www/html/wp-content/uploads
       - ./lihi-short-url:/var/www/html/wp-content/plugins/lihi-short-url
-    # The named volume's mount point is created as root; WordPress's
-    # entrypoint doesn't chown into mounted volumes, so fix it before exec.
+    # The named volume and stale upload subdirectories can be root-owned;
+    # WordPress's entrypoint doesn't chown into mounted volumes, so fix them before exec.
     entrypoint:
       - bash
       - -c
       - |
-        chown www-data:www-data /var/www/html/wp-content/uploads
+        chown -R www-data:www-data /var/www/html/wp-content/uploads
         exec docker-entrypoint.sh "$$0" "$$@"
     command: apache2-foreground
 

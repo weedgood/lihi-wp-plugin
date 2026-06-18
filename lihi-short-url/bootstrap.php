@@ -20,4 +20,5 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/store/lihi-uuid-store.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/store/lihi-token-store.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/service/lihi-service.php';
 
+require_once plugin_dir_path( __FILE__ ) . 'includes/shorturl-column-ajax.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/add-shorturl-column.php';

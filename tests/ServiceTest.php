@@ -26,8 +26,13 @@ class ServiceTest extends TestCase
         Functions\when('wp_parse_url')->justReturn('example.com');
         // Default get_option to the caller's default value. Individual tests
         // override with Functions\when('get_option')->... when they need a
-        // specific value (e.g. a saved lihi_domain).
+        // specific value.
         Functions\when('get_option')->alias(fn($key, $default = false) => $default);
+        Functions\when('add_query_arg')->alias(function (array $params, string $url): string {
+            $separator = strpos($url, '?') === false ? '?' : '&';
+            return $url . $separator . http_build_query($params);
+        });
+        Functions\when('esc_html__')->returnArg(1);
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
         $this->mockConfig();
     }
@@ -484,20 +489,19 @@ class ServiceTest extends TestCase
         $this->assertSame(['https://example.com/?p=42'], $capturedBody['urls']);
         $this->assertSame('post:example.com', $capturedBody['type']);
         $this->assertSame('42', $capturedBody['type_id']);
-        // No lihi_domain saved in this test → empty string; lihi-admin
-        // silently substitutes its account-valid default on the backend.
+        // The create AJAX flow supplies the modal domain; lower-level callers
+        // that omit it still pass an empty string through to the API.
         $this->assertSame('', $capturedBody['domain']);
-        // tags keeps the bare $type, not the host-namespaced form
+        // tags keeps the bare $type, not the host-namespaced form, and is sent
+        // to the SaaS API as a comma-separated string.
         $this->assertSame('wordpress,example.com,post', $capturedBody['tags']);
+        $this->assertArrayNotHasKey('utm', $capturedBody);
     }
 
     /** @test */
-    public function get_or_create_sends_saved_lihi_domain_when_option_is_set(): void
+    public function get_or_create_passes_modal_options_to_create_site(): void
     {
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
-        Functions\when('get_option')->alias(function ($key, $default = false) {
-            return $key === 'lihi_domain' ? 'custom.lihidev.com' : $default;
-        });
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
@@ -511,11 +515,18 @@ class ServiceTest extends TestCase
                 return ['data' => ['short_url' => 'https://lihi.io/new']];
             });
 
-        Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
+        Functions\when('get_permalink')->justReturn('https://example.com/post');
 
-        $this->makeService($client)->get_or_create_short_url(42, 'post');
+        $this->makeService($client)->get_or_create_short_url(42, 'post', [
+            'domain' => 'go.example.com',
+            'tags'   => ['campaign', 'wordpress', 'campaign'],
+            'utm'    => ['source' => 'newsletter', 'medium' => 'email', 'ignored' => 'x'],
+        ]);
 
-        $this->assertSame('custom.lihidev.com', $capturedBody['domain']);
+        $this->assertSame('go.example.com', $capturedBody['domain']);
+        $this->assertSame('wordpress,example.com,post,campaign', $capturedBody['tags']);
+        $this->assertSame(['https://example.com/post?utm_source=newsletter&utm_medium=email'], $capturedBody['urls']);
+        $this->assertArrayNotHasKey('utm', $capturedBody);
     }
 
     /** @test */
@@ -594,6 +605,39 @@ class ServiceTest extends TestCase
 
         $this->assertSame('attachment:example.com', $capturedBody['type']);
         $this->assertSame('wordpress,example.com,attachment', $capturedBody['tags']);
+    }
+
+    /** @test */
+    public function get_existing_returns_short_url_without_creating(): void
+    {
+        Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->with(Mockery::any(), 'post:example.com', 42)
+            ->once()
+            ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/existing')]));
+        $client->shouldNotReceive('create_site');
+
+        $result = $this->makeService($client)->get_existing_short_url(42, 'post');
+
+        $this->assertSame('https://lihi.io/existing', $result);
+    }
+
+    /** @test */
+    public function get_existing_throws_not_found_when_short_url_is_missing(): void
+    {
+        Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->with(Mockery::any(), 'post:example.com', 42)
+            ->once()
+            ->andReturn($this->makeSitesResponse([]));
+        $client->shouldNotReceive('create_site');
+
+        $this->expectException(\Lihi\ShortUrl\Lihi_Not_Found_Exception::class);
+        $this->makeService($client)->get_existing_short_url(42, 'post');
     }
 
     // -------------------------------------------------------------------------

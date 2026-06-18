@@ -161,7 +161,7 @@ interface Lihi_Client_Interface {
      *   type:     string,
      *   type_id?: string|int,
      *   tags?:    string,
-     * } $body Request body. `tags` is a comma-separated string (e.g. "wordpress,blog").
+     * } $body Request body.
      *
      * @return array{
      *   result: bool,
