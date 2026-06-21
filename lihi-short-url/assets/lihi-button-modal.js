@@ -153,7 +153,7 @@
 						await onConfirm();
 					}
 				} catch ( error ) {
-					await showNotice( 'lihi: ' + exceptionMessage( error ) );
+					await showNotice( exceptionMessage( error ) );
 				} finally {
 					resolve();
 				}
@@ -397,20 +397,20 @@
 			data = await loadUrlOptions( container );
 		} catch ( error ) {
 			closeCreateModal();
-			await showNotice( 'lihi: ' + exceptionMessage( error ) );
+			await showNotice( exceptionMessage( error ) );
 			return;
 		}
 
 		if ( ! data.success ) {
 			closeCreateModal();
-			await showNotice( 'lihi: ' + errorMessage( data ) );
+			await showNotice( errorMessage( data ) );
 			return;
 		}
 
 		const domains = data.data.domains || [];
 		if ( domains.length === 0 ) {
 			closeCreateModal();
-			await showNotice( 'lihi: ' + lihiButton.modal.noDomains );
+			await showNotice( lihiButton.modal.noDomains );
 			return;
 		}
 

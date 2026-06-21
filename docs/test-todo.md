@@ -89,6 +89,7 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] 成功 → 回傳 `data` 子陣列（user_role / end_date / domains）
 - [x] `client->get_profile()` 拋出 `Lihi_Token_Invalid_Exception` → invalidate token、重新 login、再試一次
 - [x] `lihi client->login($email)` 拋出 `Lihi_Auth_Exception`（email 未驗證）→ 向上傳遞
+- [x] `lihi client->login($email)` 拋出 `Lihi_User_Invalid_Exception`（lihi 帳號不可使用）→ 向上傳遞
 
 ### get_or_create_short_url()
 - [x] 已有相符 type_id 的短連結 → 直接回傳 `short_url`，不呼叫 create_site
@@ -147,7 +148,13 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] `login()` → POST `/api/wordpress/v1/auth/login`，body 為 `{ email, hostname, uuid, is_mobile }`，且不覆寫 HTTP `Host` header
 - [ ] `login()` 回應 200 → 回傳 `['token' => ...]`
 - [ ] `login()` 回應 400 → 拋出 `Lihi_Validation_Exception`
-- [ ] `login()` 回應 403 → 拋出 `Lihi_Auth_Exception`
+- [x] `login()` 回應 403 `email not verified` → 拋出 `Lihi_Auth_Exception`
+- [x] `login()` 回應 403 `User Invalid` → 拋出 `Lihi_User_Invalid_Exception`
+- [x] JWT endpoint 回應 403 `User Invalid` → 拋出 `Lihi_User_Invalid_Exception`
+- [x] JWT endpoint 回應 404 `user_not_found ,please login again` → 拋出 `Lihi_User_Invalid_Exception`，service 會清 token 並直接顯示帳號不可使用訊息，不在同一 request 重試 login
+- [x] JWT endpoint 回應 500 `Token invalid ,please login again` → 拋出 `Lihi_Token_Invalid_Exception`，service 會清 token 並重試 login
+- [x] JWT endpoint 回應 500 `Token expired ,please login again` → 拋出 `Lihi_Token_Invalid_Exception`，service 會清 token 並重試 login
+- [x] JWT endpoint 回應 500 `Something wrong ,please login again` → 拋出 `Lihi_Token_Invalid_Exception`，service 會清 token 並重試 login
 - [ ] `login()` 回應 500 → 拋出 `Lihi_Server_Exception`
 
 ---
@@ -175,6 +182,8 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [n/a] 前端 Tags 欄位使用同一個 chip list：預設 tags 是不可移除 chip，input + Add 新增的使用者 tags 是可移除 chip（由程式碼審查 / JS 語法檢查保證）
 - [x] service 拋出一般例外 → wp_send_json_error 友善訊息（不暴露內部細節），HTTP 500
 - [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「email has not been verified」訊息（lihi API 回 403，表示 email 尚未驗證），HTTP 403
+- [x] service 拋出 `Lihi_User_Invalid_Exception` → wp_send_json_error account unavailable 訊息（lihi API 回 `User Invalid` 或 `user_not_found ,please login again`，表示帳號不可使用），HTTP 403
+- [x] service 拋出 `Lihi_Token_Invalid_Exception` → wp_send_json_error login session expired 訊息，HTTP 401
 - [x] service 拋出 `Lihi_Validation_Exception` → wp_send_json_error「lihi API rejected…」訊息，HTTP 400
 - [x] service 拋出 `Lihi_Server_Exception` → wp_send_json_error「lihi service is unavailable」訊息，HTTP 503
 

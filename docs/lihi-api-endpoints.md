@@ -85,20 +85,23 @@ Response 200:
 - `hostname` 正規化後為空：`{ "result": false, "msg": "bad request" }`
 - request IP 無效：`{ "result": false, "msg": "bad request" }`
 
-**錯誤：HTTP 403** → `Lihi_Auth_Exception`
+**錯誤：HTTP 403 `email not verified`** → `Lihi_Auth_Exception`
 ```json
 { "result": false, "msg": "email not verified" }
 ```
 row 不存在、email 未驗證、或 `(domain, email, uuid)` 不符合時刻意回同一訊息，避免 caller 透過此端點試探 email / tenant 狀態。
 
-**錯誤：HTTP 200，`result: false`**
+**錯誤：HTTP 403 `User Invalid`** → `Lihi_User_Invalid_Exception`
 ```json
 { "result": false, "msg": "User Invalid" }
 ```
+lihi 帳號不可使用（例如主帳號停用子帳號、或帳號被封鎖）時回傳；外掛端會顯示 account unavailable 訊息，而不是 email 未驗證訊息。
+
+**錯誤：HTTP 200，`result: false`**
 ```json
 { "result": false, "msg": "Location Invalid" }
 ```
-目前 controller 對已刪除 user 或 geoip 擋下的新 user 註冊會回 HTTP 200 + `result: false`；plugin client 應視為 auth / server failure，而不是成功 token。
+目前 controller 對 geoip 擋下的新 user 註冊可能回 HTTP 200 + `result: false`；plugin client 應視為 server failure，而不是成功 token。
 
 ---
 
@@ -134,8 +137,26 @@ Response 200:
 - `user_role` / `end_date` 可能為 `null`（user 無 role 或 plan）
 - `domains` 為可用 redirect domain 名稱陣列；包含 user available domains 與非 site-status 專用的 default domains
 
-**錯誤：token 缺少或無效**
-由 JWT middleware / upstream 錯誤處理決定；plugin 端目前以 token invalid / server exception 處理。
+**錯誤：帳號不可使用** → `Lihi_User_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "user_not_found ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "User Invalid" }
+```
+JWT middleware 判斷 bearer token 對應 user 不存在或不可使用時回傳；外掛端會清掉本機 JWT transient，直接顯示 account unavailable 訊息，不在同一個 request 自動 login 重試。
+
+**錯誤：token 缺少或無效** → `Lihi_Token_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "Token invalid ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Token expired ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Something wrong ,please login again" }
+```
+JWT middleware 判斷 token invalid / expired / unexpected auth error 時回傳；外掛端會清掉本機 JWT transient 並自動 login 重試一次。若重試後仍失敗，設定頁 / Short URL AJAX 顯示 login session expired 訊息。
 
 ---
 
@@ -177,8 +198,26 @@ Response:
 }
 ```
 
-**錯誤：token 缺少或無效**
-由 JWT middleware / upstream 錯誤處理決定；plugin 端目前以 token invalid / server exception 處理。
+**錯誤：帳號不可使用** → `Lihi_User_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "user_not_found ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "User Invalid" }
+```
+JWT middleware 判斷 bearer token 對應 user 不存在或不可使用時回傳；外掛端會清掉本機 JWT transient，直接顯示 account unavailable 訊息，不在同一個 request 自動 login 重試。
+
+**錯誤：token 缺少或無效** → `Lihi_Token_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "Token invalid ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Token expired ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Something wrong ,please login again" }
+```
+JWT middleware 判斷 token invalid / expired / unexpected auth error 時回傳；外掛端會清掉本機 JWT transient 並自動 login 重試一次。若重試後仍失敗，設定頁 / Short URL AJAX 顯示 login session expired 訊息。
 
 ---
 
@@ -234,5 +273,23 @@ Response:
 { "result": false, "msg": "error" }
 ```
 
-**錯誤：token 缺少或無效**
-由 JWT middleware / upstream 錯誤處理決定；plugin 端目前以 token invalid / server exception 處理。
+**錯誤：帳號不可使用** → `Lihi_User_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "user_not_found ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "User Invalid" }
+```
+JWT middleware 判斷 bearer token 對應 user 不存在或不可使用時回傳；外掛端會清掉本機 JWT transient，直接顯示 account unavailable 訊息，不在同一個 request 自動 login 重試。
+
+**錯誤：token 缺少或無效** → `Lihi_Token_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "Token invalid ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Token expired ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Something wrong ,please login again" }
+```
+JWT middleware 判斷 token invalid / expired / unexpected auth error 時回傳；外掛端會清掉本機 JWT transient 並自動 login 重試一次。若重試後仍失敗，設定頁 / Short URL AJAX 顯示 login session expired 訊息。

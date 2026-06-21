@@ -90,4 +90,31 @@ class AuthClientTest extends TestCase
         $this->assertSame('site-uuid', $body['uuid']);
         $this->assertTrue($body['is_mobile']);
     }
+
+    /** @test */
+    public function login_throws_user_invalid_exception_on_user_invalid_403(): void
+    {
+        Functions\when('wp_is_mobile')->justReturn(false);
+        $this->mockRequest(403, '{"result":false,"msg":"User Invalid"}');
+
+        $this->expectException(\Lihi\ShortUrl\Lihi_User_Invalid_Exception::class);
+
+        (new Lihi_Client('https://app.lihidev.com', 'site-uuid'))->login('admin@example.com');
+    }
+
+    /** @test */
+    public function login_throws_auth_exception_on_email_not_verified_403(): void
+    {
+        Functions\when('wp_is_mobile')->justReturn(false);
+        $this->mockRequest(403, '{"result":false,"msg":"email not verified"}');
+
+        try {
+            (new Lihi_Client('https://app.lihidev.com', 'site-uuid'))->login('admin@example.com');
+            $this->fail('Expected auth exception.');
+        } catch (\Lihi\ShortUrl\Lihi_User_Invalid_Exception $e) {
+            $this->fail('Email-not-verified responses must not be treated as unavailable accounts.');
+        } catch (\Lihi\ShortUrl\Lihi_Auth_Exception $e) {
+            $this->assertStringContainsString('email not verified', $e->getMessage());
+        }
+    }
 }

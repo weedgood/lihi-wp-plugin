@@ -117,6 +117,16 @@ function validate_lihi_item_request(): array {
 }
 
 function handle_lihi_ajax_exception( \Exception $e, array $context = [] ): void {
+    if ( $e instanceof Lihi_User_Invalid_Exception ) {
+        wp_send_json_error( __( 'Your lihi account is unavailable. Please contact lihi support before creating short URLs.', 'lihi-short-url' ), 403 );
+        return;
+    }
+
+    if ( $e instanceof Lihi_Token_Invalid_Exception ) {
+        wp_send_json_error( __( 'Your lihi login session has expired. Please try again.', 'lihi-short-url' ), 401 );
+        return;
+    }
+
     if ( $e instanceof Lihi_Auth_Exception ) {
         wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email.', 'lihi-short-url' ), 403 );
         return;

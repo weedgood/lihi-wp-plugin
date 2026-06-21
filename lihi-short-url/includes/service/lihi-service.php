@@ -50,13 +50,14 @@ class Lihi_Service {
     /**
      * Fetch the authenticated user's profile (role, plan end date, redirect domains).
      *
-     * Uses the same token-then-call pattern as get_or_create_short_url():
-     * on Lihi_Token_Invalid_Exception the cached token is discarded and the
-     * call is retried once with a freshly obtained token.
+     * Uses the same token-then-call pattern as get_or_create_short_url().
+     * Lihi_User_Invalid_Exception clears the cached token and is surfaced so
+     * the next AJAX request can perform a fresh login.
      *
      * @return array{user_role: ?string, end_date: ?string, domains: list<string>}
      *
      * @throws Lihi_Auth_Exception       lihi API rejected the login (email unverified).
+     * @throws Lihi_User_Invalid_Exception lihi account is unavailable server-side.
      * @throws Lihi_Server_Exception     lihi API unavailable.
      */
     public function get_profile(): array {
@@ -64,6 +65,9 @@ class Lihi_Service {
         $token = $this->get_token( $email );
         try {
             $result = $this->client->get_profile( $token );
+        } catch ( Lihi_User_Invalid_Exception $e ) {
+            $this->invalidate_token();
+            throw $e;
         } catch ( Lihi_Token_Invalid_Exception $e ) {
             $this->invalidate_token();
             $token  = $this->get_token( $email );
@@ -76,6 +80,9 @@ class Lihi_Service {
     /**
      * Return the lihi short URL for a post, creating it if it does not yet exist.
      *
+     * On Lihi_User_Invalid_Exception the cached token is discarded and the
+     * exception is surfaced so the next AJAX request can perform a fresh login.
+     *
      * On Lihi_Token_Invalid_Exception the cached token is discarded and the
      * call is retried once with a freshly obtained token.
      */
@@ -84,6 +91,9 @@ class Lihi_Service {
         $token = $this->get_token( $email );
         try {
             return $this->fetch_or_create( $token, $item_id, $type, $options );
+        } catch ( Lihi_User_Invalid_Exception $e ) {
+            $this->invalidate_token();
+            throw $e;
         } catch ( Lihi_Token_Invalid_Exception $e ) {
             $this->invalidate_token();
             $token = $this->get_token( $email );
@@ -96,6 +106,9 @@ class Lihi_Service {
         $token = $this->get_token( $email );
         try {
             return $this->fetch_existing( $token, $item_id, $type );
+        } catch ( Lihi_User_Invalid_Exception $e ) {
+            $this->invalidate_token();
+            throw $e;
         } catch ( Lihi_Token_Invalid_Exception $e ) {
             $this->invalidate_token();
             $token = $this->get_token( $email );

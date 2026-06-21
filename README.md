@@ -82,7 +82,7 @@ lihi-short-url/
 ├── uninstall.php              Cleanup on plugin deletion: removes lihi_email / legacy lihi_domain / lihi_uuid / lihi_uuid_lock options and lihi_token transient
 ├── bootstrap.php              Loads class files unconditionally; does not register dashboard-wide setup notices (AJAX hooks always register; UI hooks self-guard on lihi_email in add-shorturl-column.php)
 ├── assets/
-│   ├── lihi-button-api.js     Frontend Short URL API facade; encapsulates admin-ajax action/nonce payloads for options/create/copy plus JSON error parsing
+│   ├── lihi-button-api.js     Frontend Short URL API facade; encapsulates admin-ajax action/nonce payloads for options/create/copy, JSON error parsing, and a 60-second domain options cache
 │   ├── lihi-button-modal.js   Centered fade create / notice modal rendering and interaction; loads domain options, renders default and removable user tag chips in one Tags field, and collects UTM fields
 │   ├── lihi-button.js         Async delegated click handler; appends buttons into empty data-lihi-container nodes, frontend-renders button labels from data-lihi-already (lihi vs Copy), flips newly successful buttons to Copy before clipboard writes, falls back to a manual-copy prompt when clipboard access is blocked, verifies Copy clicks against the API, and calls the modal helper for create/error flows
 │   └── lihi-settings.js       Settings page button handler; shared bindSaver helper wires Save & Verify (email → lihi_update_email) to admin-ajax and renders inline .notice-success / .notice-error feedback. The email handler always blanks #lihi-account-section on success (so the prior account's role / end date can't linger) and on verified:true schedules a 2 s delayed window.location.reload() so the admin sees the success notice before render_settings_page() repaints the account section
@@ -95,8 +95,8 @@ lihi-short-url/
     ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email()), empty data-lihi-container mount points for frontend-rendered buttons, localized button config, and attachment detail panel field
     ├── client/
     │   ├── lihi-client-interface.php       Unified lihi Wordpress API contract; covers auth (update_email, login) plus JWT endpoints (get_profile, get_sites, get_short_links, create_site)
-    │   ├── lihi-client.php                 Production HTTP client; base_url and site-scoped uuid are injected by helper; auth requests send home_url() host as JSON `hostname` plus injected `uuid`; login also sends `is_mobile`; bearer token is passed per JWT call, not stored on instance
-    │   └── lihi-exceptions.php             Typed exception hierarchy (Auth / Validation / NotFound / RateLimit / TokenInvalid / Server)
+    │   ├── lihi-client.php                 Production HTTP client; base_url and site-scoped uuid are injected by helper; auth requests send home_url() host as JSON `hostname` plus injected `uuid`; login also sends `is_mobile`; bearer token is passed per JWT call, not stored on instance; maps lihi user-unavailable responses to Lihi_User_Invalid_Exception
+    │   └── lihi-exceptions.php             Typed exception hierarchy (Auth / UserInvalid / Validation / NotFound / RateLimit / TokenInvalid / Server)
     ├── store/
     │   ├── lihi-uuid-store.php         Lihi_Uuid_Store: encapsulates the persistent lihi_uuid option + option-backed lihi_uuid_lock; get() validates / lazily creates under lock / waits for concurrent generators / replaces invalid UUIDs / reads back persisted UUIDs after writes
     │   └── lihi-token-store.php        Lihi_Token_Store: encapsulates the lihi_token transient + lihi_token_lock; get/set/delete/acquire_lock/release_lock/flush
@@ -110,6 +110,8 @@ lihi-short-url/
 2. When the editor clicks the lihi button, `lihi-button.js` opens the create modal; only existing **Copy** buttons call `wp_ajax_lihi_copy_url`.
 3. `Lihi_Service::get_token( $email )` checks in order: (a) the site-scoped `lihi_token` transient; (b) atomic `wp_cache_add` lock — only one concurrent request calls `login( $email )` (which hits `Lihi_Client::login( $email )` against the lihi API), the rest poll the transient and reuse the result. After a 3 s timeout, waiters fall back to calling `login( $email )` themselves.
 4. On fresh login the bearer token is stored in the transient (TTL: 1 day, well within the upstream ~168 day token TTL). Updating or clearing the `lihi_email` option flushes the transient under the same lock so a stale token can't leak across accounts.
+5. If the lihi API returns `User Invalid` or `user_not_found ,please login again`, the client raises `Lihi_User_Invalid_Exception`; the service clears the cached JWT when the error comes from a JWT endpoint and surfaces the unavailable-account message without retrying in the same request.
+6. If the lihi API returns `Token invalid ,please login again`, `Token expired ,please login again`, or `Something wrong ,please login again`, the client raises `Lihi_Token_Invalid_Exception`; the service clears the cached JWT and retries login once before surfacing a login-expired message.
 
 ### Short URL flow
 

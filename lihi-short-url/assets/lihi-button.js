@@ -108,7 +108,7 @@ async function withLihiBusy( container, btn, callback ) {
 async function showCopiedState( container, btn, data ) {
 	const shortUrl = data.data?.url;
 	if ( ! shortUrl ) {
-		await showNotice( 'lihi: ' + errorMessage( data ) );
+		await showNotice( errorMessage( data ) );
 		return;
 	}
 
@@ -140,12 +140,12 @@ async function createLihi( container, btn, options = {} ) {
 		try {
 			data = await createShortUrl( container, options );
 		} catch ( error ) {
-			await showNotice( 'lihi: ' + exceptionMessage( error ) );
+			await showNotice( exceptionMessage( error ) );
 			return;
 		}
 
 		if ( ! data.success ) {
-			await showNotice( 'lihi: ' + errorMessage( data ) );
+			await showNotice( errorMessage( data ) );
 			return;
 		}
 
@@ -159,20 +159,20 @@ async function tryCopyLihi( container, btn ) {
 		try {
 			data = await copyShortUrlFromApi( container );
 		} catch ( error ) {
-			await showNotice( 'lihi: ' + exceptionMessage( error ) );
+			await showNotice( exceptionMessage( error ) );
 			return;
 		}
 
 		if ( ! data.success ) {
 			if ( isMissingShortUrl( data ) ) {
 				setButtonAlready( container, btn, false );
-				await showNotice( 'lihi: ' + errorMessage( data ), async () => {
+				await showNotice( errorMessage( data ), async () => {
 					await openCreateModal( container, btn, createLihi );
 				} );
 				return;
 			}
 
-			await showNotice( 'lihi: ' + errorMessage( data ) );
+			await showNotice( errorMessage( data ) );
 			return;
 		}
 

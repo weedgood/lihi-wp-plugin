@@ -78,6 +78,10 @@ function render_settings_page(): void {
     if ( $value !== '' ) {
         try {
             $profile = Lihi_Singletons::lihi_service()->get_profile();
+        } catch ( Lihi_User_Invalid_Exception $e ) {
+            $profile_error = __( 'Your lihi account is unavailable. Please contact lihi support before creating short URLs.', 'lihi-short-url' );
+        } catch ( Lihi_Token_Invalid_Exception $e ) {
+            $profile_error = __( 'Your lihi login session has expired. Please try again.', 'lihi-short-url' );
         } catch ( Lihi_Auth_Exception $e ) {
             $profile_error = __( 'Email not verified yet. Click Save & Verify to resend the verification email.', 'lihi-short-url' );
         } catch ( Lihi_Server_Exception $e ) {
@@ -107,7 +111,7 @@ function render_settings_page(): void {
                             <?php esc_html_e( 'Save & Verify', 'lihi-short-url' ); ?>
                         </button>
                         <p class="description">
-                            <?php esc_html_e( 'Email used to authenticate with the lihi service. Saving triggers email verification; leave blank to disable the plugin.', 'lihi-short-url' ); ?>
+                            <?php esc_html_e( 'Email used to authenticate with the lihi service. Saving sends a verification email; the plugin can be used after verification is complete.', 'lihi-short-url' ); ?>
                         </p>
                         <div id="lihi-email-status" role="status" aria-live="polite"></div>
                     </td>

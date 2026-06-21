@@ -364,6 +364,30 @@ class ServiceTest extends TestCase
     }
 
     /** @test */
+    public function get_profile_clears_token_and_propagates_user_invalid_without_retry(): void
+    {
+        $staleToken = $this->makeJwt(time() + 3600);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_profile')
+            ->with($staleToken)
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_User_Invalid_Exception('HTTP 404: user_not_found ,please login again'));
+        $client->shouldNotReceive('login');
+
+        Functions\expect('get_transient')
+            ->once()
+            ->andReturn($staleToken);
+        Functions\expect('delete_transient')
+            ->once()
+            ->with('lihi_token')
+            ->andReturn(true);
+
+        $this->expectException(\Lihi\ShortUrl\Lihi_User_Invalid_Exception::class);
+        $this->makeService($client)->get_profile();
+    }
+
+    /** @test */
     public function get_profile_propagates_auth_exception_from_login(): void
     {
         $client = $this->makeClient();
@@ -378,6 +402,23 @@ class ServiceTest extends TestCase
         Functions\when('wp_cache_delete')->justReturn(true);
 
         $this->expectException(\Lihi\ShortUrl\Lihi_Auth_Exception::class);
+        $this->makeService($client)->get_profile();
+    }
+
+    /** @test */
+    public function get_profile_propagates_user_invalid_exception_from_login(): void
+    {
+        $client = $this->makeClient();
+        $client->shouldReceive('login')
+            ->with('user@example.com')
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_User_Invalid_Exception('User Invalid'));
+
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
+
+        $this->expectException(\Lihi\ShortUrl\Lihi_User_Invalid_Exception::class);
         $this->makeService($client)->get_profile();
     }
 
@@ -678,6 +719,31 @@ class ServiceTest extends TestCase
 
         $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
         $this->assertSame('https://lihi.io/retried', $result);
+    }
+
+    /** @test */
+    public function get_or_create_clears_token_and_propagates_user_invalid_without_retry(): void
+    {
+        $staleToken = $this->makeJwt(time() + 3600);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_short_links')
+            ->with($staleToken, 'post:example.com', 42)
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_User_Invalid_Exception('HTTP 404: user_not_found ,please login again'));
+        $client->shouldNotReceive('login');
+        $client->shouldNotReceive('create_site');
+
+        Functions\expect('get_transient')
+            ->once()
+            ->andReturn($staleToken);
+        Functions\expect('delete_transient')
+            ->once()
+            ->with('lihi_token')
+            ->andReturn(true);
+
+        $this->expectException(\Lihi\ShortUrl\Lihi_User_Invalid_Exception::class);
+        $this->makeService($client)->get_or_create_short_url(42, 'post');
     }
 
     /** @test */

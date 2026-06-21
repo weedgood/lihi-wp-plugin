@@ -429,6 +429,72 @@ class AjaxCopyUrlTest extends TestCase
     }
 
     /** @test */
+    public function returns_friendly_message_on_user_invalid_exception(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['type']    = 'post';
+        $_POST['domain']  = 'go.example.com';
+
+        $service = $this->mockService();
+        $service->shouldReceive('get_or_create_short_url')
+            ->andThrow(new \Lihi\ShortUrl\Lihi_User_Invalid_Exception('User Invalid'));
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        $errorMsg   = null;
+        $statusCode = null;
+        $this->expectJsonError($errorMsg, $statusCode);
+
+        \Lihi\ShortUrl\ajax_create_url();
+
+        $this->assertStringContainsString('account is unavailable', $errorMsg);
+        $this->assertSame(403, $statusCode);
+    }
+
+    /** @test */
+    public function returns_login_expired_message_on_token_invalid_exception(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['type']    = 'post';
+        $_POST['domain']  = 'go.example.com';
+
+        $service = $this->mockService();
+        $service->shouldReceive('get_or_create_short_url')
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: Token expired ,please login again'));
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        $errorMsg   = null;
+        $statusCode = null;
+        $this->expectJsonError($errorMsg, $statusCode);
+
+        \Lihi\ShortUrl\ajax_create_url();
+
+        $this->assertStringContainsString('login session has expired', $errorMsg);
+        $this->assertSame(401, $statusCode);
+    }
+
+    /** @test */
+    public function returns_user_invalid_message_on_user_not_found_response_exception(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['type']    = 'post';
+        $_POST['domain']  = 'go.example.com';
+
+        $service = $this->mockService();
+        $service->shouldReceive('get_or_create_short_url')
+            ->andThrow(new \Lihi\ShortUrl\Lihi_User_Invalid_Exception('HTTP 404: user_not_found ,please login again'));
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        $errorMsg   = null;
+        $statusCode = null;
+        $this->expectJsonError($errorMsg, $statusCode);
+
+        \Lihi\ShortUrl\ajax_create_url();
+
+        $this->assertStringContainsString('account is unavailable', $errorMsg);
+        $this->assertSame(403, $statusCode);
+    }
+
+    /** @test */
     public function returns_bad_request_when_service_throws_validation_exception(): void
     {
         $_POST['item_id'] = '42';

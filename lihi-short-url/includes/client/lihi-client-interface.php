@@ -56,7 +56,8 @@ interface Lihi_Client_Interface {
      * @return array{token: string}
      *
      * @throws Lihi_Validation_Exception on HTTP 400.
-     * @throws Lihi_Auth_Exception on HTTP 403.
+     * @throws Lihi_Auth_Exception on HTTP 403 email / tenant rejection.
+     * @throws Lihi_User_Invalid_Exception on "User Invalid" / "user_not_found".
      * @throws Lihi_Server_Exception on HTTP 500, network error, or result:false.
      */
     public function login( string $email ): array;
@@ -84,7 +85,7 @@ interface Lihi_Client_Interface {
      *   },
      * }
      *
-     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
+     * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function get_profile( string $token ): array;
 
@@ -128,7 +129,7 @@ interface Lihi_Client_Interface {
      *   },
      * }
      *
-     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
+     * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function get_sites( string $token, array $params = [] ): array;
 
@@ -143,6 +144,8 @@ interface Lihi_Client_Interface {
      * @param int|string|list<int> $type_ids Single ID or comma-separated / array of IDs.
      *
      * @return array Same shape as get_sites().
+     *
+     * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function get_short_links( string $token, string $type, $type_ids ): array;
 
@@ -175,7 +178,7 @@ interface Lihi_Client_Interface {
      * }
      *
      * @throws Lihi_Validation_Exception on HTTP 400 (missing required fields).
-     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
+     * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function create_site( string $token, array $body ): array;
 }

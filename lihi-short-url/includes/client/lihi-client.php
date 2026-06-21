@@ -64,7 +64,10 @@ class Lihi_Client implements Lihi_Client_Interface {
             throw new Lihi_Validation_Exception( esc_html( $this->msg( $data ) ) );
         }
         if ( $code === 403 ) {
-            throw new Lihi_Auth_Exception( esc_html( $this->msg( $data ) ) );
+            $this->throw_forbidden_response( $data );
+        }
+        if ( empty( $data['result'] ) && $this->is_user_invalid_response( $data ) ) {
+            throw new Lihi_User_Invalid_Exception( esc_html( $this->msg( $data ) ) );
         }
         if ( $code >= 500 || empty( $data['result'] ) ) {
             throw new Lihi_Server_Exception( esc_html( $this->msg( $data ) ) );
@@ -78,7 +81,7 @@ class Lihi_Client implements Lihi_Client_Interface {
     // Profile
     // -------------------------------------------------------------------------
 
-    /** @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
+    /** @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
     public function get_profile( string $token ): array {
         [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/profile', [], $token );
         return $this->decode( $code, $body );
@@ -88,13 +91,13 @@ class Lihi_Client implements Lihi_Client_Interface {
     // Sites
     // -------------------------------------------------------------------------
 
-    /** @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
+    /** @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
     public function get_sites( string $token, array $params = [] ): array {
         [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/sites', $params, $token );
         return $this->decode( $code, $body );
     }
 
-    /** @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
+    /** @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
     public function get_short_links( string $token, string $type, $type_ids ): array {
         [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/sites', [
             'per_page' => 20,
@@ -106,7 +109,7 @@ class Lihi_Client implements Lihi_Client_Interface {
 
     /**
      * @throws Lihi_Validation_Exception missing required fields (HTTP 400)
-     * @throws Lihi_Token_Invalid_Exception | Lihi_Server_Exception
+     * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function create_site( string $token, array $body ): array {
         [ 'code' => $code, 'body' => $raw ] = $this->request( 'POST', '/api/wordpress/v1/sites', $body, $token );
@@ -185,7 +188,8 @@ class Lihi_Client implements Lihi_Client_Interface {
      * Decode a JSON body. Returns [] on 204 or empty body.
      *
      * @throws Lihi_Not_Found_Exception  on 404 HTML.
-     * @throws Lihi_Token_Invalid_Exception on "網站升級中..." HTML (authenticated requests only).
+     * @throws Lihi_User_Invalid_Exception on "User Invalid" or "user_not_found" JSON (authenticated requests only).
+     * @throws Lihi_Token_Invalid_Exception on known token invalid JSON or "網站升級中..." HTML (authenticated requests only).
      * @throws Lihi_Server_Exception     on any other non-JSON body.
      */
     private function decode( int $code, string $body, bool $authenticated = true ): array {
@@ -212,7 +216,50 @@ class Lihi_Client implements Lihi_Client_Interface {
             throw new Lihi_Server_Exception( esc_html( $message ) );
         }
 
+        if ( $authenticated && $this->is_user_invalid_response( $decoded ) ) {
+            throw new Lihi_User_Invalid_Exception( esc_html( sprintf( 'HTTP %d: %s', $code, $this->msg( $decoded ) ) ) );
+        }
+
+        if ( $authenticated && $this->is_token_invalid_response( $decoded ) ) {
+            throw new Lihi_Token_Invalid_Exception( esc_html( sprintf( 'HTTP %d: %s', $code, $this->msg( $decoded ) ) ) );
+        }
+
+        if ( $authenticated && $code === 403 ) {
+            $this->throw_forbidden_response( $decoded );
+        }
+
         return $decoded;
+    }
+
+    /**
+     * @throws Lihi_Auth_Exception on generic authorization rejection.
+     * @throws Lihi_User_Invalid_Exception when lihi marks the user invalid.
+     */
+    private function throw_forbidden_response( array $data ): void {
+        $message = esc_html( $this->msg( $data ) );
+
+        if ( $this->is_user_invalid_response( $data ) ) {
+            throw new Lihi_User_Invalid_Exception( $message );
+        }
+
+        throw new Lihi_Auth_Exception( $message );
+    }
+
+    private function is_user_invalid_response( array $data ): bool {
+        $message = trim( $this->msg( $data ) );
+
+        return strcasecmp( $message, 'User Invalid' ) === 0
+            || stripos( $message, 'user_not_found' ) !== false;
+    }
+
+    private function is_token_invalid_response( array $data ): bool {
+        $message = strtolower( trim( $this->msg( $data ) ) );
+
+        return in_array( $message, [
+            'token invalid ,please login again',
+            'token expired ,please login again',
+            'something wrong ,please login again',
+        ], true );
     }
 
     /**

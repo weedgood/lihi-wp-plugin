@@ -173,6 +173,42 @@ class ClientTest extends TestCase
     }
 
     /** @test */
+    public function authenticated_json_404_user_not_found_throws_user_invalid_exception(): void
+    {
+        $this->mockRequest(404, '{"result":"failed","msg":"user_not_found ,please login again"}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_User_Invalid_Exception::class);
+        $this->expectExceptionMessage('user_not_found');
+        $this->makeClient()->get_profile('test-token');
+    }
+
+    /** @test */
+    public function authenticated_json_500_login_again_throws_token_invalid_exception(): void
+    {
+        $this->mockRequest(500, '{"result":"failed","msg":"Token expired ,please login again"}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class);
+        $this->expectExceptionMessage('please login again');
+        $this->makeClient()->get_sites('test-token');
+    }
+
+    /** @test */
+    public function authenticated_json_500_token_invalid_message_throws_token_invalid_exception(): void
+    {
+        $this->mockRequest(500, '{"result":"failed","msg":"Token invalid ,please login again"}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class);
+        $this->expectExceptionMessage('Token invalid');
+        $this->makeClient()->get_sites('test-token');
+    }
+
+    /** @test */
+    public function authenticated_json_500_something_wrong_login_again_throws_token_invalid_exception(): void
+    {
+        $this->mockRequest(500, '{"result":"failed","msg":"Something wrong ,please login again"}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class);
+        $this->expectExceptionMessage('Something wrong');
+        $this->makeClient()->get_sites('test-token');
+    }
+
+    /** @test */
     public function request_throws_server_exception_on_5xx_html_unknown_title(): void
     {
         $html = '<html><head><title>Internal Server Error</title></head><body></body></html>';
@@ -188,6 +224,14 @@ class ClientTest extends TestCase
         $this->mockRequest(500, 'not-json');
         $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
         $this->makeClient()->get_sites('test-token');
+    }
+
+    /** @test */
+    public function authenticated_json_403_user_invalid_throws_user_invalid_exception(): void
+    {
+        $this->mockRequest(403, '{"result":"failed","msg":"User Invalid"}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_User_Invalid_Exception::class);
+        $this->makeClient()->get_profile('test-token');
     }
 
     /** @test */

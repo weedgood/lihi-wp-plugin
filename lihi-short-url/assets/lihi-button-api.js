@@ -1,4 +1,9 @@
 ( function () {
+	const URL_OPTIONS_CACHE_TTL = 60000;
+	let urlOptionsCache = null;
+	let urlOptionsCacheTime = 0;
+	let urlOptionsRequest = null;
+
 	function errorMessage( data ) {
 		if ( typeof data?.data === 'string' ) return data.data;
 		if ( typeof data?.data?.message === 'string' ) return data.data.message;
@@ -37,7 +42,25 @@
 	}
 
 	async function loadUrlOptions( container ) {
-		return await postAjax( itemPayload( container, lihiButton.optionsAction ) );
+		if ( urlOptionsCache && Date.now() - urlOptionsCacheTime < URL_OPTIONS_CACHE_TTL ) {
+			return urlOptionsCache;
+		}
+
+		if ( ! urlOptionsRequest ) {
+			urlOptionsRequest = postAjax( itemPayload( container, lihiButton.optionsAction ) )
+				.then( ( data ) => {
+					if ( data.success ) {
+						urlOptionsCache = data;
+						urlOptionsCacheTime = Date.now();
+					}
+					return data;
+				} )
+				.finally( () => {
+					urlOptionsRequest = null;
+				} );
+		}
+
+		return await urlOptionsRequest;
 	}
 
 	async function createShortUrl( container, options = {} ) {
