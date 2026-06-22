@@ -88,6 +88,36 @@ class Lihi_Client implements Lihi_Client_Interface {
     }
 
     // -------------------------------------------------------------------------
+    // Passthrough
+    // -------------------------------------------------------------------------
+
+    /**
+     * @throws Lihi_Validation_Exception missing / invalid fields (HTTP 400)
+     * @throws Lihi_Rate_Limit_Exception endpoint throttle (HTTP 429)
+     * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
+     */
+    public function create_passthrough_nonce( string $token, string $target, string $challenge ): array {
+        $body = [ 'challenge' => $challenge ];
+        if ( $target !== '' ) {
+            $body['target'] = $target;
+        }
+        [ 'code' => $code, 'body' => $raw ] = $this->request( 'POST', '/api/wordpress/v1/passthrough/nonce', $body, $token );
+        $data = $this->decode( $code, $raw );
+
+        if ( $code === 400 ) {
+            throw new Lihi_Validation_Exception( esc_html( $this->msg( $data ) ) );
+        }
+        if ( $code === 429 ) {
+            throw new Lihi_Rate_Limit_Exception( esc_html( $this->msg( $data ) ) );
+        }
+        if ( $code >= 500 || empty( $data['result'] ) ) {
+            throw new Lihi_Server_Exception( esc_html( $this->msg( $data ) ) );
+        }
+
+        return $data;
+    }
+
+    // -------------------------------------------------------------------------
     // Sites
     // -------------------------------------------------------------------------
 

@@ -116,6 +116,21 @@ class Lihi_Service {
         }
     }
 
+    public function create_passthrough_nonce( string $target, string $challenge ): string {
+        $email = lihi_email();
+        $token = $this->get_token( $email );
+        try {
+            return $this->fetch_passthrough_nonce( $token, $target, $challenge );
+        } catch ( Lihi_User_Invalid_Exception $e ) {
+            $this->invalidate_token();
+            throw $e;
+        } catch ( Lihi_Token_Invalid_Exception $e ) {
+            $this->invalidate_token();
+            $token = $this->get_token( $email );
+            return $this->fetch_passthrough_nonce( $token, $target, $challenge );
+        }
+    }
+
     /**
      * Core logic for get_or_create_short_url(); extracted so the retry path can reuse it.
      *
@@ -171,6 +186,17 @@ class Lihi_Service {
         }
 
         return $existing;
+    }
+
+    private function fetch_passthrough_nonce( string $token, string $target, string $challenge ): string {
+        $result = $this->client->create_passthrough_nonce( $token, $target, $challenge );
+        $nonce  = $result['data']['nonce'] ?? '';
+
+        if ( ! $nonce ) {
+            throw new \RuntimeException( esc_html__( 'No passthrough nonce returned from lihi API.', 'lihi-short-url' ) );
+        }
+
+        return $nonce;
     }
 
     private function find_existing_short_url( array $sites, int $item_id ): string {

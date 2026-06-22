@@ -18,6 +18,13 @@ function render_lihi_button_container( int $post_id, string $post_type ): string
     return '<div class="lihi-button-container" data-lihi-container data-id="' . esc_attr( $post_id ) . '" data-type="' . esc_attr( $post_type ) . '" data-lihi-already="' . esc_attr( $already ? '1' : '0' ) . '"></div>';
 }
 
+function lihi_button_asset_version( string $asset ): string {
+    $path     = plugin_dir_path( __FILE__ ) . '../assets/' . ltrim( $asset, '/' );
+    $modified = file_exists( $path ) ? filemtime( $path ) : false;
+
+    return $modified ? '1.0.3-' . $modified : '1.0.3';
+}
+
 // UI hooks (column, container, enqueue) only register when the auth email is set.
 // AJAX handlers are registered unconditionally in shorturl-column-ajax.php.
 if ( lihi_email() !== '' ) {
@@ -34,14 +41,14 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         'lihi-button',
         plugin_dir_url( __FILE__ ) . '../assets/lihi-button.css',
         [],
-        '1.0.3'
+        lihi_button_asset_version( 'lihi-button.css' )
     );
 
     wp_enqueue_script(
         'lihi-button-api',
         plugin_dir_url( __FILE__ ) . '../assets/lihi-button-api.js',
         [],
-        '1.0.3',
+        lihi_button_asset_version( 'lihi-button-api.js' ),
         true
     );
 
@@ -49,7 +56,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         'lihi-button-modal',
         plugin_dir_url( __FILE__ ) . '../assets/lihi-button-modal.js',
         [ 'lihi-button-api' ],
-        '1.0.3',
+        lihi_button_asset_version( 'lihi-button-modal.js' ),
         true
     );
 
@@ -57,7 +64,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         'lihi-button',
         plugin_dir_url( __FILE__ ) . '../assets/lihi-button.js',
         [ 'lihi-button-api', 'lihi-button-modal' ],
-        '1.0.3',
+        lihi_button_asset_version( 'lihi-button.js' ),
         true
     );
 
@@ -66,11 +73,16 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         'nonce'         => wp_create_nonce( 'lihi_short_url' ),
         'copyAction'    => 'lihi_copy_url',
         'createAction'  => 'lihi_create_url',
+        'editAction'    => 'lihi_edit_url',
         'optionsAction' => 'lihi_url_options',
+        'canEditShortUrl' => current_user_can( 'manage_options' ) ? '1' : '0',
+        'passthroughRedirectUrl' => lihi_passthrough_redirect_url(),
         'siteHost'      => lihi_site_host(),
         'labelOriginal' => 'lihi',
         'labelReady'    => __( 'Copy', 'lihi-short-url' ),
+        'labelEdit'     => __( 'Edit', 'lihi-short-url' ),
         'labelCopied'   => __( 'Copied!', 'lihi-short-url' ),
+        'requestFailed' => __( 'Request failed. Please try again later.', 'lihi-short-url' ),
         'copyFallback'  => __( 'Clipboard access was blocked. Copy this short URL:', 'lihi-short-url' ),
         'resetDelay'    => 300,
         'labelDelay'    => 1200,
@@ -93,6 +105,13 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         'notice'        => [
             'title'   => __( 'lihi Short URL', 'lihi-short-url' ),
             'confirm' => __( 'OK', 'lihi-short-url' ),
+            'cancel'  => __( 'Cancel', 'lihi-short-url' ),
+        ],
+        'edit'          => [
+            'confirmMessage' => __( 'Go to the lihi dashboard to edit this short URL?', 'lihi-short-url' ),
+            'popupBlocked'   => __( 'Your browser blocked the lihi edit tab. Please allow pop-ups and try again.', 'lihi-short-url' ),
+            'proofUnavailable' => __( 'Your browser does not support secure lihi edit verification.', 'lihi-short-url' ),
+            'invalidProof'    => __( 'Could not verify browser session. Please refresh the page and try again.', 'lihi-short-url' ),
         ],
     ] );
 } );

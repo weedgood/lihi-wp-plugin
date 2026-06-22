@@ -85,6 +85,34 @@ class ClientTest extends TestCase
         $this->assertSame('Bearer my-token', $c['args']['headers']['Authorization']);
     }
 
+    /** @test */
+    public function create_passthrough_nonce_posts_challenge_and_target_with_bearer_token(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true,"msg":"","data":{"nonce":"nonce-token"}}');
+        $challenge = str_repeat('A', 43);
+
+        $result = $this->makeClient()->create_passthrough_nonce('my-token', 'https://example.com/path?foo=bar', $challenge);
+
+        $c    = $capture();
+        $body = json_decode($c['args']['body'] ?? '{}', true);
+        $this->assertStringContainsString('/api/wordpress/v1/passthrough/nonce', $c['url']);
+        $this->assertSame('POST', $c['args']['method']);
+        $this->assertSame('Bearer my-token', $c['args']['headers']['Authorization']);
+        $this->assertSame($challenge, $body['challenge']);
+        $this->assertArrayNotHasKey('ip', $body);
+        $this->assertSame('https://example.com/path?foo=bar', $body['target']);
+        $this->assertSame('nonce-token', $result['data']['nonce']);
+    }
+
+    /** @test */
+    public function create_passthrough_nonce_throws_validation_exception_on_400(): void
+    {
+        $this->mockRequest(400, '{"result":false,"msg":{"target":["The target may not be greater than 2048 characters."]}}');
+
+        $this->expectException(\Lihi\ShortUrl\Lihi_Validation_Exception::class);
+        $this->makeClient()->create_passthrough_nonce('my-token', str_repeat('a', 2049), str_repeat('A', 43));
+    }
+
     // -------------------------------------------------------------------------
     // request()
     // -------------------------------------------------------------------------

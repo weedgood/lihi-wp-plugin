@@ -1,11 +1,14 @@
 const {
 	copyShortUrl: copyShortUrlFromApi,
 	createShortUrl,
+	editShortUrl,
 	errorMessage,
 	exceptionMessage,
 } = window.LihiButtonApi;
 const {
+	closeConfirmModal,
 	openCreateModal,
+	showConfirm,
 	showNotice,
 } = window.LihiButtonModal;
 
@@ -27,10 +30,15 @@ function renderButtonLabel( container, btn ) {
 function setButtonAlready( container, btn, already ) {
 	container.setAttribute( 'data-lihi-already', already ? '1' : '0' );
 	renderButtonLabel( container, btn );
+	renderEditButton( container );
 }
 
 function isMissingShortUrl( data ) {
 	return data?.data?.code === 'lihi_missing';
+}
+
+function canEditShortUrl() {
+	return lihiButton.canEditShortUrl === '1' || lihiButton.canEditShortUrl === true;
 }
 
 function prepareButton( btn ) {
@@ -45,6 +53,7 @@ function renderButtonContainer( container ) {
 	if ( existing ) {
 		prepareButton( existing );
 		renderButtonLabel( container, existing );
+		renderEditButton( container );
 		return existing;
 	}
 
@@ -55,6 +64,31 @@ function renderButtonContainer( container ) {
 	prepareButton( btn );
 	renderButtonLabel( container, btn );
 
+	container.appendChild( btn );
+	renderEditButton( container );
+	return btn;
+}
+
+function renderEditButton( container ) {
+	if ( ! canEditShortUrl() || container.dataset.lihiAlready !== '1' ) {
+		container.querySelector( 'button[data-lihi-edit]' )?.remove();
+		return null;
+	}
+
+	const existing = container.querySelector( 'button[data-lihi-edit]' );
+	const label = lihiButton.labelEdit || 'Edit';
+	if ( existing ) {
+		existing.textContent = label;
+		existing.setAttribute( 'aria-label', label );
+		return existing;
+	}
+
+	const btn = document.createElement( 'button' );
+	btn.type = 'button';
+	btn.className = 'button button-secondary';
+	btn.dataset.lihiEdit = '';
+	btn.textContent = label;
+	btn.setAttribute( 'aria-label', label );
 	container.appendChild( btn );
 	return btn;
 }
@@ -86,11 +120,91 @@ async function copyShortUrl( url ) {
 	}
 }
 
+function base64UrlEncode( bytes ) {
+	let binary = '';
+	bytes.forEach( ( byte ) => {
+		binary += String.fromCharCode( byte );
+	} );
+
+	return window.btoa( binary )
+		.replace( /\+/g, '-' )
+		.replace( /\//g, '_' )
+		.replace( /=+$/g, '' );
+}
+
+async function createPassthroughProof() {
+	if ( ! window.crypto?.getRandomValues || ! window.crypto?.subtle || ! window.TextEncoder ) {
+		throw new Error(
+			lihiButton.edit?.proofUnavailable ||
+			'Your browser does not support secure lihi edit verification.'
+		);
+	}
+
+	const bytes = new Uint8Array( 32 );
+	window.crypto.getRandomValues( bytes );
+
+	const verifier = base64UrlEncode( bytes );
+	const digest = await window.crypto.subtle.digest(
+		'SHA-256',
+		new window.TextEncoder().encode( verifier )
+	);
+
+	return {
+		challenge: base64UrlEncode( new Uint8Array( digest ) ),
+		verifier,
+	};
+}
+
+function appendHiddenInput( form, name, value ) {
+	const input = document.createElement( 'input' );
+
+	input.type = 'hidden';
+	input.name = name;
+	input.value = value;
+	form.appendChild( input );
+}
+
+function submitPassthroughForm( redirectUrl, nonce, verifier, target = '' ) {
+	const form = document.createElement( 'form' );
+
+	form.method = 'POST';
+	form.action = redirectUrl;
+	form.hidden = true;
+	if ( target ) {
+		form.target = target;
+	}
+
+	appendHiddenInput( form, 'nonce', nonce );
+	appendHiddenInput( form, 'verifier', verifier );
+	document.body.appendChild( form );
+	form.submit();
+}
+
+function passthroughTargetName( container ) {
+	return 'lihi_edit_' + ( container.dataset.id || Date.now() ) + '_' + Date.now();
+}
+
+function openPassthroughWindow( targetName ) {
+	const popup = window.open( '', targetName );
+	if ( popup ) {
+		popup.opener = null;
+	}
+	return popup;
+}
+
+function closePassthroughWindow( popup ) {
+	try {
+		popup?.close();
+	} catch {
+		// Some browsers deny closing a tab once navigation has started.
+	}
+}
+
 async function withLihiBusy( container, btn, callback ) {
 	if ( lihiBusy ) return;
 
 	cancelPendingRevert( container, btn );
-	const allBtns = document.querySelectorAll( 'button[data-lihi]' );
+	const allBtns = document.querySelectorAll( 'button[data-lihi], button[data-lihi-edit]' );
 
 	lihiBusy = true;
 	allBtns.forEach( ( b ) => { b.disabled = true; } );
@@ -180,9 +294,76 @@ async function tryCopyLihi( container, btn ) {
 	} );
 }
 
+async function editLihi( container, btn ) {
+	const targetName = passthroughTargetName( container );
+	let popup = null;
+	let popupAttempted = false;
+	const confirmed = await showConfirm(
+		lihiButton.edit?.confirmMessage || 'Go to the lihi dashboard to edit this short URL?',
+		{
+			closeOnConfirm: false,
+			onConfirm: () => {
+				popupAttempted = true;
+				popup = openPassthroughWindow( targetName );
+				return Boolean( popup );
+			},
+		}
+	);
+	if ( ! confirmed && popupAttempted ) {
+		await showNotice( lihiButton.edit?.popupBlocked || 'Your browser blocked the lihi edit tab. Please allow pop-ups and try again.' );
+		return;
+	}
+	if ( ! confirmed ) return;
+
+	await withLihiBusy( container, btn, async () => {
+		let data;
+		let proof;
+		try {
+			proof = await createPassthroughProof();
+			data = await editShortUrl( container, proof.challenge );
+		} catch ( error ) {
+			closePassthroughWindow( popup );
+			closeConfirmModal();
+			await showNotice( exceptionMessage( error ) );
+			return;
+		}
+
+		if ( ! data.success ) {
+			closePassthroughWindow( popup );
+			closeConfirmModal();
+			if ( isMissingShortUrl( data ) ) {
+				setButtonAlready( container, container.querySelector( 'button[data-lihi]' ) || btn, false );
+			}
+			await showNotice( errorMessage( data ) );
+			return;
+		}
+
+		const nonce = data.data?.nonce;
+		const redirectUrl = data.data?.redirect_url || lihiButton.passthroughRedirectUrl;
+		if ( ! nonce || ! redirectUrl ) {
+			closePassthroughWindow( popup );
+			closeConfirmModal();
+			await showNotice( errorMessage( data ) );
+			return;
+		}
+
+		submitPassthroughForm( redirectUrl, nonce, proof.verifier, targetName );
+		closeConfirmModal();
+	} );
+}
+
 document.addEventListener( 'click', async ( e ) => {
 	const container = e.target.closest( '[data-lihi-container]' );
 	if ( ! container || lihiBusy ) return;
+
+	const editBtn = e.target.closest( 'button[data-lihi-edit]' );
+	if ( editBtn && container.contains( editBtn ) ) {
+		e.stopPropagation();
+		if ( ! canEditShortUrl() ) return;
+
+		await editLihi( container, editBtn );
+		return;
+	}
 
 	const btn = e.target.closest( 'button[data-lihi]' );
 	if ( ! btn || ! container.contains( btn ) ) return;

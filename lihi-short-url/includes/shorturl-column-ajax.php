@@ -9,6 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+/** Browser admin-ajax request failed local validation before any lihi API call. */
+class Lihi_Ajax_Bad_Request_Exception extends \RuntimeException {}
+
 function parse_json_array_field( string $field ): array {
     $raw = isset( $_POST[ $field ] ) ? wp_unslash( $_POST[ $field ] ) : '[]';
     if ( ! is_string( $raw ) ) {
@@ -73,6 +76,18 @@ function parse_domain_field(): string {
     return $domain;
 }
 
+function parse_passthrough_challenge_field(): string {
+    $challenge = isset( $_POST['challenge'] )
+        ? trim( sanitize_text_field( wp_unslash( $_POST['challenge'] ) ) )
+        : '';
+
+    if ( ! preg_match( '/^[A-Za-z0-9_-]{43}$/', $challenge ) ) {
+        throw new Lihi_Ajax_Bad_Request_Exception( __( 'Could not verify browser session. Please try again.', 'lihi-short-url' ) );
+    }
+
+    return $challenge;
+}
+
 function available_profile_domains( array $profile ): array {
     $domains = [];
     foreach ( $profile['domains'] ?? [] as $domain ) {
@@ -116,6 +131,15 @@ function validate_lihi_item_request(): array {
     return [ $item_id, $type ];
 }
 
+function validate_lihi_edit_permission(): bool {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( __( 'You do not have permission to edit lihi short URLs.', 'lihi-short-url' ), 403 );
+        return false;
+    }
+
+    return true;
+}
+
 function handle_lihi_ajax_exception( \Exception $e, array $context = [] ): void {
     if ( $e instanceof Lihi_User_Invalid_Exception ) {
         wp_send_json_error( __( 'Your lihi account is unavailable. Please contact lihi support before creating short URLs.', 'lihi-short-url' ), 403 );
@@ -129,6 +153,13 @@ function handle_lihi_ajax_exception( \Exception $e, array $context = [] ): void 
 
     if ( $e instanceof Lihi_Auth_Exception ) {
         wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email.', 'lihi-short-url' ), 403 );
+        return;
+    }
+
+    if ( $e instanceof Lihi_Ajax_Bad_Request_Exception ) {
+        // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- JSON payload is rendered with textContent in lihi-button.js.
+        wp_send_json_error( $e->getMessage(), 400 );
+        // phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
         return;
     }
 
@@ -226,6 +257,47 @@ function ajax_copy_url(): void {
 }
 
 add_action( 'wp_ajax_lihi_copy_url', __NAMESPACE__ . '\\ajax_copy_url' );
+
+/**
+ * AJAX handler: verify an existing lihi short URL and create a passthrough
+ * nonce so the browser can open the lihi dashboard edit flow.
+ */
+function ajax_edit_url(): void {
+    check_ajax_referer( 'lihi_short_url', 'nonce' );
+
+    if ( ! validate_lihi_edit_permission() ) {
+        return;
+    }
+
+    list( $item_id, $type ) = validate_lihi_item_request();
+    if ( ! $item_id ) {
+        return;
+    }
+
+    try {
+        $challenge    = parse_passthrough_challenge_field();
+        $url          = Lihi_Singletons::lihi_service()->get_existing_short_url( $item_id, $type );
+        $nonce        = Lihi_Singletons::lihi_service()->create_passthrough_nonce( $url, $challenge );
+        $redirect_url = lihi_passthrough_redirect_url();
+        if ( $redirect_url === '' ) {
+            throw new \RuntimeException( 'Could not resolve lihi passthrough redirect URL.' );
+        }
+
+        update_post_meta( $item_id, 'lihi_already', '1' );
+        wp_send_json_success( [
+            'nonce'        => $nonce,
+            'redirect_url' => $redirect_url,
+            'target'       => $url,
+        ] );
+    } catch ( \Exception $e ) {
+        handle_lihi_ajax_exception( $e, [
+            'fallback_message' => __( 'Failed to open lihi dashboard. Please try again later.', 'lihi-short-url' ),
+            'missing_item_id'  => $item_id,
+        ] );
+    }
+}
+
+add_action( 'wp_ajax_lihi_edit_url', __NAMESPACE__ . '\\ajax_edit_url' );
 
 /**
  * AJAX handler: create (or fetch-and-create) a lihi short URL for a post using

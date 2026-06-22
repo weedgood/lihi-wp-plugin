@@ -13,6 +13,11 @@
 		noticeTitle: 'lihi-notice-title',
 		noticeMessage: 'lihi-notice-message',
 		noticeConfirm: 'lihi-notice-confirm',
+		confirm: 'lihi-confirm-modal',
+		confirmTitle: 'lihi-confirm-title',
+		confirmMessage: 'lihi-confirm-message',
+		confirmCancel: 'lihi-confirm-cancel',
+		confirmConfirm: 'lihi-confirm-confirm',
 	} );
 	const UTM_INPUT_IDS = Object.freeze( {
 		source: 'lihi-utm-source',
@@ -141,6 +146,9 @@
 	function showNotice( message, onConfirm = null ) {
 		const modal = ensureNoticeModal();
 		const confirm = modal.querySelector( idSelector( MODAL_IDS.noticeConfirm ) );
+		confirm.disabled = false;
+		confirm.classList.remove( 'lihi-btn-loading' );
+		confirm.textContent = lihiButton.notice?.confirm || 'OK';
 		modal.querySelector( idSelector( MODAL_IDS.noticeMessage ) ).textContent = message;
 		showModalElement( modal );
 		confirm.focus();
@@ -159,6 +167,118 @@
 				}
 			};
 		} );
+	}
+
+	function ensureConfirmModal() {
+		let modal = document.getElementById( MODAL_IDS.confirm );
+		if ( modal ) return modal;
+
+		modal = document.createElement( 'div' );
+		modal.id = MODAL_IDS.confirm;
+		modal.className = 'lihi-modal lihi-confirm-modal';
+		modal.hidden = true;
+
+		const backdrop = document.createElement( 'div' );
+		backdrop.className = 'lihi-modal__backdrop';
+
+		const panel = document.createElement( 'div' );
+		panel.className = 'lihi-modal__panel';
+		panel.setAttribute( 'role', 'alertdialog' );
+		panel.setAttribute( 'aria-modal', 'true' );
+		panel.setAttribute( 'aria-labelledby', MODAL_IDS.confirmTitle );
+		panel.setAttribute( 'aria-describedby', MODAL_IDS.confirmMessage );
+
+		const header = document.createElement( 'div' );
+		header.className = 'lihi-modal__header';
+
+		const title = document.createElement( 'h2' );
+		title.id = MODAL_IDS.confirmTitle;
+		title.textContent = lihiButton.notice?.title || 'lihi';
+
+		const body = document.createElement( 'div' );
+		body.className = 'lihi-modal__body';
+
+		const message = document.createElement( 'p' );
+		message.id = MODAL_IDS.confirmMessage;
+		message.className = 'lihi-notice-modal__message';
+		body.appendChild( message );
+
+		const footer = document.createElement( 'div' );
+		footer.className = 'lihi-modal__footer';
+
+		const cancel = document.createElement( 'button' );
+		cancel.type = 'button';
+		cancel.className = 'button';
+		cancel.id = MODAL_IDS.confirmCancel;
+		cancel.textContent = lihiButton.notice?.cancel || 'Cancel';
+
+		const confirm = document.createElement( 'button' );
+		confirm.type = 'button';
+		confirm.className = 'button button-primary';
+		confirm.id = MODAL_IDS.confirmConfirm;
+		confirm.textContent = lihiButton.notice?.confirm || 'OK';
+
+		header.appendChild( title );
+		footer.append( cancel, confirm );
+		panel.append( header, body, footer );
+		modal.append( backdrop, panel );
+		document.body.appendChild( modal );
+
+		return modal;
+	}
+
+	function showConfirm( message, options = {} ) {
+		const modal = ensureConfirmModal();
+		const cancel = modal.querySelector( idSelector( MODAL_IDS.confirmCancel ) );
+		const confirm = modal.querySelector( idSelector( MODAL_IDS.confirmConfirm ) );
+		const closeOnConfirm = options?.closeOnConfirm ?? true;
+		const onConfirm = options?.onConfirm;
+		modal.querySelector( idSelector( MODAL_IDS.confirmMessage ) ).textContent = message;
+		cancel.disabled = false;
+		cancel.hidden = false;
+		cancel.textContent = lihiButton.notice?.cancel || 'Cancel';
+		confirm.disabled = false;
+		confirm.classList.remove( 'lihi-btn-loading' );
+		confirm.textContent = lihiButton.notice?.confirm || 'OK';
+		showModalElement( modal );
+		cancel.focus();
+
+		return new Promise( ( resolve ) => {
+			cancel.onclick = () => {
+				hideModalElement( modal );
+				resolve( false );
+			};
+			confirm.onclick = () => {
+				if ( typeof onConfirm === 'function' ) {
+					try {
+						if ( onConfirm() === false ) {
+							hideModalElement( modal );
+							resolve( false );
+							return;
+						}
+					} catch {
+						hideModalElement( modal );
+						resolve( false );
+						return;
+					}
+				}
+
+				if ( closeOnConfirm ) {
+					hideModalElement( modal );
+				} else {
+					cancel.disabled = true;
+					cancel.hidden = true;
+					confirm.disabled = true;
+					confirm.classList.add( 'lihi-btn-loading' );
+				}
+				resolve( true );
+			};
+		} );
+	}
+
+	function closeConfirmModal() {
+		const modal = document.getElementById( MODAL_IDS.confirm );
+		if ( modal ) hideModalElement( modal );
 	}
 
 	function ensureCreateModal() {
@@ -419,7 +539,9 @@
 	}
 
 	window.LihiButtonModal = Object.freeze( {
+		closeConfirmModal,
 		openCreateModal,
+		showConfirm,
 		showNotice,
 	} );
 }() );

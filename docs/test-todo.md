@@ -108,6 +108,11 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] 已有相符 type_id 的短連結 → 回傳 `short_url`，不呼叫 create_site
 - [x] 無相符短連結 → 拋出 `Lihi_Not_Found_Exception`，不呼叫 create_site
 
+### create_passthrough_nonce()
+- [x] transient 有效 → 使用 cached token 呼叫 client，並回傳 `data.nonce`
+- [x] client 回傳空 nonce → 拋出 RuntimeException
+- [x] `client->create_passthrough_nonce()` 拋出 `Lihi_Token_Invalid_Exception` → invalidate token、重新 login、再試一次
+
 ## Lihi_Client
 
 ### request() 核心邏輯
@@ -122,10 +127,12 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 
 ### 各方法路徑與 HTTP method
 - [x] get_profile() → GET /api/wordpress/v1/profile，帶 Authorization: Bearer
+- [x] create_passthrough_nonce() → POST /api/wordpress/v1/passthrough/nonce，body 帶 `{ challenge }` 並可帶 `{ target }`，且帶 Authorization: Bearer
 - [x] get_sites() → GET /api/wordpress/v1/sites，params 編為 query string
 - [x] get_short_links() → GET /api/wordpress/v1/sites，帶 type/type_id/per_page
 - [x] create_site() → POST /api/wordpress/v1/sites，body 為 JSON
 - [x] create_site() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
+- [x] create_passthrough_nonce() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
 
 > `Lihi_Client_Interface` 涵蓋 `wordpress/v1` 下外掛實際使用的 endpoints：
 > auth（`login` / `update-email`）與 JWT `profile`、`sites`（index/store）。`POST /mail` 外掛無用途，
@@ -159,9 +166,9 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 
 ---
 
-## AJAX Handlers: lihi_create_url / lihi_copy_url
+## AJAX Handlers: lihi_create_url / lihi_copy_url / lihi_edit_url
 
-> 政策：建立與複製短網址都需要通過 nonce，且使用者必須對目標文章 / 媒體具備 `read_post` 權限。未登入請求仍由 `wp_ajax_lihi_create_url` / `wp_ajax_lihi_copy_url` action（未註冊 `wp_ajax_nopriv_*` 變體）擋下，無法抵達 handler。
+> 政策：建立、複製、編輯短網址都需要通過 nonce，且使用者必須對目標文章 / 媒體具備 `read_post` 權限；編輯短網址還需要 `manage_options`，因為它會產生 lihi-admin passthrough nonce。未登入請求仍由 `wp_ajax_lihi_create_url` / `wp_ajax_lihi_copy_url` / `wp_ajax_lihi_edit_url` action（未註冊 `wp_ajax_nopriv_*` 變體）擋下，無法抵達 handler。
 
 - [x] AJAX parsing / validation / exception mapping / action registration 拆在 `includes/shorturl-column-ajax.php`，`includes/add-shorturl-column.php` 只保留 column UI hooks
 - [x] email 為空 → wp_send_json_error「lihi email is not configured…」，HTTP 409
@@ -173,7 +180,12 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] `lihi_create_url` 正常回傳 url → `update_post_meta($item_id, 'lihi_already', '1')` 並 `wp_send_json_success(['url' => ..., 'lihi_already' => true])`
 - [x] `lihi_copy_url` → 呼叫 `get_existing_short_url()`，不呼叫 create flow；成功時仍回傳 url 並維持 `lihi_already = 1`
 - [x] `lihi_copy_url` 且 upstream 短網址不存在 → `update_post_meta($item_id, 'lihi_already', '0')`，HTTP 410，payload code 為 `lihi_missing`
+- [x] `lihi_edit_url` 無 `manage_options` 權限 → HTTP 403，不呼叫 service、不產生 passthrough nonce
+- [x] `lihi_edit_url` → 先驗證 browser challenge、呼叫 `get_existing_short_url()`，再以短網址 target + challenge 呼叫 `create_passthrough_nonce()`，回傳 `nonce` / `redirect_url` / `target`
+- [x] `lihi_edit_url` 缺少或傳入無效 browser challenge → HTTP 400，不呼叫 service
+- [x] `lihi_edit_url` 且 upstream 短網址不存在 → `update_post_meta($item_id, 'lihi_already', '0')`，HTTP 410，payload code 為 `lihi_missing`
 - [n/a] 前端 Copy 失敗只有 `code = lihi_missing` 才重設按鈕並開啟建立 modal；其他錯誤只顯示訊息、不改狀態（由程式碼審查 / JS 語法檢查保證）
+- [n/a] 前端 Copy 狀態只在 `canEditShortUrl` 為 true 時渲染相鄰 Edit button；點擊 Edit 先顯示確認 modal，OK 後產生 verifier / challenge，取得 passthrough nonce，並用 hidden form POST `nonce` + `verifier` 到 lihi-admin redirect endpoint（由程式碼審查 / JS 語法檢查保證）
 - [x] 建立 modal options → `wp_ajax_lihi_url_options` 回傳 profile domains
 - [x] AJAX exception mapping 集中於 `handle_lihi_ajax_exception()`，create / copy / options handler 不重複維護相同 catch mapping
 - [n/a] 前端 clipboard 被瀏覽器拒絕 → 已成功回傳的短網址直接以 prompt 顯示供手動複製，且按鈕狀態已先切為 `Copy`（由程式碼審查 / JS 語法檢查保證）
@@ -216,6 +228,7 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [n/a] release metadata 1.0.3 — plugin header、readme Stable tag / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、translation header 同步（由程式碼審查保證）
 - [x] `wp_ajax_lihi_copy_url` 已註冊
 - [x] `wp_ajax_lihi_create_url` 已註冊
+- [x] `wp_ajax_lihi_edit_url` 已註冊
 - [x] `wp_ajax_lihi_url_options` 已註冊
 - [x] `wp_ajax_lihi_update_email` 已註冊
 - [x] `register_deactivation_hook()` 已註冊停用清理 callback

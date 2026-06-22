@@ -423,6 +423,80 @@ class ServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // create_passthrough_nonce()
+    // -------------------------------------------------------------------------
+
+    /** @test */
+    public function create_passthrough_nonce_returns_nonce_with_cached_token(): void
+    {
+        $token = $this->makeJwt(time() + 3600);
+        $challenge = str_repeat('A', 43);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('create_passthrough_nonce')
+            ->with($token, 'https://lihi.io/existing', $challenge)
+            ->once()
+            ->andReturn(['result' => true, 'data' => ['nonce' => 'nonce-token']]);
+        $client->shouldNotReceive('login');
+
+        Functions\when('get_transient')->justReturn($token);
+
+        $result = $this->makeService($client)->create_passthrough_nonce('https://lihi.io/existing', $challenge);
+        $this->assertSame('nonce-token', $result);
+    }
+
+    /** @test */
+    public function create_passthrough_nonce_throws_when_nonce_empty(): void
+    {
+        $token = $this->makeJwt(time() + 3600);
+        $challenge = str_repeat('A', 43);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('create_passthrough_nonce')
+            ->with($token, 'https://lihi.io/existing', $challenge)
+            ->once()
+            ->andReturn(['result' => true, 'data' => []]);
+
+        Functions\when('get_transient')->justReturn($token);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('No passthrough nonce');
+        $this->makeService($client)->create_passthrough_nonce('https://lihi.io/existing', $challenge);
+    }
+
+    /** @test */
+    public function create_passthrough_nonce_retries_once_on_token_invalid(): void
+    {
+        $staleToken = $this->makeJwt(time() + 3600);
+        $freshToken = $this->makeJwt(time() + 7200);
+        $challenge = str_repeat('A', 43);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('create_passthrough_nonce')
+            ->with($staleToken, 'https://lihi.io/existing', $challenge)
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: Token expired ,please login again'));
+        $client->shouldReceive('create_passthrough_nonce')
+            ->with($freshToken, 'https://lihi.io/existing', $challenge)
+            ->once()
+            ->andReturn(['result' => true, 'data' => ['nonce' => 'fresh-nonce']]);
+        $client->shouldReceive('login')
+            ->with('user@example.com')
+            ->once()
+            ->andReturn(['token' => $freshToken]);
+
+        Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
+        Functions\when('delete_transient')->justReturn(true);
+        Functions\expect('get_transient')->andReturn($staleToken, false, false);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
+        Functions\when('set_transient')->justReturn(true);
+
+        $result = $this->makeService($client)->create_passthrough_nonce('https://lihi.io/existing', $challenge);
+        $this->assertSame('fresh-nonce', $result);
+    }
+
+    // -------------------------------------------------------------------------
     // get_or_create_short_url()
     // -------------------------------------------------------------------------
 

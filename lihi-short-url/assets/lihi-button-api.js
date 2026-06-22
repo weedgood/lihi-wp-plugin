@@ -4,23 +4,52 @@
 	let urlOptionsCacheTime = 0;
 	let urlOptionsRequest = null;
 
+	function fallbackMessage() {
+		return lihiButton.requestFailed || 'Request failed. Please try again later.';
+	}
+
 	function errorMessage( data ) {
 		if ( typeof data?.data === 'string' ) return data.data;
 		if ( typeof data?.data?.message === 'string' ) return data.data.message;
-		return 'Request failed.';
+		return fallbackMessage();
 	}
 
 	function exceptionMessage( error ) {
-		return error?.message || 'Request failed.';
+		return error?.message || fallbackMessage();
+	}
+
+	function isValidPassthroughChallenge( challenge ) {
+		return typeof challenge === 'string' && /^[A-Za-z0-9_-]{43}$/.test( challenge );
+	}
+
+	async function parseAjaxResponse( res ) {
+		const text = await res.text();
+
+		try {
+			const data = JSON.parse( text );
+			if ( data && typeof data === 'object' && ! Array.isArray( data ) ) {
+				return data;
+			}
+		} catch {
+			// Non-JSON admin-ajax responses should never leak parser details into the modal.
+		}
+
+		throw new Error( fallbackMessage() );
 	}
 
 	async function postAjax( params ) {
+		const body = new URLSearchParams();
+		Object.entries( params ).forEach( ( [ key, value ] ) => {
+			if ( value === undefined || value === null ) return;
+			body.append( key, value );
+		} );
+
 		const res = await fetch( lihiButton.ajaxUrl, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: new URLSearchParams( params ),
+			body,
 		} );
-		return await res.json();
+		return await parseAjaxResponse( res );
 	}
 
 	function itemPayload( container, action ) {
@@ -71,9 +100,24 @@
 		return await postAjax( itemPayload( container, lihiButton.copyAction ) );
 	}
 
+	async function editShortUrl( container, challenge ) {
+		if ( ! isValidPassthroughChallenge( challenge ) ) {
+			throw new Error(
+				lihiButton.edit?.invalidProof ||
+				'Could not verify browser session. Please refresh the page and try again.'
+			);
+		}
+
+		return await postAjax( {
+			...itemPayload( container, lihiButton.editAction ),
+			challenge,
+		} );
+	}
+
 	window.LihiButtonApi = Object.freeze( {
 		copyShortUrl,
 		createShortUrl,
+		editShortUrl,
 		errorMessage,
 		exceptionMessage,
 		loadUrlOptions,

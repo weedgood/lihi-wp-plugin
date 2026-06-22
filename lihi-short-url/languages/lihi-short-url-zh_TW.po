@@ -25,6 +25,10 @@ msgstr "lihi API 未回傳 token。"
 msgid "No short_url returned from lihi API."
 msgstr "lihi API 未回傳 short_url。"
 
+#: includes/service/lihi-service.php
+msgid "No passthrough nonce returned from lihi API."
+msgstr "lihi API 未回傳 passthrough nonce。"
+
 #: includes/helper.php
 msgid "Could not resolve WordPress site host."
 msgstr "無法解析 WordPress 站台主機名稱。"
@@ -44,6 +48,10 @@ msgstr "瀏覽器封鎖剪貼簿存取，請複製此短網址："
 #: includes/add-shorturl-column.php
 msgid "Copy"
 msgstr "複製"
+
+#: includes/add-shorturl-column.php
+msgid "Edit"
+msgstr "編輯"
 
 #: includes/add-shorturl-column.php
 msgid "Create lihi Short URL"
@@ -105,9 +113,37 @@ msgstr "載入中..."
 msgid "OK"
 msgstr "確定"
 
+#: includes/add-shorturl-column.php
+msgid "Go to the lihi dashboard to edit this short URL?"
+msgstr "是否前往 lihi 後台編輯短網址？"
+
+#: includes/add-shorturl-column.php
+msgid "Your browser blocked the lihi edit tab. Please allow pop-ups and try again."
+msgstr "瀏覽器已阻擋 lihi 編輯分頁，請允許彈出視窗後再試一次。"
+
+#: includes/add-shorturl-column.php
+msgid "Your browser does not support secure lihi edit verification."
+msgstr "您的瀏覽器不支援安全的 lihi 編輯驗證。"
+
+#: includes/add-shorturl-column.php
+msgid "Could not verify browser session. Please refresh the page and try again."
+msgstr "無法驗證瀏覽器工作階段，請重新整理頁面後再試一次。"
+
 #: includes/shorturl-column-ajax.php
 msgid "Please choose a redirect domain."
 msgstr "請選擇轉址網域。"
+
+#: includes/shorturl-column-ajax.php
+msgid "Could not resolve client IP address."
+msgstr "無法取得使用者 IP。"
+
+#: includes/shorturl-column-ajax.php
+msgid "Could not verify browser session. Please try again."
+msgstr "無法驗證瀏覽器工作階段，請再試一次。"
+
+#: includes/shorturl-column-ajax.php
+msgid "You do not have permission to edit lihi short URLs."
+msgstr "您沒有編輯 lihi 短網址的權限。"
 
 #: includes/shorturl-column-ajax.php
 msgid "Short URL has been removed. Please create it again."
@@ -155,6 +191,10 @@ msgstr "複製短網址失敗，請稍後再試。"
 #: includes/shorturl-column-ajax.php
 msgid "Failed to generate short URL. Please try again later."
 msgstr "產生短網址失敗，請稍後再試。"
+
+#: includes/shorturl-column-ajax.php
+msgid "Failed to open lihi dashboard. Please try again later."
+msgstr "無法開啟 lihi 後台，請稍後再試。"
 
 #: includes/settings.php
 msgid "Email"

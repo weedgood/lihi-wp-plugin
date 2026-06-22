@@ -18,9 +18,9 @@ namespace Lihi\ShortUrl;
  * layer is responsible for acquiring and refreshing the token. The site UUID
  * used by auth payloads is also injected by the caller.
  *
- * Plugin usage note: the current plugin only calls the two Site endpoints
- * (`get_sites` via `get_short_links`, and `create_site`). `get_profile` is
- * kept here to keep the contract aligned with the service surface.
+ * Plugin usage note: this contract exposes the server-to-server passthrough
+ * nonce endpoint, while the browser-facing redirect remains outside this
+ * client because it creates a SaaS web session.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -88,6 +88,32 @@ interface Lihi_Client_Interface {
      * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function get_profile( string $token ): array;
+
+    // -------------------------------------------------------------------------
+    // Passthrough (jwt)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Create a short-lived nonce that the browser can POST to the SaaS
+     * passthrough redirect endpoint.
+     *
+     * POST /api/wordpress/v1/passthrough/nonce (PassthroughController@nonce)
+     *
+     * @param string $token     JWT bearer token.
+     * @param string $target    Optional URL / search target for the SaaS site list.
+     * @param string $challenge Browser-generated base64url(SHA-256(verifier)) challenge.
+     *
+     * @return array{
+     *   result: bool,
+     *   msg: string,
+     *   data: array{nonce: string},
+     * }
+     *
+     * @throws Lihi_Validation_Exception on HTTP 400 (invalid target).
+     * @throws Lihi_Rate_Limit_Exception on HTTP 429.
+     * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
+     */
+    public function create_passthrough_nonce( string $token, string $target, string $challenge ): array;
 
     // -------------------------------------------------------------------------
     // Sites (jwt)
