@@ -209,6 +209,134 @@ msgid "Email used to authenticate with the lihi service. Saving sends a verifica
 msgstr "用於 lihi 服務驗證身分的 Email；儲存後會寄送驗證信，驗證完成後方可使用套件。"
 
 #: includes/settings.php
+msgid "Opening lihi dashboard..."
+msgstr "正在開啟 lihi 後台..."
+
+#: includes/settings.php
+msgid "lihi dashboard is opening in a new tab."
+msgstr "lihi 後台正在新分頁中開啟。"
+
+#: includes/settings.php
+msgid "lihi dashboard opened. Sign in there if needed."
+msgstr "lihi 後台已開啟，如有需要請在該頁登入。"
+
+#: includes/settings.php
+msgid "Your browser blocked the lihi dashboard tab. Please allow pop-ups and try again."
+msgstr "您的瀏覽器封鎖了 lihi 後台分頁，請允許彈出式視窗後再試一次。"
+
+#: includes/settings.php
+msgid "Your browser does not support secure lihi dashboard login."
+msgstr "您的瀏覽器不支援安全的 lihi 後台登入。"
+
+#: includes/settings.php
+msgid "Please confirm that lihi may use this email to create an account if one does not already exist."
+msgstr "請確認您同意 lihi 在帳號不存在時使用此 Email 建立帳號。"
+
+#: includes/settings.php
+msgid "lihi Services"
+msgstr "lihi 服務"
+
+#: includes/settings.php
+msgid "lihi dashboard"
+msgstr "lihi 後台"
+
+#: includes/settings.php
+msgid "Create short URLs in WordPress. Manage the rest in lihi."
+msgstr "在 WordPress 建立短網址"
+
+#: includes/settings.php
+msgid "This plugin provides a simple workflow for creating and using short URLs."
+msgstr "此套件提供簡易的短網址建立與使用流程。"
+
+#: includes/settings.php
+msgid "For short URL list management, link editing, personal domains, SMS, and growth tools, go to the lihi dashboard."
+msgstr "若需要管理短網址清單、編輯連結內容、管理個人網域，或使用簡訊與成長工具，請前往 lihi 後台。"
+
+#: includes/settings.php
+msgid "WordPress"
+msgstr "WordPress"
+
+#: includes/settings.php
+msgid "lihi dashboard services"
+msgstr "lihi 後台服務"
+
+#: includes/settings.php
+msgid "Short URLs"
+msgstr "短網址"
+
+#: includes/settings.php
+msgid "Manage destinations, traffic splitting, A/B tests, QR codes, tags, and click analytics for campaign links."
+msgstr "管理目的網址、分流與 A/B Test、QR Code、標籤，並追蹤行銷連結成效。"
+
+#: includes/settings.php
+msgid "Domains"
+msgstr "網域"
+
+#: includes/settings.php
+msgid "Manage personal domains, DNS settings, and short-link domains connected to traffic splitting and performance tracking."
+msgstr "管理個人網域、DNS 設定與短網址網域，串接分流與成效追蹤。"
+
+#: includes/settings.php
+msgid "SMS"
+msgstr "簡訊"
+
+#: includes/settings.php
+msgid "Send marketing SMS with NCC whitelist support, short-link tracking, delivery workflows, and SMS API access."
+msgstr "發送行銷簡訊，支援 NCC 白名單、短網址追蹤、發送流程與 SMS API。"
+
+#: includes/settings.php
+msgid "Growth tools"
+msgstr "成長工具"
+
+#: includes/settings.php
+msgid "Use UTM builders, QR codes, bulk imports, and API keys for larger workflows."
+msgstr "使用 UTM 產生器、QR Code、批次匯入與 API Key 支援更大型的工作流程。"
+
+#: includes/settings.php
+msgid "Terms of Use"
+msgstr "服務條款"
+
+#: includes/settings.php
+msgid "Privacy Policy"
+msgstr "隱私權政策"
+
+#: includes/settings.php
+msgid "Go to lihi dashboard"
+msgstr "前往 lihi 後台"
+
+#: includes/settings.php
+msgid "Save and verify an email before opening the dashboard."
+msgstr "請先儲存並驗證 Email，再開啟後台。"
+
+#: includes/settings.php
+msgid "Connected lihi account"
+msgstr "已連結的 lihi 帳號"
+
+#: includes/settings.php
+msgid "Save and verify the email used by this WordPress site."
+msgstr "儲存並驗證此 WordPress 網站使用的 Email。"
+
+#: includes/settings.php
+msgid "Saving sends a verification email. The WordPress shortcut works after verification is complete."
+msgstr "儲存後會寄送驗證信；驗證完成後即可使用便利的短網址功能。"
+
+#: includes/settings.php
+msgid "If this lihi account does not exist yet, I agree that lihi may use this email to create it."
+msgstr "若 lihi 帳號尚不存在，我同意 lihi 使用此 Email 建立帳號。"
+
+#: includes/settings.php
+msgid "No lihi account is connected yet."
+msgstr "尚未連結 lihi 帳號。"
+
+#: includes/settings.php
+msgid "Too many requests. Please wait a moment and try again."
+msgstr "請求過於頻繁，請稍候再試。"
+
+#: includes/settings.php
+msgid "You do not have permission to open the lihi dashboard."
+msgstr "您沒有權限開啟 lihi 後台。"
+
+#: includes/settings.php
 msgid "lihi email cleared. Short URL generation is disabled until a new email is verified."
 msgstr "已清除 lihi Email；在新 Email 完成驗證前，短網址功能將停用。"
 

@@ -1,0 +1,466 @@
+.lihi-settings-page {
+	max-width: 920px;
+}
+
+.lihi-services-panel {
+	--lihi-ink: #17202a;
+	--lihi-muted: #5c6670;
+	--lihi-line: #d7dee6;
+	--lihi-surface: #ffffff;
+	--lihi-route: #0f8f8c;
+	--lihi-link: #0f8f8c;
+	--lihi-domain: #4057b2;
+	--lihi-sms: #b35a15;
+	--lihi-tools: #9a3d74;
+	background: linear-gradient(90deg, #f8fbfb 0%, #ffffff 54%);
+	border: 1px solid #d7dee6;
+	border-left: 4px solid var(--lihi-route);
+	border-radius: 6px;
+	box-shadow: 0 1px 2px rgba(23, 32, 42, 0.04);
+	display: grid;
+	grid-template-columns: 1fr;
+	margin: 18px 0 24px;
+	overflow: hidden;
+	position: relative;
+}
+
+.lihi-services-panel::before {
+	background:
+		linear-gradient(var(--lihi-line) 1px, transparent 1px),
+		linear-gradient(90deg, var(--lihi-line) 1px, transparent 1px);
+	background-size: 28px 28px;
+	content: "";
+	inset: 0;
+	opacity: 0.24;
+	pointer-events: none;
+	position: absolute;
+}
+
+.lihi-services-panel__intro,
+.lihi-services-panel__workspace,
+.lihi-services-grid,
+.lihi-services-panel__legal {
+	position: relative;
+	z-index: 1;
+}
+
+.lihi-services-panel__intro {
+	border-bottom: 1px solid var(--lihi-line);
+	padding: 28px;
+}
+
+.lihi-services-panel__eyebrow {
+	color: var(--lihi-route);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	margin: 0 0 8px;
+}
+
+.lihi-services-panel h2 {
+	color: var(--lihi-ink);
+	font-size: 24px;
+	font-weight: 650;
+	line-height: 1.22;
+	margin: 0;
+	max-width: 520px;
+}
+
+.lihi-services-panel__copy {
+	color: var(--lihi-muted);
+	font-size: 14px;
+	line-height: 1.65;
+	margin: 14px 0 0;
+	max-width: 560px;
+}
+
+.lihi-services-panel__copy-line {
+	display: block;
+}
+
+.lihi-services-panel__copy-line + .lihi-services-panel__copy-line {
+	margin-top: 2px;
+}
+
+.lihi-services-route {
+	align-items: center;
+	color: var(--lihi-muted);
+	display: grid;
+	font-size: 12px;
+	font-weight: 600;
+	gap: 10px;
+	grid-template-columns: auto minmax(80px, 1fr) auto;
+	margin: 22px 0 0;
+}
+
+.lihi-services-route__line {
+	background: var(--lihi-line);
+	height: 2px;
+	position: relative;
+}
+
+.lihi-services-route__line::before,
+.lihi-services-route__line::after {
+	background: var(--lihi-route);
+	border: 3px solid #ffffff;
+	border-radius: 999px;
+	box-shadow: 0 0 0 1px rgba(15, 143, 140, 0.2);
+	content: "";
+	height: 8px;
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 8px;
+}
+
+.lihi-services-route__line::before {
+	left: 0;
+}
+
+.lihi-services-route__line::after {
+	right: 0;
+}
+
+.lihi-services-panel__actions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	justify-content: flex-end;
+	margin-left: auto;
+}
+
+.lihi-services-panel__lead {
+	margin-bottom: 20px;
+}
+
+.lihi-dashboard-button {
+	align-items: center;
+	display: inline-flex !important;
+	gap: 6px;
+	min-height: 34px;
+}
+
+.lihi-dashboard-button .dashicons {
+	font-size: 16px;
+	height: 16px;
+	width: 16px;
+}
+
+.lihi-services-panel__actions > .notice {
+	margin: 0;
+	max-width: 420px;
+	width: 100%;
+}
+
+.lihi-account-panel {
+	background: rgba(255, 255, 255, 0.72);
+	border: 1px solid var(--lihi-line);
+	border-radius: 6px;
+	padding: 16px;
+}
+
+.lihi-account-panel__header {
+	align-items: flex-start;
+	display: flex;
+	gap: 10px;
+}
+
+.lihi-account-panel__header .dashicons {
+	align-items: center;
+	background: #e8f5f5;
+	border: 1px solid rgba(15, 143, 140, 0.18);
+	border-radius: 6px;
+	color: var(--lihi-route);
+	display: inline-flex;
+	font-size: 18px;
+	height: 32px;
+	justify-content: center;
+	width: 32px;
+}
+
+.lihi-account-panel h3 {
+	color: var(--lihi-ink);
+	font-size: 14px;
+	font-weight: 700;
+	margin: 0 0 3px;
+}
+
+.lihi-account-panel__header p,
+.lihi-account-panel__description,
+.lihi-account-panel__profile p {
+	color: var(--lihi-muted);
+	font-size: 13px;
+	line-height: 1.45;
+	margin: 0;
+}
+
+.lihi-account-panel__form {
+	margin-top: 14px;
+}
+
+.lihi-account-panel__form > label {
+	color: var(--lihi-ink);
+	display: block;
+	font-size: 12px;
+	font-weight: 700;
+	margin-bottom: 6px;
+}
+
+.lihi-account-panel__controls {
+	display: grid;
+	gap: 8px;
+	grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.lihi-account-panel__controls input {
+	max-width: none;
+	width: 100%;
+}
+
+.lihi-account-panel__description {
+	margin-top: 7px;
+}
+
+.lihi-account-panel__consent {
+	align-items: center;
+	color: var(--lihi-ink);
+	display: grid;
+	font-size: 13px;
+	gap: 0 8px;
+	grid-template-columns: auto minmax(0, 1fr);
+	line-height: 1.45;
+	margin-top: 12px;
+}
+
+.lihi-account-panel__consent input[type="checkbox"] {
+	align-self: center;
+	margin: 0;
+}
+
+.lihi-account-panel__consent-label {
+	align-self: center;
+	font-size: 13px;
+	line-height: 1.45;
+	margin: 0;
+}
+
+.lihi-account-panel__profile {
+	border-top: 1px solid var(--lihi-line);
+	margin-top: 14px;
+	padding-top: 14px;
+}
+
+.lihi-account-panel__profile dl {
+	display: grid;
+	gap: 10px;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	margin: 0;
+}
+
+.lihi-account-panel__profile dt {
+	color: var(--lihi-muted);
+	font-size: 11px;
+	font-weight: 700;
+	margin-bottom: 3px;
+	text-transform: uppercase;
+}
+
+.lihi-account-panel__profile dd {
+	color: var(--lihi-ink);
+	font-size: 13px;
+	font-weight: 600;
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.lihi-account-panel__profile .notice {
+	margin: 0;
+}
+
+#lihi-email-status .notice {
+	margin: 12px 0 0;
+}
+
+.lihi-services-grid {
+	display: grid;
+	gap: 10px;
+	grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.lihi-services-panel__workspace {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 20px;
+}
+
+.lihi-services-panel__workspace-header {
+	align-items: center;
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+}
+
+.lihi-services-panel__workspace-heading {
+	color: var(--lihi-ink);
+	font-size: 24px;
+	font-weight: 650;
+	line-height: 1.22;
+	margin: 0;
+	max-width: 520px;
+}
+
+.lihi-service-card {
+	background: rgba(255, 255, 255, 0.86);
+	border: 1px solid #e1e6ec;
+	border-radius: 6px;
+	column-gap: 10px;
+	display: grid;
+	grid-template-columns: 32px minmax(0, 1fr);
+	grid-template-rows: auto 1fr;
+	min-height: 112px;
+	padding: 12px;
+	position: relative;
+	row-gap: 3px;
+}
+
+.lihi-service-card::before {
+	background: var(--lihi-accent);
+	border-radius: 6px 6px 0 0;
+	content: "";
+	height: 3px;
+	left: -1px;
+	position: absolute;
+	right: -1px;
+	top: -1px;
+}
+
+.lihi-service-card--links {
+	--lihi-accent: var(--lihi-link);
+}
+
+.lihi-service-card--domains {
+	--lihi-accent: var(--lihi-domain);
+}
+
+.lihi-service-card--sms {
+	--lihi-accent: var(--lihi-sms);
+}
+
+.lihi-service-card--tools {
+	--lihi-accent: var(--lihi-tools);
+}
+
+.lihi-service-card__icon {
+	align-items: center;
+	background: color-mix(in srgb, var(--lihi-accent) 12%, #ffffff);
+	border: 1px solid color-mix(in srgb, var(--lihi-accent) 28%, #ffffff);
+	border-radius: 6px;
+	color: var(--lihi-accent);
+	display: inline-flex;
+	grid-row: 1 / span 2;
+	font-size: 17px;
+	height: 32px;
+	justify-content: center;
+	width: 32px;
+}
+
+.lihi-service-card h3 {
+	color: var(--lihi-ink);
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.25;
+	margin: 1px 0 0;
+}
+
+.lihi-service-card p {
+	color: var(--lihi-muted);
+	font-size: 13px;
+	line-height: 1.42;
+	margin: 0;
+	max-width: 25em;
+}
+
+.lihi-services-panel__legal {
+	border-top: 1px solid var(--lihi-line);
+	color: var(--lihi-muted);
+	display: flex;
+	font-size: 12px;
+	gap: 8px;
+	grid-column: 1 / -1;
+	justify-content: flex-end;
+	padding: 10px 18px;
+}
+
+.lihi-services-panel__legal a {
+	text-decoration: none;
+}
+
+.lihi-services-panel__legal a:hover,
+.lihi-services-panel__legal a:focus {
+	text-decoration: underline;
+}
+
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+	.lihi-service-card__icon {
+		background: #f6f8fa;
+		border-color: #dfe5ec;
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.lihi-service-card {
+		transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+	}
+
+	.lihi-service-card:hover {
+		border-color: color-mix(in srgb, var(--lihi-accent) 34%, #dfe5ec);
+		box-shadow: 0 6px 18px rgba(23, 32, 42, 0.08);
+		transform: translateY(-1px);
+	}
+}
+
+@media (max-width: 600px) {
+	.lihi-services-panel__intro,
+	.lihi-services-panel__workspace {
+		padding: 18px;
+	}
+
+	.lihi-services-panel h2 {
+		font-size: 20px;
+	}
+
+	.lihi-services-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.lihi-services-panel__actions {
+		align-items: stretch;
+		margin-left: 0;
+		width: 100%;
+	}
+
+	.lihi-services-panel__workspace-header {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.lihi-dashboard-button {
+		justify-content: center;
+		width: 100%;
+	}
+
+	.lihi-services-panel__actions > .notice {
+		max-width: none;
+	}
+
+	.lihi-account-panel__controls,
+	.lihi-account-panel__profile dl {
+		grid-template-columns: 1fr;
+	}
+
+	.lihi-services-panel__legal {
+		justify-content: flex-start;
+	}
+}

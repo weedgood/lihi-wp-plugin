@@ -267,6 +267,31 @@ async function createLihi( container, btn, options = {} ) {
 	} );
 }
 
+async function openCreateOrNoticeExisting( container, btn ) {
+	await withLihiBusy( container, btn, async () => {
+		let data;
+		try {
+			data = await copyShortUrlFromApi( container );
+		} catch ( error ) {
+			await showNotice( exceptionMessage( error ) );
+			return;
+		}
+
+		if ( data.success ) {
+			await showCopiedState( container, btn, data );
+			return;
+		}
+
+		if ( isMissingShortUrl( data ) ) {
+			setButtonAlready( container, btn, false );
+			await openCreateModal( container, btn, createLihi );
+			return;
+		}
+
+		await showNotice( errorMessage( data ) );
+	} );
+}
+
 async function tryCopyLihi( container, btn ) {
 	await withLihiBusy( container, btn, async () => {
 		let data;
@@ -375,7 +400,7 @@ document.addEventListener( 'click', async ( e ) => {
 		return;
 	}
 
-	await openCreateModal( container, btn, createLihi );
+	await openCreateOrNoticeExisting( container, btn );
 } );
 
 function initButtonRendering() {

@@ -68,6 +68,18 @@ function lihi_passthrough_redirect_url(): string {
 }
 
 /**
+ * Return the browser-facing lihi dashboard URL.
+ */
+function lihi_dashboard_url(): string {
+    $base_url = lihi_config( 'api_domain' );
+    if ( ! is_string( $base_url ) || $base_url === '' ) {
+        return '';
+    }
+
+    return rtrim( $base_url, '/' ) . '/admin';
+}
+
+/**
  * Resolve the permalink / file URL for a given item.
  *
  * @throws \RuntimeException When the item does not exist or has no URL.
