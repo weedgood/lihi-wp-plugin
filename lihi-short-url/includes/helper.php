@@ -16,7 +16,7 @@ require_once __DIR__ . '/lihi-singletons.php';
  *
  * The config file is required once and cached for the request lifetime.
  *
- * @param string $key Configuration key (e.g. "api_domain").
+ * @param string $key Configuration key (e.g. "api_host").
  * @return mixed Value for the key, or null if the key is unknown.
  */
 function lihi_config( string $key ) {
@@ -25,6 +25,14 @@ function lihi_config( string $key ) {
         $cfg = require __DIR__ . '/config.php';
     }
     return $cfg[ $key ] ?? null;
+}
+
+/**
+ * Return the configured lihi API / app host.
+ */
+function lihi_api_host(): string {
+    $api_host = lihi_config( 'api_host' );
+    return is_string( $api_host ) ? rtrim( $api_host, '/' ) : '';
 }
 
 /**
@@ -56,27 +64,34 @@ function lihi_site_host(): string {
 }
 
 /**
- * Return the browser-facing passthrough redirect endpoint URL.
+ * Return the browser-facing passthrough form action URL.
  */
-function lihi_passthrough_redirect_url(): string {
-    $base_url = lihi_config( 'api_domain' );
-    if ( ! is_string( $base_url ) || $base_url === '' ) {
+function lihi_passthrough_form_action(): string {
+    $api_host = lihi_api_host();
+    if ( $api_host === '' ) {
         return '';
     }
 
-    return rtrim( $base_url, '/' ) . '/api/wordpress/v1/passthrough/redirect';
+    return $api_host . '/api/wordpress/v1/passthrough/redirect';
 }
 
 /**
- * Return the browser-facing lihi dashboard URL.
+ * Return the public lihi entry URL used when no WordPress JWT is available.
  */
-function lihi_dashboard_url(): string {
-    $base_url = lihi_config( 'api_domain' );
-    if ( ! is_string( $base_url ) || $base_url === '' ) {
+function lihi_home_url(): string {
+    return 'https://lihi.io';
+}
+
+/**
+ * Return the browser-facing lihi password reset URL.
+ */
+function lihi_password_reset_url(): string {
+    $api_host = lihi_api_host();
+    if ( $api_host === '' ) {
         return '';
     }
 
-    return rtrim( $base_url, '/' ) . '/admin';
+    return $api_host . '/admin/password/reset';
 }
 
 /**

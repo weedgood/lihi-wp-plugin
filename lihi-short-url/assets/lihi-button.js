@@ -364,15 +364,15 @@ async function editLihi( container, btn ) {
 		}
 
 		const nonce = data.data?.nonce;
-		const redirectUrl = data.data?.redirect_url || lihiButton.passthroughRedirectUrl;
-		if ( ! nonce || ! redirectUrl ) {
+		const formAction = data.data?.form_action || lihiButton.passthroughFormAction;
+		if ( ! nonce || ! formAction ) {
 			closePassthroughWindow( popup );
 			closeConfirmModal();
 			await showNotice( errorMessage( data ) );
 			return;
 		}
 
-		submitPassthroughForm( redirectUrl, nonce, proof.verifier, targetName );
+		submitPassthroughForm( formAction, nonce, proof.verifier, targetName );
 		closeConfirmModal();
 	} );
 }

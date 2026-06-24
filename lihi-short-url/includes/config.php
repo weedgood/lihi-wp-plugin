@@ -10,5 +10,5 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 return [
-    'api_domain' => 'https://app.lihidev.com',
+    'api_host' => 'https://app.lihidev.com',
 ];

@@ -5,6 +5,7 @@ namespace Lihi\ShortUrl\Tests;
 use Brain\Monkey;
 use Brain\Monkey\Functions;
 use Lihi\ShortUrl\Lihi_Client_Interface;
+use Lihi\ShortUrl\Lihi_Email_Or_Password_Invalid_Exception;
 use Lihi\ShortUrl\Lihi_Rate_Limit_Exception;
 use Lihi\ShortUrl\Lihi_Service;
 use Lihi\ShortUrl\Lihi_Server_Exception;
@@ -74,7 +75,7 @@ class AjaxUpdateEmailTest extends TestCase
         return $store;
     }
 
-    private function expectJsonError(?string &$message, ?int &$statusCode): void
+    private function expectJsonError(&$message, ?int &$statusCode): void
     {
         Functions\expect('wp_send_json_error')
             ->once()
@@ -196,11 +197,12 @@ class AjaxUpdateEmailTest extends TestCase
     public function update_option_not_called_when_auth_client_throws_validation(): void
     {
         $_POST['email'] = 'alice@example.com';
+        $_POST['account_password'] = 'secret-password';
         $_POST['create_account_consent'] = '1';
 
         $this->mockClient()
             ->shouldReceive('update_email')
-            ->with('alice@example.com')
+            ->with('alice@example.com', 'secret-password')
             ->once()
             ->andThrow(new Lihi_Validation_Exception('bad email'));
 
@@ -220,10 +222,12 @@ class AjaxUpdateEmailTest extends TestCase
     public function update_option_not_called_when_auth_client_throws_rate_limit(): void
     {
         $_POST['email'] = 'alice@example.com';
+        $_POST['account_password'] = 'secret-password';
         $_POST['create_account_consent'] = '1';
 
         $this->mockClient()
             ->shouldReceive('update_email')
+            ->with('alice@example.com', 'secret-password')
             ->once()
             ->andThrow(new Lihi_Rate_Limit_Exception('too many requests'));
 
@@ -243,10 +247,12 @@ class AjaxUpdateEmailTest extends TestCase
     public function update_option_not_called_when_auth_client_throws_server_error(): void
     {
         $_POST['email'] = 'alice@example.com';
+        $_POST['account_password'] = 'secret-password';
         $_POST['create_account_consent'] = '1';
 
         $this->mockClient()
             ->shouldReceive('update_email')
+            ->with('alice@example.com', 'secret-password')
             ->once()
             ->andThrow(new Lihi_Server_Exception('500 upstream'));
 
@@ -266,11 +272,12 @@ class AjaxUpdateEmailTest extends TestCase
     public function persists_option_and_returns_verified_true_on_success(): void
     {
         $_POST['email'] = 'alice@example.com';
+        $_POST['account_password'] = 'secret-password';
         $_POST['create_account_consent'] = '1';
 
         $this->mockClient()
             ->shouldReceive('update_email')
-            ->with('alice@example.com')
+            ->with('alice@example.com', 'secret-password')
             ->once()
             ->andReturn(['verified' => true]);
 
@@ -292,15 +299,17 @@ class AjaxUpdateEmailTest extends TestCase
     }
 
     /** @test */
-    public function persists_option_and_returns_verified_false_when_email_was_sent(): void
+    public function update_email_response_without_verified_flag_is_treated_as_unverified(): void
     {
         $_POST['email'] = 'alice@example.com';
+        $_POST['account_password'] = 'secret-password';
         $_POST['create_account_consent'] = '1';
 
         $this->mockClient()
             ->shouldReceive('update_email')
+            ->with('alice@example.com', 'secret-password')
             ->once()
-            ->andReturn(['verified' => false]);
+            ->andReturn([]);
 
         Functions\expect('update_option')
             ->once()
@@ -320,9 +329,31 @@ class AjaxUpdateEmailTest extends TestCase
     }
 
     /** @test */
+    public function non_empty_email_requires_password(): void
+    {
+        $_POST['email'] = 'alice@example.com';
+        $_POST['create_account_consent'] = '1';
+
+        $client = $this->mockClient();
+        $client->shouldNotReceive('update_email');
+
+        Functions\expect('update_option')->never();
+
+        $captured   = null;
+        $statusCode = null;
+        $this->expectJsonError($captured, $statusCode);
+
+        \Lihi\ShortUrl\ajax_update_email();
+
+        $this->assertStringContainsString('password', $captured);
+        $this->assertSame(400, $statusCode);
+    }
+
+    /** @test */
     public function non_empty_email_requires_account_creation_consent(): void
     {
         $_POST['email'] = 'alice@example.com';
+        $_POST['account_password'] = 'secret-password';
 
         $client = $this->mockClient();
         $client->shouldNotReceive('update_email');
@@ -340,12 +371,69 @@ class AjaxUpdateEmailTest extends TestCase
     }
 
     /** @test */
+    public function password_is_sent_to_auth_client(): void
+    {
+        $_POST['email'] = 'alice@example.com';
+        $_POST['account_password'] = 'secret-password';
+        $_POST['create_account_consent'] = '1';
+
+        $this->mockClient()
+            ->shouldReceive('update_email')
+            ->with('alice@example.com', 'secret-password')
+            ->once()
+            ->andReturn(['verified' => true]);
+
+        Functions\expect('update_option')
+            ->once()
+            ->with('lihi_email', 'alice@example.com');
+
+        $sent = null;
+        Functions\expect('wp_send_json_success')
+            ->once()
+            ->andReturnUsing(function ($data) use (&$sent) {
+                $sent = $data;
+            });
+
+        \Lihi\ShortUrl\ajax_update_email();
+
+        $this->assertTrue($sent['verified']);
+    }
+
+    /** @test */
+    public function password_invalid_failure_returns_friendly_error(): void
+    {
+        $_POST['email'] = 'alice@example.com';
+        $_POST['account_password'] = 'wrong-password';
+        $_POST['create_account_consent'] = '1';
+
+        $this->mockClient()
+            ->shouldReceive('update_email')
+            ->with('alice@example.com', 'wrong-password')
+            ->once()
+            ->andThrow(new Lihi_Email_Or_Password_Invalid_Exception('email not verified'));
+
+        Functions\expect('update_option')->never();
+
+        $captured   = null;
+        $statusCode = null;
+        $this->expectJsonError($captured, $statusCode);
+
+        \Lihi\ShortUrl\ajax_update_email();
+
+        $this->assertIsArray($captured);
+        $this->assertSame('email_or_password_invalid', $captured['code']);
+        $this->assertStringContainsString('Email or password invalid', $captured['message']);
+        $this->assertSame('https://app.lihidev.com/admin/password/reset', $captured['password_reset_url']);
+        $this->assertSame(403, $statusCode);
+    }
+
+    /** @test */
     public function dashboard_passthrough_returns_nonce_for_configured_email(): void
     {
         $_POST['challenge'] = str_repeat('A', 43);
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('alice@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_passthrough_redirect_url')->justReturn('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect');
+        Functions\when('Lihi\ShortUrl\lihi_passthrough_form_action')->justReturn('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect');
 
         $this->mockTokenStore()
             ->shouldReceive('get')
@@ -369,14 +457,13 @@ class AjaxUpdateEmailTest extends TestCase
 
         $this->assertTrue($sent['passthrough']);
         $this->assertSame('nonce-token', $sent['nonce']);
-        $this->assertSame('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect', $sent['redirect_url']);
+        $this->assertSame('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect', $sent['form_action']);
     }
 
     /** @test */
-    public function dashboard_passthrough_returns_dashboard_url_when_token_is_missing(): void
+    public function dashboard_passthrough_returns_lihi_home_when_token_is_missing(): void
     {
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('alice@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_dashboard_url')->justReturn('https://app.lihidev.com/admin');
 
         $this->mockTokenStore()
             ->shouldReceive('get')
@@ -396,27 +483,33 @@ class AjaxUpdateEmailTest extends TestCase
         \Lihi\ShortUrl\ajax_dashboard_passthrough();
 
         $this->assertFalse($sent['passthrough']);
-        $this->assertSame('https://app.lihidev.com/admin', $sent['dashboard_url']);
+        $this->assertSame('https://lihi.io', $sent['home_url']);
     }
 
     /** @test */
-    public function dashboard_passthrough_requires_configured_email(): void
+    public function dashboard_passthrough_returns_lihi_home_when_email_is_not_configured_and_token_is_missing(): void
     {
-        $_POST['challenge'] = str_repeat('A', 43);
-
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('');
+
+        $this->mockTokenStore()
+            ->shouldReceive('get')
+            ->once()
+            ->andReturn(false);
 
         $this->mockService()
             ->shouldNotReceive('create_passthrough_nonce');
 
-        $captured   = null;
-        $statusCode = null;
-        $this->expectJsonError($captured, $statusCode);
+        $sent = null;
+        Functions\expect('wp_send_json_success')
+            ->once()
+            ->andReturnUsing(function ($data) use (&$sent) {
+                $sent = $data;
+            });
 
         \Lihi\ShortUrl\ajax_dashboard_passthrough();
 
-        $this->assertStringContainsString('lihi email is not configured', $captured);
-        $this->assertSame(409, $statusCode);
+        $this->assertFalse($sent['passthrough']);
+        $this->assertSame('https://lihi.io', $sent['home_url']);
     }
 
     /** @test */

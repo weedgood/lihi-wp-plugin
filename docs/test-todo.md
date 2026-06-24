@@ -144,7 +144,7 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 
 已建立基本 payload / header 測試；剩餘錯誤映射仍待補齊：
 
-- [x] `update_email()` → POST `/api/wordpress/v1/auth/update-email`，body 為 `{ email, hostname, uuid }`，且不覆寫 HTTP `Host` header
+- [x] `update_email()` → POST `/api/wordpress/v1/auth/update-email`，body 為 `{ email, password, hostname, uuid }`，且不覆寫 HTTP `Host` header
 - [ ] `update_email()` 回應 200 `{ data: { verified: true } }` → 回傳 `['verified' => true]`
 - [ ] `update_email()` 回應 200 `{ data: { verified: false } }` → 回傳 `['verified' => false]`
 - [ ] `update_email()` 回應 400 → 拋出 `Lihi_Validation_Exception`
@@ -181,7 +181,7 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] `lihi_copy_url` → 呼叫 `get_existing_short_url()`，不呼叫 create flow；成功時仍回傳 url 並維持 `lihi_already = 1`
 - [x] `lihi_copy_url` 且 upstream 短網址不存在 → `update_post_meta($item_id, 'lihi_already', '0')`，HTTP 410，payload code 為 `lihi_missing`
 - [x] `lihi_edit_url` 無 `manage_options` 權限 → HTTP 403，不呼叫 service、不產生 passthrough nonce
-- [x] `lihi_edit_url` → 先驗證 browser challenge、呼叫 `get_existing_short_url()`，再以短網址 target + challenge 呼叫 `create_passthrough_nonce()`，回傳 `nonce` / `redirect_url` / `target`
+- [x] `lihi_edit_url` → 先驗證 browser challenge、呼叫 `get_existing_short_url()`，再以短網址 target + challenge 呼叫 `create_passthrough_nonce()`，回傳 `nonce` / `form_action` / `target`
 - [x] `lihi_edit_url` 缺少或傳入無效 browser challenge → HTTP 400，不呼叫 service
 - [x] `lihi_edit_url` 且 upstream 短網址不存在 → `update_post_meta($item_id, 'lihi_already', '0')`，HTTP 410，payload code 為 `lihi_missing`
 - [n/a] 前端 Copy 失敗只有 `code = lihi_missing` 才重設按鈕並開啟建立 modal；其他錯誤只顯示訊息、不改狀態（由程式碼審查 / JS 語法檢查保證）
@@ -218,7 +218,7 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 
 ## Settings page rendering
 
-- [n/a] `render_settings_page()` 把 profile / 錯誤通知區塊包在 `<div id="lihi-account-section">` 內（前端 JS 依靠這個 id 在 email 更新成功時清空舊帳號資料；由程式碼審查保證）
+- [n/a] `render_settings_page()` 只在成功載入 profile 時輸出 `<div id="lihi-account-section">`，錯誤通知則留在表單 messages 區塊（前端 JS 依靠這個 id 在 email 更新成功時清空舊帳號資料；由程式碼審查保證）
 - [n/a] `lihi-settings.js` email 存檔成功時，先清空 `#lihi-account-section`，verified 時延遲 2 秒再 reload（避免「驗證信已寄出」時舊帳號的 role / end_date 殘留；2 秒延遲讓 admin 來得及讀到「✓ Email verified」訊息；由程式碼審查保證）
 
 ---

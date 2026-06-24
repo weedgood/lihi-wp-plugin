@@ -33,19 +33,34 @@ class Lihi_Client implements Lihi_Client_Interface {
     // Auth
     // -------------------------------------------------------------------------
 
-    public function update_email( string $email ): array {
-        [ 'code' => $code, 'body' => $body ] = $this->request( 'POST', '/api/wordpress/v1/auth/update-email', $this->auth_payload( [
-            'email' => $email,
-        ] ) );
+    public function update_email( string $email, string $password ): array {
+        $payload = [
+            'email'    => $email,
+            'password' => $password,
+        ];
+
+        [ 'code' => $code, 'body' => $body ] = $this->request( 'POST', '/api/wordpress/v1/auth/update-email', $this->auth_payload( $payload ) );
         $data = $this->decode( $code, $body, false );
 
         if ( $code === 400 ) {
             throw new Lihi_Validation_Exception( esc_html( $this->msg( $data ) ) );
         }
+        if ( $code === 403 ) {
+            if ( $this->is_user_invalid_response( $data ) ) {
+                throw new Lihi_User_Invalid_Exception( esc_html( $this->msg( $data ) ) );
+            }
+            if ( $this->is_password_invalid_response( $data ) ) {
+                throw new Lihi_Email_Or_Password_Invalid_Exception( esc_html( $this->msg( $data ) ) );
+            }
+            $this->throw_forbidden_response( $data );
+        }
+        if ( empty( $data['result'] ) && $this->is_user_invalid_response( $data ) ) {
+            throw new Lihi_User_Invalid_Exception( esc_html( $this->msg( $data ) ) );
+        }
         if ( $code === 429 ) {
             throw new Lihi_Rate_Limit_Exception( esc_html( $this->msg( $data ) ) );
         }
-        if ( $code >= 500 ) {
+        if ( $code >= 500 || empty( $data['result'] ) ) {
             throw new Lihi_Server_Exception( esc_html( $this->msg( $data ) ) );
         }
 
@@ -289,6 +304,16 @@ class Lihi_Client implements Lihi_Client_Interface {
             'token invalid ,please login again',
             'token expired ,please login again',
             'something wrong ,please login again',
+        ], true );
+    }
+
+    private function is_password_invalid_response( array $data ): bool {
+        $message = strtolower( trim( $this->msg( $data ) ) );
+
+        return in_array( $message, [
+            'password invalid',
+            'email or password invalid',
+            'email not verified',
         ], true );
     }
 

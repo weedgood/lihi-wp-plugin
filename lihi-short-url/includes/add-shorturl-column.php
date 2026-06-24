@@ -76,7 +76,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         'editAction'    => 'lihi_edit_url',
         'optionsAction' => 'lihi_url_options',
         'canEditShortUrl' => current_user_can( 'manage_options' ) ? '1' : '0',
-        'passthroughRedirectUrl' => lihi_passthrough_redirect_url(),
+        'passthroughFormAction' => lihi_passthrough_form_action(),
         'siteHost'      => lihi_site_host(),
         'labelOriginal' => 'lihi',
         'labelReady'    => __( 'Copy', 'lihi-short-url' ),

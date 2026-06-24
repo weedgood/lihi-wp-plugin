@@ -397,7 +397,7 @@ class AjaxCopyUrlTest extends TestCase
             ->andReturn('nonce-token');
         \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
-        Functions\when('Lihi\ShortUrl\lihi_passthrough_redirect_url')->justReturn('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect');
+        Functions\when('Lihi\ShortUrl\lihi_passthrough_form_action')->justReturn('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect');
         Functions\expect('update_post_meta')
             ->once()
             ->with(42, 'lihi_already', '1');
@@ -412,7 +412,7 @@ class AjaxCopyUrlTest extends TestCase
         \Lihi\ShortUrl\ajax_edit_url();
 
         $this->assertSame('nonce-token', $sent['nonce']);
-        $this->assertSame('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect', $sent['redirect_url']);
+        $this->assertSame('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect', $sent['form_action']);
         $this->assertSame('https://lihi.io/existing', $sent['target']);
     }
 

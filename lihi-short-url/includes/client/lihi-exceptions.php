@@ -11,6 +11,9 @@ class Lihi_Exception extends \RuntimeException {}
 /** Authorization rejected — e.g. lihi API returns 403 "email not verified". */
 class Lihi_Auth_Exception extends Lihi_Exception {}
 
+/** lihi account password verification failed. */
+class Lihi_Email_Or_Password_Invalid_Exception extends Lihi_Auth_Exception {}
+
 /** lihi user is invalid server-side. */
 class Lihi_User_Invalid_Exception extends Lihi_Auth_Exception {}
 

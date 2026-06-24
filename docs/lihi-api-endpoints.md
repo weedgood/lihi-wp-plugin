@@ -13,7 +13,7 @@ Auth / non-auth contract:
 | Endpoint | Auth | 契約 |
 |---|---|---|
 | `POST /auth/login` | none | ✅ 以已驗證 email 換取 bearer token |
-| `POST /auth/update-email` | none | ✅ 建立 / 更新 email 驗證 token |
+| `POST /auth/update-email` | none | ✅ 以密碼完成既有帳號綁定，或建立 / 更新 email 驗證 token |
 | `GET /auth/verify-email` | none | 瀏覽器 HTML flow；外掛不直接呼叫 |
 | `GET /profile` | bearer token | ✅ |
 | `POST /passthrough/nonce` | bearer token | ✅ 產生短效 nonce，供瀏覽器 POST 到 passthrough redirect |
@@ -35,15 +35,17 @@ Auth endpoints（`/auth/login`、`/auth/update-email`）不需要 Bearer token�
 
 ## POST `/auth/update-email`
 
-送出 email 驗證請求。成功回應代表 email 已驗證，或驗證信已送出。
+送出 email / password 驗證請求。成功回應代表既有帳號密碼已驗證，或新帳號驗證信已送出。
 
 伺服器行為：
-- 若 `(domain, email, uuid)` 已 `verified = true` → 直接回 `{ verified: true }`，不寫 DB、不發 token。
-- 若 row 不存在或未驗證 → 簽發新 verification token 並 upsert；驗證連結走 `GET /auth/verify-email?token=...` 的瀏覽器 HTML flow。
+- 每次請求會先清除同一個 `domain` 的其他 WordPress email 驗證紀錄。
+- 若 email 對應既有 lihi 使用者且密碼正確、帳號可用 → 標記 `(domain, email, uuid)` 已驗證並回 `{ verified: true }`，不寄信。
+- 若 email 對應既有 lihi 使用者但密碼錯誤 → 回 `password invalid`。
+- 若 email 不存在 → 簽發新 verification token、保存密碼雜湊並寄出驗證信；驗證連結走 `GET /auth/verify-email?token=...` 的瀏覽器 HTML flow，回 `{ verified: false }`。
 
 Body:
 ```json
-{ "email": "alice@example.com", "hostname": "example.com", "uuid": "2df6f4f1-2a75-4d0e-9ce0-7c70e8d7bb9e" }
+{ "email": "alice@example.com", "hostname": "example.com", "uuid": "2df6f4f1-2a75-4d0e-9ce0-7c70e8d7bb9e", "password": "account-password" }
 ```
 
 Response 200:
@@ -57,6 +59,12 @@ Response 200:
 **錯誤：HTTP 400** → `Lihi_Validation_Exception`
 - Laravel validation error：`{ "result": false, "msg": { ... } }`
 - `hostname` 正規化後為空：`{ "result": false, "msg": "bad request" }`
+
+**錯誤：HTTP 403 `password invalid`** → `Lihi_Email_Or_Password_Invalid_Exception`
+既有 lihi 帳號密碼錯誤；外掛會統一顯示友善的帳密錯誤訊息，且不保存 `lihi_email`。
+
+**錯誤：HTTP 403 / 200 `User Invalid`** → `Lihi_User_Invalid_Exception`
+帳號被刪除、停用或不可使用時，外掛顯示帳號不可使用。
 
 **錯誤：HTTP 429** → `Lihi_Rate_Limit_Exception`
 由 route middleware `throttle:10,1` 控制：每分鐘 10 次。

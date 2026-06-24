@@ -158,8 +158,8 @@ msgid "You do not have permission to generate a short URL for this item."
 msgstr "您沒有權限為此項目產生短網址。"
 
 #: includes/shorturl-column-ajax.php
-msgid "Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email."
-msgstr "您的 lihi Email 尚未完成驗證，請至「設定 → lihi 短網址」點擊「儲存並驗證」重新寄送驗證信。"
+msgid "Your lihi email has not been verified yet. Please open Settings → lihi Short URL to verify again."
+msgstr "您的 lihi Email 尚未完成驗證，請至「設定 → lihi 短網址」重新驗證。"
 
 #: includes/settings.php
 #: includes/shorturl-column-ajax.php
@@ -209,18 +209,6 @@ msgid "Email used to authenticate with the lihi service. Saving sends a verifica
 msgstr "用於 lihi 服務驗證身分的 Email；儲存後會寄送驗證信，驗證完成後方可使用套件。"
 
 #: includes/settings.php
-msgid "Opening lihi dashboard..."
-msgstr "正在開啟 lihi 後台..."
-
-#: includes/settings.php
-msgid "lihi dashboard is opening in a new tab."
-msgstr "lihi 後台正在新分頁中開啟。"
-
-#: includes/settings.php
-msgid "lihi dashboard opened. Sign in there if needed."
-msgstr "lihi 後台已開啟，如有需要請在該頁登入。"
-
-#: includes/settings.php
 msgid "Your browser blocked the lihi dashboard tab. Please allow pop-ups and try again."
 msgstr "您的瀏覽器封鎖了 lihi 後台分頁，請允許彈出式視窗後再試一次。"
 
@@ -229,8 +217,8 @@ msgid "Your browser does not support secure lihi dashboard login."
 msgstr "您的瀏覽器不支援安全的 lihi 後台登入。"
 
 #: includes/settings.php
-msgid "Please confirm that lihi may use this email to create an account if one does not already exist."
-msgstr "請確認您同意 lihi 在帳號不存在時使用此 Email 建立帳號。"
+msgid "Please confirm that lihi may use this email and password to create an account if one does not already exist."
+msgstr "請確認您同意 lihi 在帳號不存在時使用此 Email 與密碼建立帳號。"
 
 #: includes/settings.php
 msgid "lihi Services"
@@ -317,12 +305,24 @@ msgid "Save and verify the email used by this WordPress site."
 msgstr "儲存並驗證此 WordPress 網站使用的 Email。"
 
 #: includes/settings.php
+msgid "This WordPress site is connected to this lihi account."
+msgstr "此 WordPress 網站已連結到這個 lihi 帳號。"
+
+#: includes/settings.php
 msgid "Saving sends a verification email. The WordPress shortcut works after verification is complete."
 msgstr "儲存後會寄送驗證信；驗證完成後即可使用便利的短網址功能。"
 
 #: includes/settings.php
-msgid "If this lihi account does not exist yet, I agree that lihi may use this email to create it."
-msgstr "若 lihi 帳號尚不存在，我同意 lihi 使用此 Email 建立帳號。"
+msgid "Use the lihi account password to verify this WordPress site."
+msgstr "使用 lihi 帳號密碼驗證此 WordPress 網站。"
+
+#: includes/settings.php
+msgid "Password"
+msgstr "密碼"
+
+#: includes/settings.php
+msgid "If the account does not exist, I agree that lihi may use this email and password to create an account."
+msgstr "如果帳號不存在，同意 lihi 使用此 Email 與密碼建立帳號。"
 
 #: includes/settings.php
 msgid "No lihi account is connected yet."
@@ -341,12 +341,32 @@ msgid "lihi email cleared. Short URL generation is disabled until a new email is
 msgstr "已清除 lihi Email；在新 Email 完成驗證前，短網址功能將停用。"
 
 #: includes/settings.php
+msgid "Please enter the lihi account password."
+msgstr "請輸入 lihi 帳號密碼。"
+
+#: includes/settings.php
+msgid "Show password"
+msgstr "顯示密碼"
+
+#: includes/settings.php
+msgid "Hide password"
+msgstr "隱藏密碼"
+
+#: includes/settings.php
+msgid "Forgot password?"
+msgstr "忘記密碼？"
+
+#: includes/settings.php
 msgid "lihi Short URL Settings"
 msgstr "lihi 短網址設定"
 
 #: includes/settings.php
 msgid "Save & Verify"
 msgstr "儲存並驗證"
+
+#: includes/settings.php
+msgid "Log out"
+msgstr "登出"
 
 #: includes/settings.php
 msgid "You do not have permission to update this setting."
@@ -359,6 +379,14 @@ msgstr "請輸入有效的 Email 地址。"
 #: includes/settings.php
 msgid "lihi rejected the email address. Please check the format and try again."
 msgstr "lihi 拒絕了此 Email 地址，請確認格式後再試一次。"
+
+#: includes/settings.php
+msgid "Email or password invalid. Please check and try again."
+msgstr "Email 或密碼錯誤，請確認後再試一次。"
+
+#: includes/settings.php
+msgid "Not verified yet. Enter the password, confirm the agreement, then click Save & Verify to bind the email."
+msgstr "尚未完成驗證，請填寫密碼並勾選同意後，點擊「儲存並驗證」綁定 Email。"
 
 #: includes/settings.php
 msgid "The lihi service is unavailable. Please try again later."
@@ -375,10 +403,6 @@ msgstr "✓ Email 已驗證。"
 #: includes/settings.php
 msgid "Verification email sent. Please click the link in that email to finish verification."
 msgstr "驗證信已寄出，請點擊信中的連結完成驗證。"
-
-#: includes/settings.php
-msgid "Email not verified yet. Click Save & Verify to resend the verification email."
-msgstr "Email 尚未完成驗證，請點擊「儲存並驗證」重新寄送驗證信。"
 
 #: includes/settings.php
 msgid "The lihi service is temporarily unavailable. Please try again later."

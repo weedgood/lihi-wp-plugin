@@ -28,7 +28,7 @@ final class Lihi_Singletons {
         $instance = self::get( Lihi_Client_Interface::class );
 
         if ( ! $instance instanceof Lihi_Client_Interface ) {
-            $instance = new Lihi_Client( (string) lihi_config( 'api_domain' ), lihi_uuid() );
+            $instance = new Lihi_Client( lihi_api_host(), lihi_uuid() );
             self::set( Lihi_Client_Interface::class, $instance );
         }
 

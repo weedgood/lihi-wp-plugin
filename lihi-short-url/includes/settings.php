@@ -80,19 +80,21 @@ function enqueue_settings_assets(): void {
     );
 
     wp_localize_script( 'lihi-settings', 'lihiSettings', [
-        'ajaxUrl'                => admin_url( 'admin-ajax.php' ),
-        'emailAction'            => 'lihi_update_email',
-        'emailNonce'             => wp_create_nonce( 'lihi_update_email' ),
-        'dashboardAction'        => 'lihi_dashboard_passthrough',
-        'dashboardNonce'         => wp_create_nonce( 'lihi_dashboard_passthrough' ),
-        'dashboardUrl'           => lihi_dashboard_url(),
-        'passthroughRedirectUrl' => lihi_passthrough_redirect_url(),
-        'requestFailed'          => __( 'Request failed. Please try again later.', 'lihi-short-url' ),
-        'emailConsentRequired'   => __( 'Please confirm that lihi may use this email to create an account if one does not already exist.', 'lihi-short-url' ),
-        'dashboard'              => [
-            'opening'          => __( 'Opening lihi dashboard...', 'lihi-short-url' ),
-            'opened'           => __( 'lihi dashboard is opening in a new tab.', 'lihi-short-url' ),
-            'direct'           => __( 'lihi dashboard opened. Sign in there if needed.', 'lihi-short-url' ),
+        'ajaxUrl'                       => admin_url( 'admin-ajax.php' ),
+        'emailAction'                   => 'lihi_update_email',
+        'emailNonce'                    => wp_create_nonce( 'lihi_update_email' ),
+        'dashboardAction'               => 'lihi_dashboard_passthrough',
+        'dashboardNonce'                => wp_create_nonce( 'lihi_dashboard_passthrough' ),
+        'homeUrl'                       => lihi_home_url(),
+        'passthroughFormAction'         => lihi_passthrough_form_action(),
+        'passwordResetUrl'              => lihi_password_reset_url(),
+        'requestFailed'                 => __( 'Request failed. Please try again later.', 'lihi-short-url' ),
+        'emailPasswordRequired'         => __( 'Please enter the lihi account password.', 'lihi-short-url' ),
+        'emailConsentRequired'          => __( 'Please confirm that lihi may use this email and password to create an account if one does not already exist.', 'lihi-short-url' ),
+        'showPassword'                  => __( 'Show password', 'lihi-short-url' ),
+        'hidePassword'                  => __( 'Hide password', 'lihi-short-url' ),
+        'forgotPassword'                => __( 'Forgot password?', 'lihi-short-url' ),
+        'dashboard'                     => [
             'popupBlocked'     => __( 'Your browser blocked the lihi dashboard tab. Please allow pop-ups and try again.', 'lihi-short-url' ),
             'proofUnavailable' => __( 'Your browser does not support secure lihi dashboard login.', 'lihi-short-url' ),
         ],
@@ -115,7 +117,7 @@ function render_settings_page(): void {
         } catch ( Lihi_Token_Invalid_Exception $e ) {
             $profile_error = __( 'Your lihi login session has expired. Please try again.', 'lihi-short-url' );
         } catch ( Lihi_Auth_Exception $e ) {
-            $profile_error = __( 'Email not verified yet. Click Save & Verify to resend the verification email.', 'lihi-short-url' );
+            $profile_error = __( 'Not verified yet. Enter the password, confirm the agreement, then click Save & Verify to bind the email.', 'lihi-short-url' );
         } catch ( Lihi_Server_Exception $e ) {
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
                 // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only diagnostics gated behind WP_DEBUG.
@@ -152,31 +154,29 @@ function render_settings_page(): void {
 
                 <div class="lihi-account-panel">
                     <div class="lihi-account-panel__header">
-                        <span class="dashicons dashicons-admin-users" aria-hidden="true"></span>
-                        <div>
-                            <h3><?php esc_html_e( 'Connected lihi account', 'lihi-short-url' ); ?></h3>
-                            <p><?php esc_html_e( 'Save and verify the email used by this WordPress site.', 'lihi-short-url' ); ?></p>
+                        <div class="lihi-account-panel__header-main">
+                            <span class="dashicons dashicons-admin-users" aria-hidden="true"></span>
+                            <div>
+                                <h3><?php esc_html_e( 'Connected lihi account', 'lihi-short-url' ); ?></h3>
+                                <p>
+                                    <?php
+                                    echo esc_html(
+                                        $profile !== null
+                                            ? __( 'This WordPress site is connected to this lihi account.', 'lihi-short-url' )
+                                            : __( 'Save and verify the email used by this WordPress site.', 'lihi-short-url' )
+                                    );
+                                    ?>
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="lihi-account-panel__form">
-                        <label for="lihi_email"><?php esc_html_e( 'Email', 'lihi-short-url' ); ?></label>
-                        <div class="lihi-account-panel__controls">
-                            <input type="email" id="lihi_email" name="lihi_email" value="<?php echo esc_attr( $value ); ?>" class="regular-text" />
-                            <button type="button" id="lihi-save-email" class="button button-primary">
-                                <?php esc_html_e( 'Save & Verify', 'lihi-short-url' ); ?>
-                            </button>
-                        </div>
-                        <p class="lihi-account-panel__description">
-                            <?php esc_html_e( 'Saving sends a verification email. The WordPress shortcut works after verification is complete.', 'lihi-short-url' ); ?>
-                        </p>
-                        <div class="lihi-account-panel__consent">
-                            <input type="checkbox" id="lihi_email_consent" name="create_account_consent" value="1" />
-                            <label class="lihi-account-panel__consent-label" for="lihi_email_consent"><?php esc_html_e( 'If this lihi account does not exist yet, I agree that lihi may use this email to create it.', 'lihi-short-url' ); ?></label>
-                        </div>
-                        <div id="lihi-email-status" role="status" aria-live="polite"></div>
-                    </div>
-                    <div id="lihi-account-section" class="lihi-account-panel__profile">
                         <?php if ( $profile !== null ) : ?>
+                            <button type="button" id="lihi-logout-email" class="button lihi-account-panel__logout">
+                                <?php esc_html_e( 'Log out', 'lihi-short-url' ); ?>
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                    <?php if ( $profile !== null ) : ?>
+                        <div id="lihi-account-section" class="lihi-account-panel__profile">
                             <dl>
                                 <div>
                                     <dt><?php esc_html_e( 'Email', 'lihi-short-url' ); ?></dt>
@@ -191,12 +191,45 @@ function render_settings_page(): void {
                                     <dd><?php echo esc_html( $profile['end_date'] ?? __( '—', 'lihi-short-url' ) ); ?></dd>
                                 </div>
                             </dl>
-                        <?php elseif ( $profile_error !== '' ) : ?>
-                            <div class="notice notice-error inline"><p><?php echo esc_html( $profile_error ); ?></p></div>
-                        <?php else : ?>
-                            <p><?php esc_html_e( 'No lihi account is connected yet.', 'lihi-short-url' ); ?></p>
-                        <?php endif; ?>
-                    </div>
+                            <div id="lihi-email-status" role="status" aria-live="polite"></div>
+                        </div>
+                    <?php else : ?>
+                        <div class="lihi-account-panel__form">
+                            <div class="lihi-account-panel__fields">
+                                <div class="lihi-account-panel__field">
+                                    <label for="lihi_email"><?php esc_html_e( 'Email', 'lihi-short-url' ); ?></label>
+                                    <input type="email" id="lihi_email" name="lihi_email" value="<?php echo esc_attr( $value ); ?>" class="regular-text" />
+                                </div>
+                                <div class="lihi-account-panel__field">
+                                    <label for="lihi_account_password"><?php esc_html_e( 'Password', 'lihi-short-url' ); ?></label>
+                                    <div class="lihi-account-panel__password-control">
+                                        <input type="password" id="lihi_account_password" name="account_password" value="" class="regular-text" autocomplete="current-password" required />
+                                        <button type="button" id="lihi-toggle-password" class="lihi-account-panel__password-toggle" aria-controls="lihi_account_password" aria-pressed="false" aria-label="<?php esc_attr_e( 'Show password', 'lihi-short-url' ); ?>" title="<?php esc_attr_e( 'Show password', 'lihi-short-url' ); ?>">
+                                            <span class="dashicons dashicons-visibility" aria-hidden="true"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="lihi-account-panel__description">
+                                <?php esc_html_e( 'Use the lihi account password to verify this WordPress site.', 'lihi-short-url' ); ?>
+                            </p>
+                            <div class="lihi-account-panel__verification-options">
+                                <div class="lihi-account-panel__checkbox">
+                                    <input type="checkbox" id="lihi_email_consent" name="create_account_consent" value="1" />
+                                    <label class="lihi-account-panel__checkbox-label" for="lihi_email_consent"><?php esc_html_e( 'If the account does not exist, I agree that lihi may use this email and password to create an account.', 'lihi-short-url' ); ?></label>
+                                </div>
+                                <button type="button" id="lihi-save-email" class="button button-primary">
+                                    <?php esc_html_e( 'Save & Verify', 'lihi-short-url' ); ?>
+                                </button>
+                            </div>
+                            <div class="lihi-account-panel__messages">
+                                <div id="lihi-email-status" role="status" aria-live="polite"></div>
+                                <?php if ( $profile_error !== '' ) : ?>
+                                    <div class="notice notice-error inline lihi-account-panel__form-notice"><p><?php echo esc_html( $profile_error ); ?></p></div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
             </div>
@@ -246,6 +279,14 @@ function render_settings_page(): void {
     <?php
 }
 
+function posted_checkbox_is_checked( string $field ): bool {
+    if ( ! isset( $_POST[ $field ] ) || is_array( $_POST[ $field ] ) ) {
+        return false;
+    }
+
+    return sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) === '1';
+}
+
 /**
  * AJAX handler: verify and persist the lihi email.
  *
@@ -279,17 +320,39 @@ function ajax_update_email(): void {
         return;
     }
 
-    $has_create_account_consent = isset( $_POST['create_account_consent'] )
-        && sanitize_text_field( wp_unslash( $_POST['create_account_consent'] ) ) === '1';
+    $has_create_account_consent = posted_checkbox_is_checked( 'create_account_consent' );
+
+    // Do not sanitize passwords: changing characters would make valid credentials fail.
+    $account_password = isset( $_POST['account_password'] ) && ! is_array( $_POST['account_password'] )
+        ? (string) wp_unslash( $_POST['account_password'] )
+        : '';
+    if ( trim( $account_password ) === '' ) {
+        wp_send_json_error( __( 'Please enter the lihi account password.', 'lihi-short-url' ), 400 );
+        return;
+    }
+
     if ( ! $has_create_account_consent ) {
-        wp_send_json_error( __( 'Please confirm that lihi may use this email to create an account if one does not already exist.', 'lihi-short-url' ), 400 );
+        wp_send_json_error( __( 'Please confirm that lihi may use this email and password to create an account if one does not already exist.', 'lihi-short-url' ), 400 );
         return;
     }
 
     try {
-        $result = Lihi_Singletons::lihi_client()->update_email( $email );
+        $result = Lihi_Singletons::lihi_client()->update_email( $email, $account_password );
     } catch ( Lihi_Validation_Exception $e ) {
         wp_send_json_error( __( 'lihi rejected the email address. Please check the format and try again.', 'lihi-short-url' ), 400 );
+        return;
+    } catch ( Lihi_User_Invalid_Exception $e ) {
+        wp_send_json_error( __( 'Your lihi account is unavailable. Please contact lihi support before creating short URLs.', 'lihi-short-url' ), 403 );
+        return;
+    } catch ( Lihi_Email_Or_Password_Invalid_Exception $e ) {
+        wp_send_json_error( [
+            'code'               => 'email_or_password_invalid',
+            'message'            => __( 'Email or password invalid. Please check and try again.', 'lihi-short-url' ),
+            'password_reset_url' => esc_url_raw( lihi_password_reset_url() ),
+        ], 403 );
+        return;
+    } catch ( Lihi_Auth_Exception $e ) {
+        wp_send_json_error( __( 'Not verified yet. Enter the password, confirm the agreement, then click Save & Verify to bind the email.', 'lihi-short-url' ), 403 );
         return;
     } catch ( Lihi_Rate_Limit_Exception $e ) {
         wp_send_json_error( __( 'Too many verification attempts. Please wait a moment and try again.', 'lihi-short-url' ), 429 );
@@ -340,7 +403,7 @@ function send_dashboard_passthrough_exception( \Exception $e ): void {
     }
 
     if ( $e instanceof Lihi_Auth_Exception ) {
-        wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email.', 'lihi-short-url' ), 403 );
+        wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL to verify again.', 'lihi-short-url' ), 403 );
         return;
     }
 
@@ -378,22 +441,17 @@ function ajax_dashboard_passthrough(): void {
         return;
     }
 
-    if ( lihi_email() === '' ) {
-        wp_send_json_error( __( 'lihi email is not configured. Please set it in Settings → lihi Short URL.', 'lihi-short-url' ), 409 );
-        return;
-    }
-
     try {
         $cached_token = Lihi_Singletons::lihi_token_store()->get();
         if ( ! is_string( $cached_token ) || $cached_token === '' ) {
-            $dashboard_url = lihi_dashboard_url();
-            if ( $dashboard_url === '' ) {
-                throw new \RuntimeException( 'Could not resolve lihi dashboard URL.' );
+            $home_url = lihi_home_url();
+            if ( $home_url === '' ) {
+                throw new \RuntimeException( 'Could not resolve lihi home URL.' );
             }
 
             wp_send_json_success( [
-                'passthrough'   => false,
-                'dashboard_url' => $dashboard_url,
+                'passthrough' => false,
+                'home_url'    => $home_url,
             ] );
             return;
         }
@@ -404,16 +462,16 @@ function ajax_dashboard_passthrough(): void {
             return;
         }
 
-        $nonce        = Lihi_Singletons::lihi_service()->create_passthrough_nonce( '', $challenge );
-        $redirect_url = lihi_passthrough_redirect_url();
-        if ( $redirect_url === '' ) {
-            throw new \RuntimeException( 'Could not resolve lihi passthrough redirect URL.' );
+        $nonce       = Lihi_Singletons::lihi_service()->create_passthrough_nonce( '', $challenge );
+        $form_action = lihi_passthrough_form_action();
+        if ( $form_action === '' ) {
+            throw new \RuntimeException( 'Could not resolve lihi passthrough form action URL.' );
         }
 
         wp_send_json_success( [
-            'passthrough'   => true,
-            'nonce'        => $nonce,
-            'redirect_url' => $redirect_url,
+            'passthrough' => true,
+            'nonce'       => $nonce,
+            'form_action' => $form_action,
         ] );
     } catch ( \Exception $e ) {
         send_dashboard_passthrough_exception( $e );

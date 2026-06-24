@@ -4,7 +4,7 @@ namespace Lihi\ShortUrl;
 /**
  * lihi Wordpress API client contract.
  *
- * Base URL: injected by the caller, typically lihi_config( 'api_domain' ).
+ * Base URL: injected by the caller, typically lihi_config( 'api_host' ).
  * Mirrors the endpoints wired in lihi-admin's `wordpress/v1` group
  * (`routes/api.php`). Auth now lives under the same API namespace and keeps
  * the `/auth` route prefix.
@@ -34,18 +34,22 @@ interface Lihi_Client_Interface {
     // -------------------------------------------------------------------------
 
     /**
-     * Start or refresh email verification for the current tenant.
+     * Start or complete email verification for the current tenant.
      *
      * POST /api/wordpress/v1/auth/update-email (AuthController@updateEmail)
      *
-     * @param string $email Email to verify.
-     * @return array{verified: bool}
+     * @param string $email    Email to verify.
+     * @param string $password lihi account password.
+     * @return array{verified?: bool}
      *
      * @throws Lihi_Validation_Exception on HTTP 400.
+     * @throws Lihi_Email_Or_Password_Invalid_Exception when the password is invalid.
+     * @throws Lihi_Auth_Exception on other HTTP 403 auth rejection.
+     * @throws Lihi_User_Invalid_Exception when lihi marks the user invalid.
      * @throws Lihi_Rate_Limit_Exception on HTTP 429.
      * @throws Lihi_Server_Exception on HTTP 500 or network error.
      */
-    public function update_email( string $email ): array;
+    public function update_email( string $email, string $password ): array;
 
     /**
      * Exchange a verified email for a fresh bearer token.

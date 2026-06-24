@@ -1,4 +1,5 @@
 document.addEventListener( 'DOMContentLoaded', () => {
+	bindPasswordToggle();
 	bindSaver( {
 		buttonId: 'lihi-save-email',
 		statusId: 'lihi-email-status',
@@ -6,22 +7,32 @@ document.addEventListener( 'DOMContentLoaded', () => {
 		nonce:    lihiSettings.emailNonce,
 		payload:  () => {
 			const input = document.getElementById( 'lihi_email' );
+			const password = document.getElementById( 'lihi_account_password' );
 			const consent = document.getElementById( 'lihi_email_consent' );
 
 			return {
 				email: input.value,
+				account_password: password?.value || '',
 				create_account_consent: consent?.checked ? '1' : '0',
 			};
 		},
 		validate: () => {
 			const input = document.getElementById( 'lihi_email' );
+			const password = document.getElementById( 'lihi_account_password' );
 			const consent = document.getElementById( 'lihi_email_consent' );
-			if ( input.value.trim() !== '' && ! consent?.checked ) {
-				return lihiSettings.emailConsentRequired ||
-					'Please confirm that lihi may use this email to create an account if one does not already exist.';
+			if ( input.value.trim() === '' ) return '';
+
+			if ( ! password?.value.trim() ) {
+				return lihiSettings.emailPasswordRequired ||
+					'Please enter the lihi account password.';
 			}
 
-			return '';
+			if ( consent?.checked ) {
+				return '';
+			}
+
+			return lihiSettings.emailConsentRequired ||
+				'Please confirm that lihi may use this email and password to create an account if one does not already exist.';
 		},
 		successMessage: ( data ) => data.message,
 		// The Account section belongs to the previous JWT; clear it on every
@@ -37,9 +48,42 @@ document.addEventListener( 'DOMContentLoaded', () => {
 			}
 		},
 	} );
+	bindSaver( {
+		buttonId: 'lihi-logout-email',
+		statusId: 'lihi-email-status',
+		action:   lihiSettings.emailAction,
+		nonce:    lihiSettings.emailNonce,
+		payload:  () => ( { email: '' } ),
+		validate: () => '',
+		successMessage: ( data ) => data.message,
+		onSuccess: () => {
+			setTimeout( () => window.location.reload(), 800 );
+		},
+	} );
 
 	bindDashboardPassthrough();
 } );
+
+function bindPasswordToggle() {
+	const input = document.getElementById( 'lihi_account_password' );
+	const button = document.getElementById( 'lihi-toggle-password' );
+	const icon = button?.querySelector( '.dashicons' );
+	if ( ! input || ! button || ! icon ) return;
+
+	button.addEventListener( 'click', () => {
+		const shouldShow = input.type === 'password';
+		input.type = shouldShow ? 'text' : 'password';
+		button.setAttribute( 'aria-pressed', shouldShow ? 'true' : 'false' );
+
+		const label = shouldShow
+			? ( lihiSettings.hidePassword || 'Hide password' )
+			: ( lihiSettings.showPassword || 'Show password' );
+		button.setAttribute( 'aria-label', label );
+		button.title = label;
+		icon.classList.toggle( 'dashicons-visibility', ! shouldShow );
+		icon.classList.toggle( 'dashicons-hidden', shouldShow );
+	} );
+}
 
 function fallbackMessage() {
 	return lihiSettings.requestFailed || 'Request failed. Please try again later.';
@@ -51,14 +95,35 @@ function errorMessage( data ) {
 	return fallbackMessage();
 }
 
+function errorAction( data ) {
+	if ( data?.data?.code !== 'email_or_password_invalid' ) return null;
+
+	const url = data.data.password_reset_url || lihiSettings.passwordResetUrl || '';
+	if ( ! url ) return null;
+
+	return {
+		label: lihiSettings.forgotPassword || 'Forgot password?',
+		url,
+	};
+}
+
 function exceptionMessage( error ) {
 	return error?.message || fallbackMessage();
 }
 
-function renderStatus( status, type, message ) {
+function renderStatus( status, type, message, action = null ) {
 	status.className = 'notice notice-' + type + ' inline';
 	const p = document.createElement( 'p' );
 	p.textContent = message;
+	if ( action?.url && action?.label ) {
+		const link = document.createElement( 'a' );
+		link.className = 'lihi-settings-notice-link';
+		link.href = action.url;
+		link.target = '_blank';
+		link.rel = 'noopener noreferrer';
+		link.textContent = action.label;
+		p.append( ' ', link );
+	}
 	status.replaceChildren( p );
 }
 
@@ -173,8 +238,11 @@ function bindDashboardPassthrough() {
 
 	button.addEventListener( 'click', async () => {
 		const targetName = 'lihi_dashboard_' + Date.now();
-		const directUrl = lihiSettings.dashboardUrl || '';
-		if ( ! directUrl && ! lihiSettings.passthroughRedirectUrl ) {
+		const homeUrl = lihiSettings.homeUrl || '';
+		status.className = '';
+		status.replaceChildren();
+
+		if ( ! homeUrl && ! lihiSettings.passthroughFormAction ) {
 			renderStatus( status, 'error', fallbackMessage() );
 			return;
 		}
@@ -191,7 +259,6 @@ function bindDashboardPassthrough() {
 		}
 
 		button.disabled = true;
-		renderStatus( status, 'info', lihiSettings.dashboard?.opening || 'Opening lihi dashboard...' );
 
 		try {
 			let proof = null;
@@ -217,13 +284,12 @@ function bindDashboardPassthrough() {
 			}
 
 			if ( data.data?.passthrough === false ) {
-				const fallbackUrl = data.data?.dashboard_url || directUrl;
+				const fallbackUrl = data.data?.home_url || homeUrl;
 				if ( ! fallbackUrl ) {
 					throw new Error( errorMessage( data ) );
 				}
 
 				navigateDashboardWindow( popup, fallbackUrl );
-				renderStatus( status, 'success', lihiSettings.dashboard?.direct || 'lihi dashboard opened. Sign in there if needed.' );
 				return;
 			}
 
@@ -232,13 +298,12 @@ function bindDashboardPassthrough() {
 			}
 
 			const passthroughNonce = data.data?.nonce;
-			const redirectUrl = data.data?.redirect_url || lihiSettings.passthroughRedirectUrl;
-			if ( ! passthroughNonce || ! redirectUrl ) {
+			const formAction = data.data?.form_action || lihiSettings.passthroughFormAction;
+			if ( ! passthroughNonce || ! formAction ) {
 				throw new Error( errorMessage( data ) );
 			}
 
-			submitPassthroughForm( redirectUrl, passthroughNonce, proof.verifier, targetName );
-			renderStatus( status, 'success', lihiSettings.dashboard?.opened || 'lihi dashboard is opening in a new tab.' );
+			submitPassthroughForm( formAction, passthroughNonce, proof.verifier, targetName );
 		} catch ( error ) {
 			closeDashboardWindow( popup );
 			renderStatus( status, 'error', exceptionMessage( error ) );
@@ -274,7 +339,7 @@ function bindSaver( { buttonId, statusId, action, nonce, payload, validate, succ
 				renderStatus( status, 'success', successMessage( data.data ) );
 				onSuccess?.( data.data );
 			} else {
-				renderStatus( status, 'error', errorMessage( data ) );
+				renderStatus( status, 'error', errorMessage( data ), errorAction( data ) );
 			}
 		} catch ( e ) {
 			renderStatus( status, 'error', exceptionMessage( e ) );

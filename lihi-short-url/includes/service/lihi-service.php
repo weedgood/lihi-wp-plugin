@@ -9,7 +9,8 @@ namespace Lihi\ShortUrl;
  *
  * Token management: get_token() lazily reads the lihi_token transient. If the token is
  * absent it calls login() to obtain a fresh token and stores it in the transient.
- * No login is triggered on page load — only when an API call is actually needed.
+ * Settings page profile loading, short URL actions, and passthrough flows all
+ * use this same token-then-call path.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

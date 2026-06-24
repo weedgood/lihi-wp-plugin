@@ -13,7 +13,7 @@ use PHPUnit\Framework\TestCase;
 class ServiceTest extends TestCase
 {
     private array $configDefaults = [
-        'api_domain' => 'https://app.lihidev.com',
+        'api_host' => 'https://app.lihidev.com',
     ];
 
     protected function setUp(): void
@@ -329,6 +329,37 @@ class ServiceTest extends TestCase
         $this->assertSame('admin', $result['user_role']);
         $this->assertSame('2026-12-31', $result['end_date']);
         $this->assertSame(['redirect.lihidev.com'], $result['domains']);
+    }
+
+    /** @test */
+    public function get_profile_logs_in_before_fetching_profile_when_token_is_missing(): void
+    {
+        $token = $this->makeJwt(time() + 3600);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('login')
+            ->with('user@example.com')
+            ->once()
+            ->andReturn(['token' => $token]);
+        $client->shouldReceive('get_profile')
+            ->with($token)
+            ->once()
+            ->andReturn([
+                'result' => true,
+                'data'   => [
+                    'user_role' => 'admin',
+                    'end_date'  => '2026-12-31',
+                    'domains'   => [],
+                ],
+            ]);
+
+        Functions\expect('get_transient')->andReturn(false, false);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('set_transient')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
+
+        $result = $this->makeService($client)->get_profile();
+        $this->assertSame('admin', $result['user_role']);
     }
 
     /** @test */

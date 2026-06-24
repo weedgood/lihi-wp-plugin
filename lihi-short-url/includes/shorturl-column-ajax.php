@@ -152,7 +152,7 @@ function handle_lihi_ajax_exception( \Exception $e, array $context = [] ): void 
     }
 
     if ( $e instanceof Lihi_Auth_Exception ) {
-        wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL and click Save & Verify to resend the verification email.', 'lihi-short-url' ), 403 );
+        wp_send_json_error( __( 'Your lihi email has not been verified yet. Please open Settings → lihi Short URL to verify again.', 'lihi-short-url' ), 403 );
         return;
     }
 
@@ -277,17 +277,17 @@ function ajax_edit_url(): void {
     try {
         $challenge    = parse_passthrough_challenge_field();
         $url          = Lihi_Singletons::lihi_service()->get_existing_short_url( $item_id, $type );
-        $nonce        = Lihi_Singletons::lihi_service()->create_passthrough_nonce( $url, $challenge );
-        $redirect_url = lihi_passthrough_redirect_url();
-        if ( $redirect_url === '' ) {
-            throw new \RuntimeException( 'Could not resolve lihi passthrough redirect URL.' );
+        $nonce       = Lihi_Singletons::lihi_service()->create_passthrough_nonce( $url, $challenge );
+        $form_action = lihi_passthrough_form_action();
+        if ( $form_action === '' ) {
+            throw new \RuntimeException( 'Could not resolve lihi passthrough form action URL.' );
         }
 
         update_post_meta( $item_id, 'lihi_already', '1' );
         wp_send_json_success( [
-            'nonce'        => $nonce,
-            'redirect_url' => $redirect_url,
-            'target'       => $url,
+            'nonce'       => $nonce,
+            'form_action' => $form_action,
+            'target'      => $url,
         ] );
     } catch ( \Exception $e ) {
         handle_lihi_ajax_exception( $e, [
