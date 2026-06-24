@@ -71,12 +71,11 @@ interface Lihi_Client_Interface {
     // -------------------------------------------------------------------------
 
     /**
-     * Current user's role, plan expiry, and accessible redirect domains.
+     * Current user's role and plan expiry.
      *
-     * GET /api/wordpress/v1/profile (AuthController@profile)
+     * GET /api/wordpress/v1/user/profile (UserController@profile)
      *
      * Tenant is resolved via the bearer token's `sub` claim; no query params.
-     * Not used by the plugin; kept here for contract completeness.
      *
      * @param string $token JWT bearer token.
      *
@@ -85,13 +84,33 @@ interface Lihi_Client_Interface {
      *   data: array{
      *     user_role: ?string,
      *     end_date:  ?string,
-     *     domains:   list<string>,
      *   },
      * }
      *
      * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function get_profile( string $token ): array;
+
+    /**
+     * Retrieve create-modal options for the authenticated user.
+     *
+     * GET /api/wordpress/v1/user/options (UserController@options)
+     *
+     * @param string $token JWT bearer token.
+     *
+     * @return array{
+     *   result: bool,
+     *   data: array{
+     *     domains:     list<array{id: mixed, name: string}>,
+     *     utm_sources: list<string>,
+     *     utm_mediums: list<string>,
+     *   },
+     * }
+     *
+     * @throws Lihi_Validation_Exception on HTTP 400.
+     * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
+     */
+    public function get_options( string $token ): array;
 
     // -------------------------------------------------------------------------
     // Passthrough (jwt)
@@ -124,41 +143,25 @@ interface Lihi_Client_Interface {
     // -------------------------------------------------------------------------
 
     /**
-     * Retrieve sites with optional filters.
+     * Find a short-link URL with WordPress filters.
      *
-     * GET /api/wordpress/v1/sites (SiteController@index)
+     * GET /api/wordpress/v1/site/find (SiteController@find)
      *
      * @param string $token JWT bearer token.
      * @param array{
-     *   type?:     string,
-     *   type_id?:  string,
-     *   per_page?: int,
-     *   page?:     int,
-     *   keyword?:  string,
+     *   type:    string,
+     *   type_id: string,
      * } $params Query parameters.
      *
      * @return array{
      *   result: bool,
+     *   msg?: string,
      *   data: array{
-     *     sites: array{
-     *       current_page: int,
-     *       total:        int,
-     *       per_page:     int,
-     *       data: list<array{
-     *         id:             int,
-     *         domain_name:    string,
-     *         short_url:      string,
-     *         wordpress_link: array{type: string, type_id: string},
-     *         site_urls:      list<array{id: int, url: string}>,
-     *         site_tags:      list<mixed>,
-     *       }>,
-     *     },
-     *     domains:     list<array{id: mixed, name: string}>,
-     *     total_sites: int,
-     *     limit_sites: int,
+     *     site: string,
      *   },
      * }
      *
+     * @throws Lihi_Validation_Exception on HTTP 400 (missing required filters).
      * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function get_sites( string $token, array $params = [] ): array;
@@ -166,15 +169,15 @@ interface Lihi_Client_Interface {
     /**
      * Retrieve short links filtered by WordPress type and one or more type IDs.
      *
-     * Convenience wrapper around GET /api/wordpress/v1/sites with per_page=20,
-     * type, and type_id pre-filled.
+     * Convenience wrapper around GET /api/wordpress/v1/site/find with type and type_id pre-filled.
      *
      * @param string               $token    JWT bearer token.
      * @param string               $type     Resource type (e.g. 'post', 'page', 'attachment').
-     * @param int|string|list<int> $type_ids Single ID or comma-separated / array of IDs.
+     * @param int|string|list<int> $type_ids Single ID or comma-separated / array of IDs; arrays are sent as comma-separated strings.
      *
      * @return array Same shape as get_sites().
      *
+     * @throws Lihi_Validation_Exception on HTTP 400 (missing required filters).
      * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function get_short_links( string $token, string $type, $type_ids ): array;
@@ -182,7 +185,7 @@ interface Lihi_Client_Interface {
     /**
      * Create a new site (short link).
      *
-     * POST /api/wordpress/v1/sites (SiteController@store)
+     * POST /api/wordpress/v1/site/store (SiteController@store)
      *
      * Server-side Validator requires `domain`, `urls`, `type`; `type_id` is
      * optional but must be a string when present.

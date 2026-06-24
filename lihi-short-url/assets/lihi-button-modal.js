@@ -87,6 +87,56 @@
 		return input;
 	}
 
+	function selectInput( id ) {
+		const select = document.createElement( 'select' );
+		select.id = id;
+		return select;
+	}
+
+	function normalizeSelectOption( item ) {
+		const value = typeof item === 'object' && item !== null
+			? String( item.value || item.id || item.name || '' ).trim()
+			: String( item || '' ).trim();
+		const label = typeof item === 'object' && item !== null
+			? String( item.label || item.name || value ).trim()
+			: value;
+
+		if ( ! value ) return null;
+
+		return {
+			value,
+			label: label || value,
+		};
+	}
+
+	function renderSelectOptions( select, items, options = {} ) {
+		select.replaceChildren();
+
+		if ( options.loading ) {
+			select.replaceChildren( new Option( lihiButton.modal.loading, '' ) );
+			select.disabled = true;
+			return;
+		}
+
+		select.disabled = Boolean( options.disabled );
+
+		if ( options.includeBlank ) {
+			select.appendChild( new Option( options.blankLabel || '', '' ) );
+		}
+
+		if ( ! Array.isArray( items ) ) return;
+
+		items.forEach( ( item ) => {
+			const normalized = normalizeSelectOption( item );
+			if ( ! normalized ) return;
+
+			const option = document.createElement( 'option' );
+			option.value = normalized.value;
+			option.textContent = normalized.label;
+			select.appendChild( option );
+		} );
+	}
+
 	function defaultTagsForContainer( container ) {
 		return [ 'wordpress', lihiButton.siteHost, container.dataset.type ].filter( Boolean );
 	}
@@ -347,8 +397,8 @@
 		const utmGrid = document.createElement( 'div' );
 		utmGrid.className = 'lihi-utm-grid';
 		utmGrid.append(
-			labelledControl( labels.utmSource, textInput( UTM_INPUT_IDS.source ) ),
-			labelledControl( labels.utmMedium, textInput( UTM_INPUT_IDS.medium ) ),
+			labelledControl( labels.utmSource, selectInput( UTM_INPUT_IDS.source ) ),
+			labelledControl( labels.utmMedium, selectInput( UTM_INPUT_IDS.medium ) ),
 			labelledControl( labels.utmCampaign, textInput( UTM_INPUT_IDS.campaign ) ),
 			labelledControl( labels.utmTerm, textInput( UTM_INPUT_IDS.term ) ),
 			labelledControl( labels.utmContent, textInput( UTM_INPUT_IDS.content ) )
@@ -411,14 +461,26 @@
 
 	function renderDomainOptions( domains ) {
 		const select = document.getElementById( MODAL_IDS.domain );
-		select.replaceChildren();
+		renderSelectOptions( select, domains );
+	}
 
-		domains.forEach( ( domain ) => {
-			const option = document.createElement( 'option' );
-			option.value = domain;
-			option.textContent = domain;
-			select.appendChild( option );
+	function renderUtmSelectOptions( key, values ) {
+		const select = document.getElementById( UTM_INPUT_IDS[ key ] );
+		renderSelectOptions( select, values, {
+			includeBlank: true,
+			blankLabel: lihiButton.modal?.selectPlaceholder || 'Please select',
 		} );
+	}
+
+	function renderUtmOptions( options = {} ) {
+		renderUtmSelectOptions( 'source', options.source || [] );
+		renderUtmSelectOptions( 'medium', options.medium || [] );
+	}
+
+	function renderOptionLoadingState() {
+		renderSelectOptions( document.getElementById( MODAL_IDS.domain ), [], { loading: true } );
+		renderSelectOptions( document.getElementById( UTM_INPUT_IDS.source ), [], { loading: true } );
+		renderSelectOptions( document.getElementById( UTM_INPUT_IDS.medium ), [], { loading: true } );
 	}
 
 	function renderDefaultTags( tags ) {
@@ -495,7 +557,6 @@
 
 	async function openCreateModal( container, btn, onSubmit ) {
 		const modal = ensureCreateModal();
-		const select = modal.querySelector( idSelector( MODAL_IDS.domain ) );
 		const submit = modal.querySelector( idSelector( MODAL_IDS.submit ) );
 
 		if ( typeof onSubmit === 'function' ) {
@@ -508,7 +569,7 @@
 			modal.querySelector( idSelector( UTM_INPUT_IDS[ key ] ) ).value = '';
 		} );
 		renderDefaultTags( defaultTagsForContainer( container ) );
-		select.replaceChildren( new Option( lihiButton.modal.loading, '' ) );
+		renderOptionLoadingState();
 		submit.disabled = true;
 		showModalElement( modal );
 
@@ -535,6 +596,7 @@
 		}
 
 		renderDomainOptions( domains );
+		renderUtmOptions( data.data.utm_options || {} );
 		submit.disabled = false;
 	}
 

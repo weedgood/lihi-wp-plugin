@@ -98,9 +98,10 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
             'utmCampaign'   => __( 'UTM campaign', 'lihi-short-url' ),
             'utmTerm'       => __( 'UTM term', 'lihi-short-url' ),
             'utmContent'    => __( 'UTM content', 'lihi-short-url' ),
-            'cancel'        => __( 'Cancel', 'lihi-short-url' ),
-            'submit'        => __( 'Create & Copy', 'lihi-short-url' ),
-            'loading'       => __( 'Loading...', 'lihi-short-url' ),
+            'cancel'            => __( 'Cancel', 'lihi-short-url' ),
+            'submit'            => __( 'Create & Copy', 'lihi-short-url' ),
+            'loading'           => __( 'Loading...', 'lihi-short-url' ),
+            'selectPlaceholder' => __( 'Please select', 'lihi-short-url' ),
         ],
         'notice'        => [
             'title'   => __( 'lihi Short URL', 'lihi-short-url' ),

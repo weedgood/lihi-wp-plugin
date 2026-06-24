@@ -88,20 +88,70 @@ function parse_passthrough_challenge_field(): string {
     return $challenge;
 }
 
-function available_profile_domains( array $profile ): array {
+function sanitize_option_value( $value ): string {
+    if ( ! is_scalar( $value ) ) {
+        return '';
+    }
+
+    return trim( sanitize_text_field( (string) $value ) );
+}
+
+function available_url_option_domains( array $options ): array {
     $domains = [];
-    foreach ( $profile['domains'] ?? [] as $domain ) {
-        if ( ! is_scalar( $domain ) ) {
+    $seen    = [];
+
+    foreach ( $options['domains'] ?? [] as $domain ) {
+        $value = '';
+        $label = '';
+
+        if ( is_array( $domain ) ) {
+            $value = sanitize_option_value( $domain['id'] ?? '' );
+            $label = sanitize_option_value( $domain['name'] ?? '' );
+        } elseif ( is_scalar( $domain ) ) {
+            $value = sanitize_option_value( $domain );
+            $label = $value;
+        } else {
             continue;
         }
 
-        $value = trim( (string) $domain );
-        if ( $value !== '' ) {
-            $domains[] = $value;
+        if ( $label === '' ) {
+            $label = $value;
         }
+        if ( $value === '' ) {
+            $value = $label;
+        }
+        if ( $value === '' || isset( $seen[ $value ] ) ) {
+            continue;
+        }
+
+        $seen[ $value ] = true;
+        $domains[]      = [
+            'value' => $value,
+            'label' => $label,
+        ];
     }
 
-    return array_values( array_unique( $domains ) );
+    return $domains;
+}
+
+function available_url_option_utm( array $options ): array {
+    $utm = [
+        'source' => [],
+        'medium' => [],
+    ];
+
+    foreach ( [ 'source' => 'utm_sources', 'medium' => 'utm_mediums' ] as $key => $field ) {
+        foreach ( $options[ $field ] ?? [] as $value ) {
+            $value = sanitize_option_value( $value );
+            if ( $value !== '' ) {
+                $utm[ $key ][] = $value;
+            }
+        }
+
+        $utm[ $key ] = array_values( array_unique( $utm[ $key ] ) );
+    }
+
+    return $utm;
 }
 
 function validate_lihi_item_request(): array {
@@ -211,15 +261,17 @@ function ajax_url_options(): void {
     }
 
     try {
-        $profile = Lihi_Singletons::lihi_service()->get_profile();
-        $domains = available_profile_domains( $profile );
+        $options = Lihi_Singletons::lihi_service()->get_url_options();
+        $domains = available_url_option_domains( $options );
+        $utm     = available_url_option_utm( $options );
         wp_send_json_success( [
-            'domains' => $domains,
+            'domains'     => $domains,
+            'utm_options' => $utm,
         ] );
     } catch ( \Exception $e ) {
         handle_lihi_ajax_exception( $e, [
             'fallback_message' => __( 'Could not load account information.', 'lihi-short-url' ),
-            'log_prefix'       => 'profile fetch failed',
+            'log_prefix'       => 'url options fetch failed',
         ] );
     }
 }

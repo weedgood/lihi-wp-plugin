@@ -98,8 +98,25 @@ class Lihi_Client implements Lihi_Client_Interface {
 
     /** @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
     public function get_profile( string $token ): array {
-        [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/profile', [], $token );
-        return $this->decode( $code, $body );
+        [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/user/profile', [], $token );
+        $data = $this->decode( $code, $body );
+        $this->throw_for_unsuccessful_response( $code, $data );
+
+        return $data;
+    }
+
+    /** @throws Lihi_Validation_Exception | Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
+    public function get_options( string $token ): array {
+        [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/user/options', [], $token );
+        $data = $this->decode( $code, $body );
+
+        if ( $code === 400 ) {
+            throw new Lihi_Validation_Exception( esc_html( $this->msg( $data ) ) );
+        }
+
+        $this->throw_for_unsuccessful_response( $code, $data );
+
+        return $data;
     }
 
     // -------------------------------------------------------------------------
@@ -125,9 +142,7 @@ class Lihi_Client implements Lihi_Client_Interface {
         if ( $code === 429 ) {
             throw new Lihi_Rate_Limit_Exception( esc_html( $this->msg( $data ) ) );
         }
-        if ( $code >= 500 || empty( $data['result'] ) ) {
-            throw new Lihi_Server_Exception( esc_html( $this->msg( $data ) ) );
-        }
+        $this->throw_for_unsuccessful_response( $code, $data );
 
         return $data;
     }
@@ -138,18 +153,33 @@ class Lihi_Client implements Lihi_Client_Interface {
 
     /** @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
     public function get_sites( string $token, array $params = [] ): array {
-        [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/sites', $params, $token );
-        return $this->decode( $code, $body );
+        [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/site/find', $params, $token );
+        $data = $this->decode( $code, $body );
+
+        if ( $code === 400 ) {
+            throw new Lihi_Validation_Exception( esc_html( $this->msg( $data ) ) );
+        }
+
+        $this->throw_for_unsuccessful_response( $code, $data );
+
+        return $data;
     }
 
     /** @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
     public function get_short_links( string $token, string $type, $type_ids ): array {
-        [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/sites', [
-            'per_page' => 20,
-            'type'     => $type,
-            'type_id'  => $type_ids,
+        [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/site/find', [
+            'type'    => $type,
+            'type_id' => is_array( $type_ids ) ? implode( ',', array_map( 'strval', $type_ids ) ) : (string) $type_ids,
         ], $token );
-        return $this->decode( $code, $body );
+        $data = $this->decode( $code, $body );
+
+        if ( $code === 400 ) {
+            throw new Lihi_Validation_Exception( esc_html( $this->msg( $data ) ) );
+        }
+
+        $this->throw_for_unsuccessful_response( $code, $data );
+
+        return $data;
     }
 
     /**
@@ -157,12 +187,14 @@ class Lihi_Client implements Lihi_Client_Interface {
      * @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception
      */
     public function create_site( string $token, array $body ): array {
-        [ 'code' => $code, 'body' => $raw ] = $this->request( 'POST', '/api/wordpress/v1/sites', $body, $token );
+        [ 'code' => $code, 'body' => $raw ] = $this->request( 'POST', '/api/wordpress/v1/site/store', $body, $token );
         $data = $this->decode( $code, $raw );
 
         if ( $code === 400 ) {
             throw new Lihi_Validation_Exception( esc_html( $this->msg( $data ) ) );
         }
+
+        $this->throw_for_unsuccessful_response( $code, $data );
 
         return $data;
     }
@@ -288,6 +320,16 @@ class Lihi_Client implements Lihi_Client_Interface {
         }
 
         throw new Lihi_Auth_Exception( $message );
+    }
+
+    private function throw_for_unsuccessful_response( int $code, array $data ): void {
+        if ( $data === [] ) {
+            return;
+        }
+
+        if ( $code >= 500 || ( $data['result'] ?? null ) !== true ) {
+            throw new Lihi_Server_Exception( esc_html( $this->msg( $data ) ) );
+        }
     }
 
     private function is_user_invalid_response( array $data ): bool {

@@ -57,14 +57,22 @@ class AjaxCopyUrlTest extends TestCase
     // -------------------------------------------------------------------------
 
     /** @test */
-    public function url_options_returns_profile_domains_for_modal(): void
+    public function url_options_returns_domains_and_utm_options_for_modal(): void
     {
         $_POST['item_id'] = '42';
 
         $service = $this->mockService();
-        $service->shouldReceive('get_profile')
+        $service->shouldReceive('get_url_options')
             ->once()
-            ->andReturn(['domains' => ['go.example.com', 'go2.example.com']]);
+            ->andReturn([
+                'domains'     => [
+                    ['id' => 12, 'name' => 'go.example.com'],
+                    ['id' => 'go2.example.com', 'name' => 'go2.example.com'],
+                    'legacy.example.com',
+                ],
+                'utm_sources' => ['facebook', ' newsletter ', ''],
+                'utm_mediums' => ['social', 'email', 'social'],
+            ]);
         \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
         $sent = null;
@@ -76,7 +84,15 @@ class AjaxCopyUrlTest extends TestCase
 
         \Lihi\ShortUrl\ajax_url_options();
 
-        $this->assertSame(['go.example.com', 'go2.example.com'], $sent['domains']);
+        $this->assertSame([
+            ['value' => '12', 'label' => 'go.example.com'],
+            ['value' => 'go2.example.com', 'label' => 'go2.example.com'],
+            ['value' => 'legacy.example.com', 'label' => 'legacy.example.com'],
+        ], $sent['domains']);
+        $this->assertSame([
+            'source' => ['facebook', 'newsletter'],
+            'medium' => ['social', 'email'],
+        ], $sent['utm_options']);
     }
 
     /** @test */

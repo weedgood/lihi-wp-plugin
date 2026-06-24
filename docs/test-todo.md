@@ -86,16 +86,20 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] login 拋出例外 → lock 釋放，例外向上傳遞
 
 ### get_profile()
-- [x] 成功 → 回傳 `data` 子陣列（user_role / end_date / domains）
+- [x] 成功 → 回傳 `data` 子陣列（user_role / end_date）
 - [x] `client->get_profile()` 拋出 `Lihi_Token_Invalid_Exception` → invalidate token、重新 login、再試一次
 - [x] `lihi client->login($email)` 拋出 `Lihi_Auth_Exception`（email 未驗證）→ 向上傳遞
 - [x] `lihi client->login($email)` 拋出 `Lihi_User_Invalid_Exception`（lihi 帳號不可使用）→ 向上傳遞
 
+### get_url_options()
+- [x] 成功 → 呼叫 `client->get_options($token)` 並回傳 `data` 子陣列（domains / utm_sources / utm_mediums）
+- [x] `client->get_options()` 拋出 `Lihi_Token_Invalid_Exception` → invalidate token、重新 login、再試一次
+
 ### get_or_create_short_url()
-- [x] 已有相符 type_id 的短連結 → 直接回傳 `short_url`，不呼叫 create_site
-- [x] 無相符短連結 → 呼叫 create_site 並回傳新 `short_url`
+- [x] `get_short_links()` 回傳 `data.site` 非空字串 → 直接回傳該短網址，不呼叫 create_site
+- [x] `get_short_links()` 回傳 `data.site` 空字串 → 呼叫 create_site 並回傳新 `short_url`
 - [x] create_site 回傳空 `short_url` → 拋出 RuntimeException
-- [x] get_short_links 有多筆結果 → 回傳第一筆相符的 `short_url`
+- [x] get_short_links 單一 find response → 使用 `data.site` 作為既有短網址
 - [x] create_site 的 body 包含正確的 permalink、type、type_id
 - [x] create_site body 的 `domain` 來自 modal 選擇；create AJAX 只要求非空值，最終 domain 有效性由 lihi API 判斷
 - [x] create_site body 的 `tags` 是 comma-separated string：固定 `wordpress` / host / type，並與使用者輸入 tags 合併去重後用逗號串接
@@ -105,8 +109,8 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] create_site 的 body `type` 為 `"{type}:{host}"`，固定 tags 仍使用原始 `type`
 
 ### get_existing_short_url()
-- [x] 已有相符 type_id 的短連結 → 回傳 `short_url`，不呼叫 create_site
-- [x] 無相符短連結 → 拋出 `Lihi_Not_Found_Exception`，不呼叫 create_site
+- [x] `data.site` 非空字串 → 回傳短網址，不呼叫 create_site
+- [x] `data.site` 空字串 → 拋出 `Lihi_Not_Found_Exception`，不呼叫 create_site
 
 ### create_passthrough_nonce()
 - [x] transient 有效 → 使用 cached token 呼叫 client，並回傳 `data.nonce`
@@ -126,17 +130,22 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] wp_remote_request 回傳 WP_Error → 拋出 RuntimeException
 
 ### 各方法路徑與 HTTP method
-- [x] get_profile() → GET /api/wordpress/v1/profile，帶 Authorization: Bearer
+- [x] get_profile() → GET /api/wordpress/v1/user/profile，帶 Authorization: Bearer
+- [x] get_options() → GET /api/wordpress/v1/user/options，帶 Authorization: Bearer
 - [x] create_passthrough_nonce() → POST /api/wordpress/v1/passthrough/nonce，body 帶 `{ challenge }` 並可帶 `{ target }`，且帶 Authorization: Bearer
-- [x] get_sites() → GET /api/wordpress/v1/sites，params 編為 query string
-- [x] get_short_links() → GET /api/wordpress/v1/sites，帶 type/type_id/per_page
-- [x] create_site() → POST /api/wordpress/v1/sites，body 為 JSON
+- [x] get_sites() → GET /api/wordpress/v1/site/find，params 編為 query string
+- [x] get_short_links() → GET /api/wordpress/v1/site/find，帶 type/type_id，陣列 type_id 轉為 comma-separated string
+- [x] create_site() → POST /api/wordpress/v1/site/store，body 為 JSON
+- [x] get_options() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
+- [x] get_options() 回傳 `result:false` → 拋出 `Lihi_Server_Exception`，不回傳空 options
+- [x] get_sites() / get_short_links() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
+- [x] get_short_links() 回傳 JSON 5xx failure → 拋出 `Lihi_Server_Exception`，不誤判成短網址不存在
 - [x] create_site() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
 - [x] create_passthrough_nonce() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
 
 > `Lihi_Client_Interface` 涵蓋 `wordpress/v1` 下外掛實際使用的 endpoints：
-> auth（`login` / `update-email`）與 JWT `profile`、`sites`（index/store）。`POST /mail` 外掛無用途，
-> 不納入契約；`PUT/PATCH/DELETE /sites`、`/posts`、`/site-urls` 不屬於本 API contract。
+> auth（`login` / `update-email`）與 JWT `user/profile`、`user/options`、`passthrough/nonce`、`site/find`、`site/store`。`POST /mail` 外掛無用途，
+> 不納入契約；site update/delete、`/posts`、`/site-urls` 不屬於本 API contract。
 
 ---
 
@@ -186,7 +195,8 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] `lihi_edit_url` 且 upstream 短網址不存在 → `update_post_meta($item_id, 'lihi_already', '0')`，HTTP 410，payload code 為 `lihi_missing`
 - [n/a] 前端 Copy 失敗只有 `code = lihi_missing` 才重設按鈕並開啟建立 modal；其他錯誤只顯示訊息、不改狀態（由程式碼審查 / JS 語法檢查保證）
 - [n/a] 前端 Copy 狀態只在 `canEditShortUrl` 為 true 時渲染相鄰 Edit button；點擊 Edit 先顯示確認 modal，OK 後產生 verifier / challenge，取得 passthrough nonce，並用 hidden form POST `nonce` + `verifier` 到 lihi-admin redirect endpoint（由程式碼審查 / JS 語法檢查保證）
-- [x] 建立 modal options → `wp_ajax_lihi_url_options` 回傳 profile domains
+- [x] 建立 modal options → `wp_ajax_lihi_url_options` 從 options endpoint 回傳 domain `{ value, label }` options 與 UTM source / medium options
+- [n/a] 前端建立 modal 的 Domain / UTM source / UTM medium 使用同一組 60 秒快取資料與 select loading / option rendering UI（由程式碼審查 / JS 語法檢查保證）
 - [x] AJAX exception mapping 集中於 `handle_lihi_ajax_exception()`，create / copy / options handler 不重複維護相同 catch mapping
 - [n/a] 前端 clipboard 被瀏覽器拒絕 → 已成功回傳的短網址直接以 prompt 顯示供手動複製，且按鈕狀態已先切為 `Copy`（由程式碼審查 / JS 語法檢查保證）
 - [n/a] 前端 showNotice 使用可確認的共用 modal，支援 OK 後執行 callback；Copy missing 會先顯示錯誤，再由 callback 開啟建立 modal（由程式碼審查 / JS 語法檢查保證）

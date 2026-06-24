@@ -9,7 +9,7 @@ namespace Lihi\ShortUrl;
  *
  * Token management: get_token() lazily reads the lihi_token transient. If the token is
  * absent it calls login() to obtain a fresh token and stores it in the transient.
- * Settings page profile loading, short URL actions, and passthrough flows all
+ * Settings page profile loading, create-modal option loading, short URL actions, and passthrough flows all
  * use this same token-then-call path.
  */
 
@@ -49,13 +49,13 @@ class Lihi_Service {
     }
 
     /**
-     * Fetch the authenticated user's profile (role, plan end date, redirect domains).
+     * Fetch the authenticated user's profile (role and plan end date).
      *
      * Uses the same token-then-call pattern as get_or_create_short_url().
      * Lihi_User_Invalid_Exception clears the cached token and is surfaced so
      * the next AJAX request can perform a fresh login.
      *
-     * @return array{user_role: ?string, end_date: ?string, domains: list<string>}
+     * @return array{user_role: ?string, end_date: ?string}
      *
      * @throws Lihi_Auth_Exception       lihi API rejected the login (email unverified).
      * @throws Lihi_User_Invalid_Exception lihi account is unavailable server-side.
@@ -73,6 +73,36 @@ class Lihi_Service {
             $this->invalidate_token();
             $token  = $this->get_token( $email );
             $result = $this->client->get_profile( $token );
+        }
+
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Fetch create-modal options from the options endpoint.
+     *
+     * @return array{
+     *   domains?: list<mixed>,
+     *   utm_sources?: list<string>,
+     *   utm_mediums?: list<string>,
+     * }
+     *
+     * @throws Lihi_Auth_Exception         lihi API rejected the login (email unverified).
+     * @throws Lihi_User_Invalid_Exception lihi account is unavailable server-side.
+     * @throws Lihi_Server_Exception       lihi API unavailable.
+     */
+    public function get_url_options(): array {
+        $email = lihi_email();
+        $token = $this->get_token( $email );
+        try {
+            $result = $this->client->get_options( $token );
+        } catch ( Lihi_User_Invalid_Exception $e ) {
+            $this->invalidate_token();
+            throw $e;
+        } catch ( Lihi_Token_Invalid_Exception $e ) {
+            $this->invalidate_token();
+            $token  = $this->get_token( $email );
+            $result = $this->client->get_options( $token );
         }
 
         return $result['data'] ?? [];
@@ -142,9 +172,7 @@ class Lihi_Service {
         $host     = lihi_site_host();
         $api_type = $type . ':' . $host;
         $result   = $this->client->get_short_links( $token, $api_type, $item_id );
-        $sites    = $result['data']['sites']['data'] ?? [];
-
-        $existing = $this->find_existing_short_url( $sites, $item_id );
+        $existing = $this->short_url_from_find_result( $result );
         if ( $existing !== '' ) {
             return $existing;
         }
@@ -179,8 +207,7 @@ class Lihi_Service {
         $host     = lihi_site_host();
         $api_type = $type . ':' . $host;
         $result   = $this->client->get_short_links( $token, $api_type, $item_id );
-        $sites    = $result['data']['sites']['data'] ?? [];
-        $existing = $this->find_existing_short_url( $sites, $item_id );
+        $existing = $this->short_url_from_find_result( $result );
 
         if ( $existing === '' ) {
             throw new Lihi_Not_Found_Exception( esc_html__( 'Short URL has been removed. Please create it again.', 'lihi-short-url' ) );
@@ -200,14 +227,9 @@ class Lihi_Service {
         return $nonce;
     }
 
-    private function find_existing_short_url( array $sites, int $item_id ): string {
-        foreach ( $sites as $site ) {
-            if ( (string) ( $site['wordpress_link']['type_id'] ?? '' ) === (string) $item_id ) {
-                return (string) ( $site['short_url'] ?? '' );
-            }
-        }
-
-        return '';
+    private function short_url_from_find_result( array $result ): string {
+        $site = $result['data']['site'] ?? '';
+        return is_string( $site ) ? trim( $site ) : '';
     }
 
     private function build_tags( string $host, string $type, array $custom_tags ): array {

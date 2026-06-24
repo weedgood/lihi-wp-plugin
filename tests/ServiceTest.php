@@ -78,33 +78,13 @@ class ServiceTest extends TestCase
             . '.sig';
     }
 
-    private function makeSitesResponse(array $sites): array
+    private function makeFindResponse(string $site): array
     {
         return [
             'result' => true,
             'data'   => [
-                'domains'     => [],
-                'total_sites' => count( $sites ),
-                'limit_sites' => 500,
-                'sites'       => [
-                    'current_page' => 1,
-                    'total'        => count( $sites ),
-                    'per_page'     => 20,
-                    'data'         => $sites,
-                ],
+                'site' => $site,
             ],
-        ];
-    }
-
-    private function makeSite(int $typeId, string $lihiUrl): array
-    {
-        return [
-            'id'             => $typeId,
-            'domain'         => 'lihi.io',
-            'short_url'       => $lihiUrl,
-            'site_urls'      => [],
-            'site_tags'      => [],
-            'wordpress_link' => ['type' => 'post', 'type_id' => (string) $typeId],
         ];
     }
 
@@ -164,7 +144,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with($cachedToken, 'post:example.com', 3)
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(3, 'https://lihi.io/cached')]));
+            ->andReturn($this->makeFindResponse('https://lihi.io/cached'));
 
         $client->shouldNotReceive('login');
 
@@ -184,7 +164,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with($cachedToken, 'post:example.com', 13)
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(13, 'https://lihi.io/double')]));
+            ->andReturn($this->makeFindResponse('https://lihi.io/double'));
 
         $client->shouldNotReceive('login');
 
@@ -209,7 +189,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with($newToken, 'post:example.com', 5)
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(5, 'https://lihi.io/xyz')]));
+            ->andReturn($this->makeFindResponse('https://lihi.io/xyz'));
 
         $client->shouldReceive('login')
             ->with('user@example.com')
@@ -236,7 +216,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with($newToken, 'post:example.com', 9)
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(9, 'https://lihi.io/waited')]));
+            ->andReturn($this->makeFindResponse('https://lihi.io/waited'));
 
         $client->shouldNotReceive('login');
 
@@ -261,7 +241,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with($newToken, 'post:example.com', 11)
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(11, 'https://lihi.io/fallback')]));
+            ->andReturn($this->makeFindResponse('https://lihi.io/fallback'));
 
         $client->shouldReceive('login')
             ->with('user@example.com')
@@ -321,14 +301,13 @@ class ServiceTest extends TestCase
                 'data'   => [
                     'user_role' => 'admin',
                     'end_date'  => '2026-12-31',
-                    'domains'   => ['redirect.lihidev.com'],
                 ],
             ]);
 
         $result = $this->makeService($client)->get_profile();
         $this->assertSame('admin', $result['user_role']);
         $this->assertSame('2026-12-31', $result['end_date']);
-        $this->assertSame(['redirect.lihidev.com'], $result['domains']);
+        $this->assertArrayNotHasKey('domains', $result);
     }
 
     /** @test */
@@ -349,7 +328,6 @@ class ServiceTest extends TestCase
                 'data'   => [
                     'user_role' => 'admin',
                     'end_date'  => '2026-12-31',
-                    'domains'   => [],
                 ],
             ]);
 
@@ -376,7 +354,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_profile')
             ->with($freshToken)
             ->once()
-            ->andReturn(['result' => true, 'data' => ['user_role' => 'user', 'end_date' => null, 'domains' => []]]);
+            ->andReturn(['result' => true, 'data' => ['user_role' => 'user', 'end_date' => null]]);
 
         $client->shouldReceive('login')
             ->with('user@example.com')
@@ -451,6 +429,74 @@ class ServiceTest extends TestCase
 
         $this->expectException(\Lihi\ShortUrl\Lihi_User_Invalid_Exception::class);
         $this->makeService($client)->get_profile();
+    }
+
+    // -------------------------------------------------------------------------
+    // get_url_options()
+    // -------------------------------------------------------------------------
+
+    /** @test */
+    public function get_url_options_fetches_options_endpoint(): void
+    {
+        $token = $this->makeJwt(time() + 3600);
+        Functions\when('get_transient')->justReturn($token);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_options')
+            ->with($token)
+            ->once()
+            ->andReturn([
+                'result' => true,
+                'data'   => [
+                    'domains'     => [['id' => 1, 'name' => 'go.example.com']],
+                    'utm_sources' => ['facebook'],
+                    'utm_mediums' => ['social'],
+                ],
+            ]);
+
+        $result = $this->makeService($client)->get_url_options();
+        $this->assertSame([['id' => 1, 'name' => 'go.example.com']], $result['domains']);
+        $this->assertSame(['facebook'], $result['utm_sources']);
+        $this->assertSame(['social'], $result['utm_mediums']);
+    }
+
+    /** @test */
+    public function get_url_options_retries_once_on_token_invalid(): void
+    {
+        $staleToken = $this->makeJwt(time() + 3600);
+        $freshToken = $this->makeJwt(time() + 7200);
+
+        $client = $this->makeClient();
+        $client->shouldReceive('get_options')
+            ->with($staleToken)
+            ->once()
+            ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('Token expired'));
+        $client->shouldReceive('get_options')
+            ->with($freshToken)
+            ->once()
+            ->andReturn([
+                'result' => true,
+                'data'   => [
+                    'domains'     => [],
+                    'utm_sources' => ['newsletter'],
+                    'utm_mediums' => ['email'],
+                ],
+            ]);
+        $client->shouldReceive('login')
+            ->with('user@example.com')
+            ->once()
+            ->andReturn(['token' => $freshToken]);
+
+        Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
+        Functions\when('delete_transient')->justReturn(true);
+        Functions\expect('get_transient')->andReturn($staleToken, false, false);
+        Functions\when('wp_cache_add')->justReturn(true);
+        Functions\when('wp_cache_delete')->justReturn(true);
+        Functions\when('set_transient')->justReturn(true);
+
+        $result = $this->makeService($client)->get_url_options();
+        $this->assertSame(['newsletter'], $result['utm_sources']);
+        $this->assertSame(['email'], $result['utm_mediums']);
     }
 
     // -------------------------------------------------------------------------
@@ -540,7 +586,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with(Mockery::type('string'), 'post:example.com', 42)
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/existing')]));
+            ->andReturn($this->makeFindResponse('https://lihi.io/existing'));
         $client->shouldNotReceive('create_site');
 
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
@@ -557,7 +603,7 @@ class ServiceTest extends TestCase
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(99, 'other-slug')]));
+            ->andReturn($this->makeFindResponse(''));
         $client->shouldReceive('create_site')
             ->once()
             ->andReturn(['data' => ['short_url' => 'https://lihi.io/new']]);
@@ -577,7 +623,7 @@ class ServiceTest extends TestCase
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->andReturn($this->makeSitesResponse([]));
+            ->andReturn($this->makeFindResponse(''));
         $client->shouldReceive('create_site')
             ->andReturn(['data' => ['short_url' => '']]);
 
@@ -591,22 +637,19 @@ class ServiceTest extends TestCase
     }
 
     /** @test */
-    public function get_or_create_returns_first_matching_short_url(): void
+    public function get_or_create_returns_site_from_find_response(): void
     {
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->andReturn($this->makeSitesResponse([
-                $this->makeSite(42, 'https://lihi.io/first'),
-                $this->makeSite(42, 'https://lihi.io/second'),
-            ]));
+            ->andReturn($this->makeFindResponse('https://lihi.io/found'));
         $client->shouldNotReceive('create_site');
 
         Functions\when('get_permalink')->justReturn('https://example.com/?p=42');
 
         $result = $this->makeService($client)->get_or_create_short_url(42, 'post');
-        $this->assertSame('https://lihi.io/first', $result);
+        $this->assertSame('https://lihi.io/found', $result);
     }
 
     /** @test */
@@ -616,7 +659,7 @@ class ServiceTest extends TestCase
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->andReturn($this->makeSitesResponse([]));
+            ->andReturn($this->makeFindResponse(''));
 
         $capturedBody = null;
         $client->shouldReceive('create_site')
@@ -651,7 +694,7 @@ class ServiceTest extends TestCase
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->andReturn($this->makeSitesResponse([]));
+            ->andReturn($this->makeFindResponse(''));
 
         $capturedBody = null;
         $client->shouldReceive('create_site')
@@ -682,7 +725,7 @@ class ServiceTest extends TestCase
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->andReturn($this->makeSitesResponse([]));
+            ->andReturn($this->makeFindResponse(''));
 
         $capturedBody = null;
         $client->shouldReceive('create_site')
@@ -716,7 +759,7 @@ class ServiceTest extends TestCase
             ->once()
             ->andReturnUsing(function ($token, $type, $itemId) use (&$capturedType) {
                 $capturedType = $type;
-                return $this->makeSitesResponse([]);
+                return $this->makeFindResponse('');
             });
         $client->shouldReceive('create_site')
             ->andReturn(['data' => ['short_url' => 'https://lihi.io/new']]);
@@ -735,7 +778,7 @@ class ServiceTest extends TestCase
 
         $client = $this->makeClient();
         $client->shouldReceive('get_short_links')
-            ->andReturn($this->makeSitesResponse([]));
+            ->andReturn($this->makeFindResponse(''));
 
         $capturedBody = null;
         $client->shouldReceive('create_site')
@@ -762,7 +805,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with(Mockery::any(), 'post:example.com', 42)
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/existing')]));
+            ->andReturn($this->makeFindResponse('https://lihi.io/existing'));
         $client->shouldNotReceive('create_site');
 
         $result = $this->makeService($client)->get_existing_short_url(42, 'post');
@@ -779,7 +822,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with(Mockery::any(), 'post:example.com', 42)
             ->once()
-            ->andReturn($this->makeSitesResponse([]));
+            ->andReturn($this->makeFindResponse(''));
         $client->shouldNotReceive('create_site');
 
         $this->expectException(\Lihi\ShortUrl\Lihi_Not_Found_Exception::class);
@@ -804,7 +847,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with($freshToken, 'post:example.com', 42)
             ->once()
-            ->andReturn($this->makeSitesResponse([$this->makeSite(42, 'https://lihi.io/retried')]));
+            ->andReturn($this->makeFindResponse('https://lihi.io/retried'));
 
         $client->shouldReceive('login')
             ->with('user@example.com')
@@ -861,7 +904,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with($staleToken, 'post:example.com', 42)
             ->once()
-            ->andReturn($this->makeSitesResponse([]));
+            ->andReturn($this->makeFindResponse(''));
         $client->shouldReceive('create_site')
             ->with($staleToken, Mockery::any())
             ->once()
@@ -869,7 +912,7 @@ class ServiceTest extends TestCase
         $client->shouldReceive('get_short_links')
             ->with($freshToken, 'post:example.com', 42)
             ->once()
-            ->andReturn($this->makeSitesResponse([]));
+            ->andReturn($this->makeFindResponse(''));
         $client->shouldReceive('create_site')
             ->with($freshToken, Mockery::any())
             ->once()

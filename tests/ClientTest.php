@@ -65,24 +65,61 @@ class ClientTest extends TestCase
     /** @test */
     public function get_short_links_sends_get_with_type_and_type_id(): void
     {
-        $capture = $this->mockRequest(200, '{"result":true,"data":{"sites":{"data":[]}}}');
+        $capture = $this->mockRequest(200, '{"result":true,"data":{"site":""}}');
         $this->makeClient()->get_short_links('test-token', 'post', 42);
         $url = $capture()['url'];
-        $this->assertStringContainsString('/api/wordpress/v1/sites', $url);
+        $this->assertStringContainsString('/api/wordpress/v1/site/find', $url);
         $this->assertStringContainsString('type=post', $url);
         $this->assertStringContainsString('type_id=42', $url);
-        $this->assertStringContainsString('per_page=20', $url);
+        $this->assertStringNotContainsString('per_page=', $url);
+    }
+
+    /** @test */
+    public function get_short_links_encodes_array_type_ids_as_comma_separated_string(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true,"data":{"site":""}}');
+        $this->makeClient()->get_short_links('test-token', 'post', [42, 43]);
+        $url = rawurldecode($capture()['url']);
+        $this->assertStringContainsString('type_id=42,43', $url);
     }
 
     /** @test */
     public function get_profile_sends_get_to_profile_path_with_bearer_token(): void
     {
-        $capture = $this->mockRequest(200, '{"result":true,"data":{"user_role":"admin","end_date":null,"domains":["redirect.lihidev.com"]}}');
+        $capture = $this->mockRequest(200, '{"result":true,"data":{"user_role":"admin","end_date":null}}');
         $this->makeClient()->get_profile('my-token');
         $c = $capture();
-        $this->assertStringContainsString('/api/wordpress/v1/profile', $c['url']);
+        $this->assertStringContainsString('/api/wordpress/v1/user/profile', $c['url']);
         $this->assertSame('GET', $c['args']['method']);
         $this->assertSame('Bearer my-token', $c['args']['headers']['Authorization']);
+    }
+
+    /** @test */
+    public function get_options_sends_get_to_options_path_with_bearer_token(): void
+    {
+        $capture = $this->mockRequest(200, '{"result":true,"data":{"domains":[],"utm_sources":[],"utm_mediums":[]}}');
+        $this->makeClient()->get_options('my-token');
+        $c = $capture();
+        $this->assertStringContainsString('/api/wordpress/v1/user/options', $c['url']);
+        $this->assertSame('GET', $c['args']['method']);
+        $this->assertSame('Bearer my-token', $c['args']['headers']['Authorization']);
+    }
+
+    /** @test */
+    public function get_options_throws_validation_exception_on_400(): void
+    {
+        $this->mockRequest(400, '{"result":false,"msg":{"options":["Could not load options."]}}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Validation_Exception::class);
+        $this->makeClient()->get_options('my-token');
+    }
+
+    /** @test */
+    public function get_options_throws_server_exception_on_result_false(): void
+    {
+        $this->mockRequest(200, '{"result":false,"msg":"options unavailable"}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
+        $this->expectExceptionMessage('options unavailable');
+        $this->makeClient()->get_options('my-token');
     }
 
     /** @test */
@@ -121,10 +158,11 @@ class ClientTest extends TestCase
     public function get_request_appends_data_as_query_string(): void
     {
         $capture = $this->mockRequest();
-        $this->makeClient()->get_sites('test-token', ['type' => 'products', 'per_page' => 10]);
+        $this->makeClient()->get_sites('test-token', ['type' => 'products', 'type_id' => '10']);
         $c = $capture();
+        $this->assertStringContainsString('/api/wordpress/v1/site/find', $c['url']);
         $this->assertStringContainsString('type=products', $c['url']);
-        $this->assertStringContainsString('per_page=10', $c['url']);
+        $this->assertStringContainsString('type_id=10', $c['url']);
         $this->assertArrayNotHasKey('body', $c['args']);
     }
 
@@ -142,6 +180,7 @@ class ClientTest extends TestCase
         ]);
         $c    = $capture();
         $body = json_decode($c['args']['body'] ?? '{}', true);
+        $this->assertStringContainsString('/api/wordpress/v1/site/store', $c['url']);
         $this->assertSame(['https://example.com'], $body['urls']);
         $this->assertStringNotContainsString('?', $c['url']);
     }
@@ -268,6 +307,23 @@ class ClientTest extends TestCase
         $this->mockRequest(400, '{"result":false,"msg":{"domain":["The domain field is required."]}}');
         $this->expectException(\Lihi\ShortUrl\Lihi_Validation_Exception::class);
         $this->makeClient()->create_site('token', []);
+    }
+
+    /** @test */
+    public function get_sites_throws_validation_exception_on_400(): void
+    {
+        $this->mockRequest(400, '{"result":false,"msg":{"type":["The type field is required."]}}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Validation_Exception::class);
+        $this->makeClient()->get_sites('token');
+    }
+
+    /** @test */
+    public function get_short_links_throws_server_exception_on_5xx_json_failure(): void
+    {
+        $this->mockRequest(500, '{"result":false,"msg":"upstream unavailable"}');
+        $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
+        $this->expectExceptionMessage('upstream unavailable');
+        $this->makeClient()->get_short_links('token', 'post', 42);
     }
 
     /** @test */

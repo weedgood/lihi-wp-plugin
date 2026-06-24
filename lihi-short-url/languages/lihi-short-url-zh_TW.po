@@ -110,6 +110,10 @@ msgid "Loading..."
 msgstr "載入中..."
 
 #: includes/add-shorturl-column.php
+msgid "Please select"
+msgstr "請選擇"
+
+#: includes/add-shorturl-column.php
 msgid "OK"
 msgstr "確定"
 
