@@ -297,6 +297,10 @@
     gap: 12px;
 }
 
+.lihi-utm-grid[hidden] {
+    display: none;
+}
+
 .lihi-utm-dashboard-row {
     display: flex;
     grid-column: 1 / -1;

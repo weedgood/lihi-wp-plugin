@@ -199,6 +199,7 @@ CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執�
 - [n/a] 前端 Copy 狀態只在 `canEditShortUrl` 為 true 時渲染相鄰 Edit button；點擊 Edit 先顯示確認 modal，OK 後先呼叫 `lihi_copy_url` 取得目前短網址，再把該 URL 作為 `target` 呼叫 `lihi_passthrough_nonce`，並以帶有 GET query `nonce` + `verifier` 的 URL 開啟新分頁（由程式碼審查 / JS 語法檢查保證）
 - [x] 建立 modal options → `wp_ajax_lihi_url_options` 從 options endpoint 回傳 domain `{ value, label }` options 與 UTM source / medium options
 - [n/a] 前端建立 modal 的 Domain / UTM source / UTM medium 使用同一組 60 秒快取資料與 select loading / option rendering UI（由程式碼審查 / JS 語法檢查保證）
+- [n/a] 前端建立 modal 在 `data-type="attachment"` 時隱藏 UTM 區塊，但送出 payload 仍包含 source / medium / campaign / term / content 空白值（由程式碼審查 / JS 語法檢查保證）
 - [n/a] 前端 Domain label row 對所有使用者顯示「Custom domain?」；管理員點擊後先顯示 confirm，再以 localized `/myDomain` target 呼叫 `lihi_passthrough_nonce` 並開新分頁，非管理員則直接開 `https://lihidomain.com`。UTM source / medium 下方的「Manage options?」只對管理員顯示，點擊後以 `/profile#utm-setting` target 走同一個 passthrough flow（由程式碼審查 / JS 語法檢查保證）
 - [x] AJAX exception mapping 集中於 `handle_lihi_ajax_exception()`，create / copy / options handler 不重複維護相同 catch mapping
 - [n/a] 前端 clipboard 被瀏覽器拒絕 → 已成功回傳的短網址直接以 prompt 顯示供手動複製，且按鈕狀態已先切為 `Copy`（由程式碼審查 / JS 語法檢查保證）

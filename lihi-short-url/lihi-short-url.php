@@ -3,8 +3,8 @@ namespace Lihi\ShortUrl;
 
 /**
  * Plugin Name: lihi Short URL
- * Description: Adds a one-click "lihi" button to generate and copy short URLs, including posts, pages, media and all post-type list tables.
- * Version: 1.0.3
+ * Description: Adds lihi Short URL controls to create, copy, and edit short URLs for posts, pages, media, and public post types in wp-admin.
+ * Version: 1.0.4
  * Requires at least: 5.5
  * Requires PHP: 7.4
  * Author: lihi

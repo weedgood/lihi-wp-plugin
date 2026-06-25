@@ -20,6 +20,7 @@
 		confirmMessage: 'lihi-confirm-message',
 		confirmCancel: 'lihi-confirm-cancel',
 		confirmConfirm: 'lihi-confirm-confirm',
+		utmGrid: 'lihi-utm-grid',
 	} );
 	const UTM_INPUT_IDS = Object.freeze( {
 		source: 'lihi-utm-source',
@@ -28,6 +29,7 @@
 		term: 'lihi-utm-term',
 		content: 'lihi-utm-content',
 	} );
+	const MEDIA_TYPE = 'attachment';
 	const modalHideTimers = new WeakMap();
 	let activeModalTarget = null;
 	let createHandler = null;
@@ -35,6 +37,22 @@
 
 	function idSelector( id ) {
 		return '#' + id;
+	}
+
+	function blankUtmPayload() {
+		return UTM_KEYS.reduce( ( values, key ) => ( {
+			...values,
+			[ key ]: '',
+		} ), {} );
+	}
+
+	function shouldShowUtmFields( container ) {
+		return container?.dataset?.type !== MEDIA_TYPE;
+	}
+
+	function setUtmFieldsVisible( visible ) {
+		const grid = document.getElementById( MODAL_IDS.utmGrid );
+		if ( grid ) grid.hidden = ! visible;
 	}
 
 	function showModalElement( modal ) {
@@ -477,6 +495,7 @@
 		utmDashboardRow.append( utmDashboard );
 
 		const utmGrid = document.createElement( 'div' );
+		utmGrid.id = MODAL_IDS.utmGrid;
 		utmGrid.className = 'lihi-utm-grid';
 		utmGrid.append(
 			labelledControl( labels.utmSource, selectInput( UTM_INPUT_IDS.source ) ),
@@ -687,6 +706,14 @@
 
 	function collectCreateModalPayload() {
 		const modal = ensureCreateModal();
+		if ( activeModalTarget && ! shouldShowUtmFields( activeModalTarget.container ) ) {
+			return {
+				domain: modal.querySelector( idSelector( MODAL_IDS.domain ) ).value,
+				tags: collectUserTags( modal ),
+				utm: blankUtmPayload(),
+			};
+		}
+
 		const utm = {};
 		UTM_KEYS.forEach( ( key ) => {
 			const value = modal.querySelector( idSelector( UTM_INPUT_IDS[ key ] ) ).value.trim();
@@ -707,6 +734,7 @@
 		createHandler = typeof onSubmit === 'function' ? onSubmit : null;
 		dashboardTargetHandler = typeof onDashboardTarget === 'function' ? onDashboardTarget : null;
 		activeModalTarget = { container, btn };
+		setUtmFieldsVisible( shouldShowUtmFields( container ) );
 		modal.querySelector( idSelector( MODAL_IDS.tagInput ) ).value = '';
 		modal.querySelector( idSelector( MODAL_IDS.tags ) ).replaceChildren();
 		UTM_KEYS.forEach( ( key ) => {

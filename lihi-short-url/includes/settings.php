@@ -60,8 +60,8 @@ add_action( 'admin_menu', function () {
 function enqueue_settings_assets(): void {
     $settings_css = plugin_dir_path( __FILE__ ) . '../assets/lihi-settings.css';
     $settings_js  = plugin_dir_path( __FILE__ ) . '../assets/lihi-settings.js';
-    $css_version  = file_exists( $settings_css ) ? '1.0.3-' . filemtime( $settings_css ) : '1.0.3';
-    $js_version   = file_exists( $settings_js ) ? '1.0.3-' . filemtime( $settings_js ) : '1.0.3';
+    $css_version  = file_exists( $settings_css ) ? '1.0.4-' . filemtime( $settings_css ) : '1.0.4';
+    $js_version   = file_exists( $settings_js ) ? '1.0.4-' . filemtime( $settings_js ) : '1.0.4';
 
     wp_enqueue_style( 'dashicons' );
     wp_enqueue_style(

@@ -2,9 +2,9 @@
 # Copyright (C) 2026 lihi
 msgid ""
 msgstr ""
-"Project-Id-Version: lihi WP Plugin 1.0.3\n"
+"Project-Id-Version: lihi WP Plugin 1.0.4\n"
 "POT-Creation-Date: 2026-04-09\n"
-"PO-Revision-Date: 2026-06-21\n"
+"PO-Revision-Date: 2026-06-25\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -478,5 +478,5 @@ msgid "—"
 msgstr "—"
 
 #. Description of the plugin
-msgid "Adds a one-click \"lihi\" button to generate and copy short URLs, including posts, pages, media and all post-type list tables."
-msgstr "在列表中新增一鍵生成短網址並複製的按鈕 \"lihi\"，包含文章、頁面與媒體等所有內容行列表。"
+msgid "Adds lihi Short URL controls to create, copy, and edit short URLs for posts, pages, media, and public post types in wp-admin."
+msgstr "在 WordPress 後台為文章、頁面、媒體與公開內容類型加入 lihi 短網址建立、複製與編輯控制。"
