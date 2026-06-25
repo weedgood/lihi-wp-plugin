@@ -63,24 +63,15 @@ class ClientTest extends TestCase
     // -------------------------------------------------------------------------
 
     /** @test */
-    public function get_short_links_sends_get_with_type_and_type_id(): void
+    public function get_short_link_sends_get_with_type_and_type_id(): void
     {
         $capture = $this->mockRequest(200, '{"result":true,"data":{"site":""}}');
-        $this->makeClient()->get_short_links('test-token', 'post', 42);
+        $this->makeClient()->get_short_link('test-token', 'post', 42);
         $url = $capture()['url'];
         $this->assertStringContainsString('/api/wordpress/v1/site/find', $url);
         $this->assertStringContainsString('type=post', $url);
         $this->assertStringContainsString('type_id=42', $url);
         $this->assertStringNotContainsString('per_page=', $url);
-    }
-
-    /** @test */
-    public function get_short_links_encodes_array_type_ids_as_comma_separated_string(): void
-    {
-        $capture = $this->mockRequest(200, '{"result":true,"data":{"site":""}}');
-        $this->makeClient()->get_short_links('test-token', 'post', [42, 43]);
-        $url = rawurldecode($capture()['url']);
-        $this->assertStringContainsString('type_id=42,43', $url);
     }
 
     /** @test */
@@ -158,7 +149,7 @@ class ClientTest extends TestCase
     public function get_request_appends_data_as_query_string(): void
     {
         $capture = $this->mockRequest();
-        $this->makeClient()->get_sites('test-token', ['type' => 'products', 'type_id' => '10']);
+        $this->makeClient()->get_short_link('test-token', 'products', '10');
         $c = $capture();
         $this->assertStringContainsString('/api/wordpress/v1/site/find', $c['url']);
         $this->assertStringContainsString('type=products', $c['url']);
@@ -189,7 +180,7 @@ class ClientTest extends TestCase
     public function request_includes_authorization_header_when_token_provided(): void
     {
         $capture = $this->mockRequest();
-        $this->makeClient()->get_sites('my-token');
+        $this->makeClient()->get_short_link('my-token', 'post', 42);
         $c = $capture();
         $this->assertSame('Bearer my-token', $c['args']['headers']['Authorization']);
     }
@@ -198,7 +189,7 @@ class ClientTest extends TestCase
     public function request_returns_empty_array_on_204(): void
     {
         $this->mockRequest(204, '');
-        $result = $this->makeClient()->get_sites('test-token');
+        $result = $this->makeClient()->get_short_link('test-token', 'post', 42);
         $this->assertSame([], $result);
     }
 
@@ -206,7 +197,7 @@ class ClientTest extends TestCase
     public function request_returns_empty_array_on_empty_body(): void
     {
         $this->mockRequest(200, '');
-        $result = $this->makeClient()->get_sites('test-token');
+        $result = $this->makeClient()->get_short_link('test-token', 'post', 42);
         $this->assertSame([], $result);
     }
 
@@ -217,7 +208,7 @@ class ClientTest extends TestCase
         $this->mockRequest(404, $html);
         $this->expectException(\Lihi\ShortUrl\Lihi_Not_Found_Exception::class);
         $this->expectExceptionMessageMatches('/404.*Page Not Found/');
-        $this->makeClient()->get_sites('test-token');
+        $this->makeClient()->get_short_link('test-token', 'post', 42);
     }
 
     /** @test */
@@ -227,7 +218,7 @@ class ClientTest extends TestCase
         $this->mockRequest(500, $html);
         $this->expectException(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class);
         $this->expectExceptionMessageMatches('/500.*網站升級中/');
-        $this->makeClient()->get_sites('test-token');
+        $this->makeClient()->get_short_link('test-token', 'post', 42);
     }
 
     /** @test */
@@ -236,7 +227,7 @@ class ClientTest extends TestCase
         $html = '<html><head><title>網站升級中...</title></head><body></body></html>';
         $this->mockRequest(500, $html);
         $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
-        $this->makeClient()->get_sites('test-token');
+        $this->makeClient()->get_short_link('test-token', 'post', 42);
     }
 
     /** @test */
@@ -254,7 +245,7 @@ class ClientTest extends TestCase
         $this->mockRequest(500, '{"result":"failed","msg":"Token expired ,please login again"}');
         $this->expectException(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class);
         $this->expectExceptionMessage('please login again');
-        $this->makeClient()->get_sites('test-token');
+        $this->makeClient()->get_short_link('test-token', 'post', 42);
     }
 
     /** @test */
@@ -263,7 +254,7 @@ class ClientTest extends TestCase
         $this->mockRequest(500, '{"result":"failed","msg":"Token invalid ,please login again"}');
         $this->expectException(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class);
         $this->expectExceptionMessage('Token invalid');
-        $this->makeClient()->get_sites('test-token');
+        $this->makeClient()->get_short_link('test-token', 'post', 42);
     }
 
     /** @test */
@@ -272,7 +263,7 @@ class ClientTest extends TestCase
         $this->mockRequest(500, '{"result":"failed","msg":"Something wrong ,please login again"}');
         $this->expectException(\Lihi\ShortUrl\Lihi_Token_Invalid_Exception::class);
         $this->expectExceptionMessage('Something wrong');
-        $this->makeClient()->get_sites('test-token');
+        $this->makeClient()->get_short_link('test-token', 'post', 42);
     }
 
     /** @test */
@@ -282,7 +273,7 @@ class ClientTest extends TestCase
         $this->mockRequest(500, $html);
         $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
         $this->expectExceptionMessageMatches('/500.*Internal Server Error/');
-        $this->makeClient()->get_sites('test-token');
+        $this->makeClient()->get_short_link('test-token', 'post', 42);
     }
 
     /** @test */
@@ -290,7 +281,7 @@ class ClientTest extends TestCase
     {
         $this->mockRequest(500, 'not-json');
         $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
-        $this->makeClient()->get_sites('test-token');
+        $this->makeClient()->get_short_link('test-token', 'post', 42);
     }
 
     /** @test */
@@ -310,20 +301,20 @@ class ClientTest extends TestCase
     }
 
     /** @test */
-    public function get_sites_throws_validation_exception_on_400(): void
+    public function get_short_link_throws_validation_exception_on_400(): void
     {
         $this->mockRequest(400, '{"result":false,"msg":{"type":["The type field is required."]}}');
         $this->expectException(\Lihi\ShortUrl\Lihi_Validation_Exception::class);
-        $this->makeClient()->get_sites('token');
+        $this->makeClient()->get_short_link('token', 'post', 42);
     }
 
     /** @test */
-    public function get_short_links_throws_server_exception_on_5xx_json_failure(): void
+    public function get_short_link_throws_server_exception_on_5xx_json_failure(): void
     {
         $this->mockRequest(500, '{"result":false,"msg":"upstream unavailable"}');
         $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
         $this->expectExceptionMessage('upstream unavailable');
-        $this->makeClient()->get_short_links('token', 'post', 42);
+        $this->makeClient()->get_short_link('token', 'post', 42);
     }
 
     /** @test */
@@ -337,6 +328,6 @@ class ClientTest extends TestCase
 
         $this->expectException(\Lihi\ShortUrl\Lihi_Server_Exception::class);
         $this->expectExceptionMessage('cURL error: connection timed out');
-        $this->makeClient()->get_sites('test-token');
+        $this->makeClient()->get_short_link('test-token', 'post', 42);
     }
 }

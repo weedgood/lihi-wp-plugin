@@ -152,24 +152,10 @@ class Lihi_Client implements Lihi_Client_Interface {
     // -------------------------------------------------------------------------
 
     /** @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
-    public function get_sites( string $token, array $params = [] ): array {
-        [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/site/find', $params, $token );
-        $data = $this->decode( $code, $body );
-
-        if ( $code === 400 ) {
-            throw new Lihi_Validation_Exception( esc_html( $this->msg( $data ) ) );
-        }
-
-        $this->throw_for_unsuccessful_response( $code, $data );
-
-        return $data;
-    }
-
-    /** @throws Lihi_Auth_Exception | Lihi_User_Invalid_Exception | Lihi_Token_Invalid_Exception | Lihi_Server_Exception */
-    public function get_short_links( string $token, string $type, $type_ids ): array {
+    public function get_short_link( string $token, string $type, $type_id ): array {
         [ 'code' => $code, 'body' => $body ] = $this->request( 'GET', '/api/wordpress/v1/site/find', [
             'type'    => $type,
-            'type_id' => is_array( $type_ids ) ? implode( ',', array_map( 'strval', $type_ids ) ) : (string) $type_ids,
+            'type_id' => (string) $type_id,
         ], $token );
         $data = $this->decode( $code, $body );
 

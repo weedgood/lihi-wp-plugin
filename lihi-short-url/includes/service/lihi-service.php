@@ -171,8 +171,9 @@ class Lihi_Service {
     private function fetch_or_create( string $token, int $item_id, string $type, array $options ): string {
         $host     = lihi_site_host();
         $api_type = $type . ':' . $host;
-        $result   = $this->client->get_short_links( $token, $api_type, $item_id );
-        $existing = $this->short_url_from_find_result( $result );
+        $result   = $this->client->get_short_link( $token, $api_type, $item_id );
+        $site     = $result['data']['site'] ?? '';
+        $existing = is_string( $site ) ? trim( $site ) : '';
         if ( $existing !== '' ) {
             return $existing;
         }
@@ -206,8 +207,9 @@ class Lihi_Service {
     private function fetch_existing( string $token, int $item_id, string $type ): string {
         $host     = lihi_site_host();
         $api_type = $type . ':' . $host;
-        $result   = $this->client->get_short_links( $token, $api_type, $item_id );
-        $existing = $this->short_url_from_find_result( $result );
+        $result   = $this->client->get_short_link( $token, $api_type, $item_id );
+        $site     = $result['data']['site'] ?? '';
+        $existing = is_string( $site ) ? trim( $site ) : '';
 
         if ( $existing === '' ) {
             throw new Lihi_Not_Found_Exception( esc_html__( 'Short URL has been removed. Please create it again.', 'lihi-short-url' ) );
@@ -225,11 +227,6 @@ class Lihi_Service {
         }
 
         return $nonce;
-    }
-
-    private function short_url_from_find_result( array $result ): string {
-        $site = $result['data']['site'] ?? '';
-        return is_string( $site ) ? trim( $site ) : '';
     }
 
     private function build_tags( array $custom_tags ): array {

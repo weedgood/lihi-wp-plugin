@@ -290,7 +290,7 @@ Auth: bearer token required.
 Query params: `type`, `type_id`
 
 - `type` + `type_id` 合起來是 WordPress link 查詢條件，兩者皆必填
-- `type_id` 需傳字串
+- `type_id` 需傳單一字串，不支援多筆 ID 或 comma-separated list
 - 本外掛在呼叫時會將 `type` 串上網站本身的 host（格式 `"{type}:{host}"`，例如 `post:example.com`），以便同一 lihi 帳號下多個 WordPress 站台共用相同 `type_id` 時仍可區分
 
 Response 200，有既有短網址:

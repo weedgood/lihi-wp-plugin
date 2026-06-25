@@ -5,7 +5,6 @@ Composer 僅在官方 `php:*-cli` 測試 container 內執行；PHP 7.4 與 PHP 8
 測試位置：`tests/`
 
 CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執行。Package job 會打包 `lihi-short-url/` 成 `build/lihi-short-url.zip`，驗證 ZIP 內含 `lihi-short-url/lihi-short-url.php` 與 `lihi-short-url/readme.txt`，並上傳 artifact `lihi-short-url-plugin`；release job 會下載同一個 artifact 建立或更新該 tag 的 GitHub Release，若 release 已存在則以 `--clobber` 替換 ZIP asset。
-Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header、WordPress.org `readme.txt` 的 `Stable tag` / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、以及 `zh_TW` translation header 應保持一致。
 
 | Test class | 基底 | 說明 |
 |---|---|---|
@@ -95,16 +94,16 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] `client->get_options()` 拋出 `Lihi_Token_Invalid_Exception` → invalidate token、重新 login、再試一次
 
 ### get_or_create_short_url()
-- [x] `get_short_links()` 回傳 `data.site` 非空字串 → 直接回傳該短網址，不呼叫 create_site
-- [x] `get_short_links()` 回傳 `data.site` 空字串 → 呼叫 create_site 並回傳新 `short_url`
+- [x] `get_short_link()` 回傳 `data.site` 非空字串 → 直接回傳該短網址，不呼叫 create_site
+- [x] `get_short_link()` 回傳 `data.site` 空字串 → 呼叫 create_site 並回傳新 `short_url`
 - [x] create_site 回傳空 `short_url` → 拋出 RuntimeException
-- [x] get_short_links 單一 find response → 使用 `data.site` 作為既有短網址
+- [x] get_short_link 單一 find response → 使用 `data.site` 作為既有短網址
 - [x] create_site 的 body 包含正確的 permalink、type、type_id
 - [x] create_site body 的 `domain` 來自 modal 選擇；create AJAX 只要求非空值，最終 domain 有效性由 lihi API 判斷
 - [x] create_site body 的 `tags` 是 comma-separated string：只包含建立 modal 送出的已選 tags，去重後用逗號串接；未選 tag 時送空字串
 - [x] create_site body 有 UTM 時，目的 URL 加上 `utm_*` query string，且不另外傳 `utm` object
 - [x] type 為 `attachment` → 使用 `wp_get_attachment_url()` 而非 `get_permalink()`
-- [x] get_short_links 的 type 參數為 `"{type}:{host}"`（host 取自 `home_url()`）
+- [x] get_short_link 的 type 參數為 `"{type}:{host}"`（host 取自 `home_url()`）
 - [x] create_site 的 body `type` 為 `"{type}:{host}"`，不會因 host-namespaced type 自動補任何 tags
 
 ### get_existing_short_url()
@@ -132,13 +131,12 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] get_profile() → GET /api/wordpress/v1/user/profile，帶 Authorization: Bearer
 - [x] get_options() → GET /api/wordpress/v1/user/options，帶 Authorization: Bearer
 - [x] create_passthrough_nonce() → POST /api/wordpress/v1/passthrough/nonce，body 帶 `{ challenge }` 並可帶 `{ target }`，且帶 Authorization: Bearer
-- [x] get_sites() → GET /api/wordpress/v1/site/find，params 編為 query string
-- [x] get_short_links() → GET /api/wordpress/v1/site/find，帶 type/type_id，陣列 type_id 轉為 comma-separated string
+- [x] get_short_link() → GET /api/wordpress/v1/site/find，帶 type / 單一 type_id
 - [x] create_site() → POST /api/wordpress/v1/site/store，body 為 JSON
 - [x] get_options() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
 - [x] get_options() 回傳 `result:false` → 拋出 `Lihi_Server_Exception`，不回傳空 options
-- [x] get_sites() / get_short_links() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
-- [x] get_short_links() 回傳 JSON 5xx failure → 拋出 `Lihi_Server_Exception`，不誤判成短網址不存在
+- [x] get_short_link() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
+- [x] get_short_link() 回傳 JSON 5xx failure → 拋出 `Lihi_Server_Exception`，不誤判成短網址不存在
 - [x] create_site() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
 - [x] create_passthrough_nonce() 回應碼 400 → 拋出 `Lihi_Validation_Exception`
 
@@ -240,7 +238,6 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 
 ## Plugin hooks (整合)
 
-- [n/a] release metadata 1.0.3 — plugin header、readme Stable tag / changelog / upgrade notice / GitHub 維護 repo 連結、enqueue asset version、WordPress.org slug / text domain `lihi-short-url`、translation header 同步（由程式碼審查保證）
 - [x] `wp_ajax_lihi_copy_url` 已註冊
 - [x] `wp_ajax_lihi_create_url` 已註冊
 - [x] `wp_ajax_lihi_edit_url` 已註冊
@@ -251,6 +248,7 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] `admin_enqueue_scripts` 白名單（edit/upload/post/post-new）→ enqueue `lihi-button-api` / `lihi-button-modal` / `lihi-button`，且 main script 依賴前兩者
 - [x] `admin_enqueue_scripts` 非白名單 → 不 enqueue
 - [x] `manage_post_posts_columns` 有 `lihi` 欄位
+- [n/a] 欄位標題顯示 `lihi Short URL`（zh_TW：`lihi 短網址`），前端初始按鈕顯示 `Create`（zh_TW：`建立`），列表按鈕尺寸維持 WordPress 後台預設高度（由程式碼審查 / CSS 檢查保證）
 - [x] `manage_post_posts_custom_column` 輸出空的 `data-lihi-container`，含 `data-id` / `data-type="post"` / `data-lihi-already`；實際 button 由前端 JS 放入 container
 - [x] `manage_post_posts_custom_column` 在 post meta `lihi_already = 1` 時輸出 `data-lihi-already="1"`
 - [x] `manage_media_columns` 有 `lihi` 欄位

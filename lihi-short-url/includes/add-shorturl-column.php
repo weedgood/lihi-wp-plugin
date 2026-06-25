@@ -2,7 +2,7 @@
 namespace Lihi\ShortUrl;
 
 /**
- * Adds a "Short URL" column to all public post type list tables.
+ * Adds a "lihi Short URL" column to all public post type list tables.
  *
  * Dynamically registers column hooks for every public post type so that
  * custom post types are supported without extra configuration.
@@ -78,7 +78,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
         'canEditShortUrl'       => current_user_can( 'manage_options' ) ? '1' : '0',
         'passthroughRedirectUrl' => lihi_passthrough_redirect_url(),
         'siteHost'              => lihi_site_host(),
-        'labelOriginal'         => 'lihi',
+        'labelOriginal'         => __( 'Create', 'lihi-short-url' ),
         'labelReady'            => __( 'Copy', 'lihi-short-url' ),
         'labelEdit'             => __( 'Edit', 'lihi-short-url' ),
         'labelCopied'           => __( 'Copied!', 'lihi-short-url' ),
@@ -147,7 +147,7 @@ add_action( 'admin_init', function () {
         }
 
         add_filter( "manage_{$post_type}_posts_columns", function ( $columns ) {
-            $columns['lihi'] = __( 'Short URL', 'lihi-short-url' );
+            $columns['lihi'] = __( 'lihi Short URL', 'lihi-short-url' );
             return $columns;
         } );
 
@@ -160,7 +160,7 @@ add_action( 'admin_init', function () {
 
     // Media Library list mode.
     add_filter( 'manage_media_columns', function ( $columns ) {
-        $columns['lihi'] = __( 'Short URL', 'lihi-short-url' );
+        $columns['lihi'] = __( 'lihi Short URL', 'lihi-short-url' );
         return $columns;
     } );
 
@@ -174,7 +174,7 @@ add_action( 'admin_init', function () {
 // Add a frontend button container to the attachment detail panel in the media grid view.
 add_filter( 'attachment_fields_to_edit', function ( $form_fields, $post ) {
     $form_fields['lihi'] = [
-        'label' => __( 'Short URL', 'lihi-short-url' ),
+        'label' => __( 'lihi Short URL', 'lihi-short-url' ),
         'input' => 'html',
         'html'  => render_lihi_button_container( (int) $post->ID, (string) $post->post_type ),
     ];

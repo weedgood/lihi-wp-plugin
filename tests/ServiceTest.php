@@ -127,7 +127,7 @@ class ServiceTest extends TestCase
         $cachedToken = $this->makeJwt(time() + 3600);
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($cachedToken, 'post:example.com', 3)
             ->once()
             ->andReturn($this->makeFindResponse('https://lihi.io/cached'));
@@ -147,7 +147,7 @@ class ServiceTest extends TestCase
         $cachedToken = $this->makeJwt(time() + 3600);
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($cachedToken, 'post:example.com', 13)
             ->once()
             ->andReturn($this->makeFindResponse('https://lihi.io/double'));
@@ -172,7 +172,7 @@ class ServiceTest extends TestCase
         $newToken = $this->makeJwt(time() + 3600);
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($newToken, 'post:example.com', 5)
             ->once()
             ->andReturn($this->makeFindResponse('https://lihi.io/xyz'));
@@ -199,7 +199,7 @@ class ServiceTest extends TestCase
         $newToken = $this->makeJwt(time() + 3600);
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($newToken, 'post:example.com', 9)
             ->once()
             ->andReturn($this->makeFindResponse('https://lihi.io/waited'));
@@ -224,7 +224,7 @@ class ServiceTest extends TestCase
         $newToken = $this->makeJwt(time() + 3600);
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($newToken, 'post:example.com', 11)
             ->once()
             ->andReturn($this->makeFindResponse('https://lihi.io/fallback'));
@@ -569,7 +569,7 @@ class ServiceTest extends TestCase
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with(Mockery::type('string'), 'post:example.com', 42)
             ->once()
             ->andReturn($this->makeFindResponse('https://lihi.io/existing'));
@@ -587,7 +587,7 @@ class ServiceTest extends TestCase
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->once()
             ->andReturn($this->makeFindResponse(''));
         $client->shouldReceive('create_site')
@@ -608,7 +608,7 @@ class ServiceTest extends TestCase
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->andReturn($this->makeFindResponse(''));
         $client->shouldReceive('create_site')
             ->andReturn(['data' => ['short_url' => '']]);
@@ -628,7 +628,7 @@ class ServiceTest extends TestCase
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->andReturn($this->makeFindResponse('https://lihi.io/found'));
         $client->shouldNotReceive('create_site');
 
@@ -644,7 +644,7 @@ class ServiceTest extends TestCase
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->andReturn($this->makeFindResponse(''));
 
         $capturedBody = null;
@@ -679,7 +679,7 @@ class ServiceTest extends TestCase
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->andReturn($this->makeFindResponse(''));
 
         $capturedBody = null;
@@ -710,7 +710,7 @@ class ServiceTest extends TestCase
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->andReturn($this->makeFindResponse(''));
 
         $capturedBody = null;
@@ -731,7 +731,7 @@ class ServiceTest extends TestCase
     }
 
     /** @test */
-    public function get_or_create_namespaces_api_type_with_wp_host_for_get_short_links(): void
+    public function get_or_create_namespaces_api_type_with_wp_host_for_get_short_link(): void
     {
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
@@ -741,7 +741,7 @@ class ServiceTest extends TestCase
 
         $capturedType = null;
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->once()
             ->andReturnUsing(function ($token, $type, $itemId) use (&$capturedType) {
                 $capturedType = $type;
@@ -763,7 +763,7 @@ class ServiceTest extends TestCase
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->andReturn($this->makeFindResponse(''));
 
         $capturedBody = null;
@@ -788,7 +788,7 @@ class ServiceTest extends TestCase
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with(Mockery::any(), 'post:example.com', 42)
             ->once()
             ->andReturn($this->makeFindResponse('https://lihi.io/existing'));
@@ -805,7 +805,7 @@ class ServiceTest extends TestCase
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with(Mockery::any(), 'post:example.com', 42)
             ->once()
             ->andReturn($this->makeFindResponse(''));
@@ -820,17 +820,17 @@ class ServiceTest extends TestCase
     // -------------------------------------------------------------------------
 
     /** @test */
-    public function get_or_create_retries_once_when_get_short_links_throws_token_invalid(): void
+    public function get_or_create_retries_once_when_get_short_link_throws_token_invalid(): void
     {
         $staleToken = $this->makeJwt(time() + 3600);
         $freshToken = $this->makeJwt(time() + 7200);
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($staleToken, 'post:example.com', 42)
             ->once()
             ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($freshToken, 'post:example.com', 42)
             ->once()
             ->andReturn($this->makeFindResponse('https://lihi.io/retried'));
@@ -861,7 +861,7 @@ class ServiceTest extends TestCase
         $staleToken = $this->makeJwt(time() + 3600);
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($staleToken, 'post:example.com', 42)
             ->once()
             ->andThrow(new \Lihi\ShortUrl\Lihi_User_Invalid_Exception('HTTP 404: user_not_found ,please login again'));
@@ -887,7 +887,7 @@ class ServiceTest extends TestCase
         $freshToken = $this->makeJwt(time() + 7200);
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($staleToken, 'post:example.com', 42)
             ->once()
             ->andReturn($this->makeFindResponse(''));
@@ -895,7 +895,7 @@ class ServiceTest extends TestCase
             ->with($staleToken, Mockery::any())
             ->once()
             ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($freshToken, 'post:example.com', 42)
             ->once()
             ->andReturn($this->makeFindResponse(''));
@@ -931,11 +931,11 @@ class ServiceTest extends TestCase
         $freshToken = $this->makeJwt(time() + 7200);
 
         $client = $this->makeClient();
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($staleToken, 'post:example.com', 42)
             ->once()
             ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));
-        $client->shouldReceive('get_short_links')
+        $client->shouldReceive('get_short_link')
             ->with($freshToken, 'post:example.com', 42)
             ->once()
             ->andThrow(new \Lihi\ShortUrl\Lihi_Token_Invalid_Exception('HTTP 500: 網站升級中...'));

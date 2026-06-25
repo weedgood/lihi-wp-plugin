@@ -46,6 +46,10 @@ msgid "Clipboard access was blocked. Copy this short URL:"
 msgstr "瀏覽器封鎖剪貼簿存取，請複製此短網址："
 
 #: includes/add-shorturl-column.php
+msgid "Create"
+msgstr "建立"
+
+#: includes/add-shorturl-column.php
 msgid "Copy"
 msgstr "複製"
 
