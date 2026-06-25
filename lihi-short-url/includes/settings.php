@@ -279,11 +279,39 @@ function render_settings_page(): void {
 }
 
 function posted_checkbox_is_checked( string $field ): bool {
-    if ( ! isset( $_POST[ $field ] ) || is_array( $_POST[ $field ] ) ) {
+    $value = settings_posted_value( $field, null );
+    if ( ! is_scalar( $value ) ) {
         return false;
     }
 
-    return sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) === '1';
+    return sanitize_text_field( (string) $value ) === '1';
+}
+
+function settings_posted_value( string $field, $default = '' ) {
+    $field = sanitize_key( $field );
+    if ( $field === '' ) {
+        return $default;
+    }
+
+    // Settings AJAX handlers verify nonces before reading request fields.
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    if ( ! isset( $_POST[ $field ] ) ) {
+        return $default;
+    }
+
+    // Raw helper; callers sanitize text, while passwords stay unchanged.
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+    return wp_unslash( $_POST[ $field ] );
+}
+
+function settings_posted_text_field( string $field, string $default = '' ): string {
+    $value = settings_posted_value( $field, $default );
+
+    if ( ! is_scalar( $value ) ) {
+        return $default;
+    }
+
+    return trim( sanitize_text_field( (string) $value ) );
 }
 
 /**
@@ -301,9 +329,7 @@ function ajax_update_email(): void {
         return;
     }
 
-    $raw = isset( $_POST['email'] )
-        ? trim( sanitize_text_field( wp_unslash( $_POST['email'] ) ) )
-        : '';
+    $raw = settings_posted_text_field( 'email' );
     if ( $raw === '' ) {
         delete_option( 'lihi_email' );
         wp_send_json_success( [
@@ -322,8 +348,9 @@ function ajax_update_email(): void {
     $has_create_account_consent = posted_checkbox_is_checked( 'create_account_consent' );
 
     // Do not sanitize passwords: changing characters would make valid credentials fail.
-    $account_password = isset( $_POST['account_password'] ) && ! is_array( $_POST['account_password'] )
-        ? (string) wp_unslash( $_POST['account_password'] )
+    $account_password_value = settings_posted_value( 'account_password', '' );
+    $account_password       = is_scalar( $account_password_value )
+        ? (string) $account_password_value
         : '';
     if ( trim( $account_password ) === '' ) {
         wp_send_json_error( __( 'Please enter the lihi account password.', 'lihi-short-url' ), 400 );
@@ -381,9 +408,7 @@ function ajax_update_email(): void {
 add_action( 'wp_ajax_lihi_update_email', __NAMESPACE__ . '\\ajax_update_email' );
 
 function parse_dashboard_challenge_field(): string {
-    $challenge = isset( $_POST['challenge'] )
-        ? trim( sanitize_text_field( wp_unslash( $_POST['challenge'] ) ) )
-        : '';
+    $challenge = settings_posted_text_field( 'challenge' );
 
     return preg_match( '/^[A-Za-z0-9_-]{43}$/', $challenge )
         ? $challenge

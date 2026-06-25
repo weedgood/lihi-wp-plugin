@@ -12,13 +12,40 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Browser admin-ajax request failed local validation before any lihi API call. */
 class Lihi_Ajax_Bad_Request_Exception extends \RuntimeException {}
 
+function ajax_posted_value( string $field, $default = '' ) {
+    $field = sanitize_key( $field );
+    if ( $field === '' ) {
+        return $default;
+    }
+
+    // AJAX handlers verify nonces before calling this request helper.
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    if ( ! isset( $_POST[ $field ] ) ) {
+        return $default;
+    }
+
+    // Raw helper; callers sanitize scalar text or JSON-decoded values.
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+    return wp_unslash( $_POST[ $field ] );
+}
+
+function ajax_posted_text_field( string $field, string $default = '' ): string {
+    $value = ajax_posted_value( $field, $default );
+
+    if ( ! is_scalar( $value ) ) {
+        return $default;
+    }
+
+    return trim( sanitize_text_field( (string) $value ) );
+}
+
 function parse_json_array_field( string $field ): array {
-    $raw = isset( $_POST[ $field ] ) ? wp_unslash( $_POST[ $field ] ) : '[]';
-    if ( ! is_string( $raw ) ) {
+    $raw = ajax_posted_value( $field, '[]' );
+    if ( ! is_scalar( $raw ) ) {
         return [];
     }
 
-    $decoded = json_decode( $raw, true );
+    $decoded = json_decode( (string) $raw, true );
     if ( ! is_array( $decoded ) ) {
         return [];
     }
@@ -39,12 +66,12 @@ function parse_json_array_field( string $field ): array {
 }
 
 function parse_utm_field(): array {
-    $raw = isset( $_POST['utm'] ) ? wp_unslash( $_POST['utm'] ) : '{}';
-    if ( ! is_string( $raw ) ) {
+    $raw = ajax_posted_value( 'utm', '{}' );
+    if ( ! is_scalar( $raw ) ) {
         return [];
     }
 
-    $decoded = json_decode( $raw, true );
+    $decoded = json_decode( (string) $raw, true );
     if ( ! is_array( $decoded ) ) {
         return [];
     }
@@ -65,37 +92,33 @@ function parse_utm_field(): array {
 }
 
 function parse_domain_field(): string {
-    $domain = isset( $_POST['domain'] )
-        ? trim( sanitize_text_field( wp_unslash( $_POST['domain'] ) ) )
-        : '';
+    $domain = ajax_posted_text_field( 'domain' );
 
     if ( $domain === '' ) {
-        throw new Lihi_Validation_Exception( __( 'Please choose a redirect domain.', 'lihi-short-url' ) );
+        throw new Lihi_Validation_Exception( esc_html__( 'Please choose a redirect domain.', 'lihi-short-url' ) );
     }
 
     return $domain;
 }
 
 function parse_passthrough_challenge_field(): string {
-    $challenge = isset( $_POST['challenge'] )
-        ? trim( sanitize_text_field( wp_unslash( $_POST['challenge'] ) ) )
-        : '';
+    $challenge = ajax_posted_text_field( 'challenge' );
 
     if ( ! preg_match( '/^[A-Za-z0-9_-]{43}$/', $challenge ) ) {
-        throw new Lihi_Ajax_Bad_Request_Exception( __( 'Could not verify browser session. Please try again.', 'lihi-short-url' ) );
+        throw new Lihi_Ajax_Bad_Request_Exception( esc_html__( 'Could not verify browser session. Please try again.', 'lihi-short-url' ) );
     }
 
     return $challenge;
 }
 
 function parse_passthrough_target_field(): string {
-    if ( ! isset( $_POST['target'] ) ) {
+    $raw_target = ajax_posted_value( 'target', null );
+    if ( $raw_target === null ) {
         return '';
     }
 
-    $raw_target = wp_unslash( $_POST['target'] );
     if ( ! is_scalar( $raw_target ) ) {
-        throw new Lihi_Ajax_Bad_Request_Exception( __( 'Invalid lihi dashboard target.', 'lihi-short-url' ) );
+        throw new Lihi_Ajax_Bad_Request_Exception( esc_html__( 'Invalid lihi dashboard target.', 'lihi-short-url' ) );
     }
 
     $target = trim( (string) $raw_target );
@@ -105,7 +128,7 @@ function parse_passthrough_target_field(): string {
     }
 
     if ( strlen( $target ) > 2048 || ! preg_match( '/^(?:\/(?!\/)|https?:\/\/[^\s\/?#]+)[^\s\x00-\x1F\x7F]*\z/', $target ) ) {
-        throw new Lihi_Ajax_Bad_Request_Exception( __( 'Invalid lihi dashboard target.', 'lihi-short-url' ) );
+        throw new Lihi_Ajax_Bad_Request_Exception( esc_html__( 'Invalid lihi dashboard target.', 'lihi-short-url' ) );
     }
 
     return $target;
@@ -178,7 +201,7 @@ function available_url_option_utm( array $options ): array {
 }
 
 function validate_lihi_item_request(): array {
-    $item_id = intval( wp_unslash( $_POST['item_id'] ?? 0 ) );
+    $item_id = intval( ajax_posted_text_field( 'item_id', '0' ) );
 
     if ( ! $item_id ) {
         wp_send_json_error( __( 'Invalid post ID or type.', 'lihi-short-url' ), 400 );

@@ -49,6 +49,8 @@ Body:
 { "email": "alice@example.com", "hostname": "example.com", "uuid": "2df6f4f1-2a75-4d0e-9ce0-7c70e8d7bb9e", "password": "account-password" }
 ```
 
+外掛端送出此 body 前會在 settings AJAX handler 驗證 nonce 與 `manage_options` 權限；email / consent 文字欄位會先做 WordPress 標準 unslash + sanitize，password 則只做 unslash 後原樣送出，避免改寫使用者輸入的有效密碼。
+
 Response 200:
 ```json
 { "result": true, "data": { "verified": true } }

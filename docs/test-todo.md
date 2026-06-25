@@ -195,6 +195,7 @@ CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執�
 - [x] `lihi_passthrough_nonce` 缺少或傳入無效 browser challenge → HTTP 400，不呼叫 service
 - [x] `lihi_passthrough_nonce` 傳入非 scalar 或不符合 lihi-admin 格式的 target → HTTP 400，不呼叫 service
 - [x] `lihi_passthrough_nonce` 可接受 `/profile#utm-setting` 這類帶 hash 的 admin-relative UTM settings target
+- [x] AJAX request helpers → nonce 已驗證後才讀取 `$_POST`，scalar text fields 會 `wp_unslash()` + sanitize，JSON payload decode 後逐值 sanitize，WPCS security sniffs 無剩餘 nonce / unsanitized-input / output escaping 告警
 - [n/a] 前端 Copy 失敗只有 `code = lihi_missing` 才重設按鈕並開啟建立 modal；其他錯誤只顯示訊息、不改狀態（由程式碼審查 / JS 語法檢查保證）
 - [n/a] 前端 Copy 狀態只在 `canEditShortUrl` 為 true 時渲染相鄰 Edit button；點擊 Edit 先顯示確認 modal，OK 後先呼叫 `lihi_copy_url` 取得目前短網址，再把該 URL 作為 `target` 呼叫 `lihi_passthrough_nonce`，並以帶有 GET query `nonce` + `verifier` 的 URL 開啟新分頁（由程式碼審查 / JS 語法檢查保證）
 - [x] 建立 modal options → `wp_ajax_lihi_url_options` 從 options endpoint 回傳 domain `{ value, label }` options 與 UTM source / medium options
@@ -218,6 +219,7 @@ CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執�
 ## AJAX Handler: lihi_update_email
 
 - [x] 無 `manage_options` 權限 → wp_send_json_error，HTTP 403，不呼叫 `update_option`
+- [x] `email` / consent / dashboard challenge 經 nonce-verified helper 讀取並 sanitize；`account_password` 僅 `wp_unslash()` 後原樣送至 auth client，避免改寫有效密碼
 - [x] email 為空 → 呼叫 `delete_option('lihi_email')`，wp_send_json_success 訊息含「cleared」，不呼叫 lihi client
 - [x] email 全為空白字元 → 同上，視為清除
 - [x] email 格式無效 → wp_send_json_error，HTTP 400，不呼叫 lihi client 與 `update_option`

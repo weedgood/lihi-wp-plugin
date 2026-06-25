@@ -299,13 +299,11 @@ class Lihi_Client implements Lihi_Client_Interface {
      * @throws Lihi_User_Invalid_Exception when lihi marks the user invalid.
      */
     private function throw_forbidden_response( array $data ): void {
-        $message = esc_html( $this->msg( $data ) );
-
         if ( $this->is_user_invalid_response( $data ) ) {
-            throw new Lihi_User_Invalid_Exception( $message );
+            throw new Lihi_User_Invalid_Exception( esc_html( $this->msg( $data ) ) );
         }
 
-        throw new Lihi_Auth_Exception( $message );
+        throw new Lihi_Auth_Exception( esc_html( $this->msg( $data ) ) );
     }
 
     private function throw_for_unsuccessful_response( int $code, array $data ): void {
