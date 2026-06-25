@@ -62,6 +62,10 @@ msgid "Domain"
 msgstr "網域"
 
 #: includes/add-shorturl-column.php
+msgid "Custom domain?"
+msgstr "自訂網域？"
+
+#: includes/add-shorturl-column.php
 msgid "No redirect domains are available for this lihi account."
 msgstr "此 lihi 帳號沒有可用的轉址網域。"
 
@@ -74,8 +78,20 @@ msgid "Add"
 msgstr "新增"
 
 #: includes/add-shorturl-column.php
+msgid "Recommended tags"
+msgstr "推薦標籤"
+
+#: includes/add-shorturl-column.php
+msgid "Add recommended tag"
+msgstr "加入推薦標籤"
+
+#: includes/add-shorturl-column.php
 msgid "Remove tag"
 msgstr "移除標籤"
+
+#: includes/add-shorturl-column.php
+msgid "Manage options?"
+msgstr "管理選項？"
 
 #: includes/add-shorturl-column.php
 msgid "UTM source"
@@ -122,6 +138,14 @@ msgid "Go to the lihi dashboard to edit this short URL?"
 msgstr "是否前往 lihi 後台編輯短網址？"
 
 #: includes/add-shorturl-column.php
+msgid "Go to the lihi dashboard to manage custom domains?"
+msgstr "是否前往 lihi 後台管理自訂網域？"
+
+#: includes/add-shorturl-column.php
+msgid "Go to the lihi dashboard to manage UTM options?"
+msgstr "是否前往 lihi 後台管理 UTM 選項？"
+
+#: includes/add-shorturl-column.php
 msgid "Your browser blocked the lihi edit tab. Please allow pop-ups and try again."
 msgstr "瀏覽器已阻擋 lihi 編輯分頁，請允許彈出視窗後再試一次。"
 
@@ -132,6 +156,14 @@ msgstr "您的瀏覽器不支援安全的 lihi 編輯驗證。"
 #: includes/add-shorturl-column.php
 msgid "Could not verify browser session. Please refresh the page and try again."
 msgstr "無法驗證瀏覽器工作階段，請重新整理頁面後再試一次。"
+
+#: includes/add-shorturl-column.php
+msgid "Your browser blocked the lihi domain tab. Please allow pop-ups and try again."
+msgstr "瀏覽器已阻擋 lihi 網域分頁，請允許彈出視窗後再試一次。"
+
+#: includes/add-shorturl-column.php
+msgid "Your browser does not support secure lihi domain login."
+msgstr "您的瀏覽器不支援安全的 lihi 網域登入。"
 
 #: includes/shorturl-column-ajax.php
 msgid "Please choose a redirect domain."
@@ -200,6 +232,10 @@ msgstr "產生短網址失敗，請稍後再試。"
 msgid "Failed to open lihi dashboard. Please try again later."
 msgstr "無法開啟 lihi 後台，請稍後再試。"
 
+#: includes/shorturl-column-ajax.php
+msgid "Failed to open lihi domain settings. Please try again later."
+msgstr "無法開啟 lihi 網域設定，請稍後再試。"
+
 #: includes/settings.php
 msgid "Email"
 msgstr "Email"
@@ -216,6 +252,7 @@ msgstr "用於 lihi 服務驗證身分的 Email；儲存後會寄送驗證信，
 msgid "Your browser blocked the lihi dashboard tab. Please allow pop-ups and try again."
 msgstr "您的瀏覽器封鎖了 lihi 後台分頁，請允許彈出式視窗後再試一次。"
 
+#: includes/add-shorturl-column.php
 #: includes/settings.php
 msgid "Your browser does not support secure lihi dashboard login."
 msgstr "您的瀏覽器不支援安全的 lihi 後台登入。"

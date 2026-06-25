@@ -88,6 +88,29 @@ function parse_passthrough_challenge_field(): string {
     return $challenge;
 }
 
+function parse_passthrough_target_field(): string {
+    if ( ! isset( $_POST['target'] ) ) {
+        return '';
+    }
+
+    $raw_target = wp_unslash( $_POST['target'] );
+    if ( ! is_scalar( $raw_target ) ) {
+        throw new Lihi_Ajax_Bad_Request_Exception( __( 'Invalid lihi dashboard target.', 'lihi-short-url' ) );
+    }
+
+    $target = trim( (string) $raw_target );
+
+    if ( $target === '' ) {
+        return '';
+    }
+
+    if ( strlen( $target ) > 2048 || ! preg_match( '/^(?:\/(?!\/)|https?:\/\/[^\s\/?#]+)[^\s\x00-\x1F\x7F]*\z/', $target ) ) {
+        throw new Lihi_Ajax_Bad_Request_Exception( __( 'Invalid lihi dashboard target.', 'lihi-short-url' ) );
+    }
+
+    return $target;
+}
+
 function sanitize_option_value( $value ): string {
     if ( ! is_scalar( $value ) ) {
         return '';
@@ -329,17 +352,16 @@ function ajax_edit_url(): void {
     try {
         $challenge    = parse_passthrough_challenge_field();
         $url          = Lihi_Singletons::lihi_service()->get_existing_short_url( $item_id, $type );
-        $nonce       = Lihi_Singletons::lihi_service()->create_passthrough_nonce( $url, $challenge );
-        $form_action = lihi_passthrough_form_action();
-        if ( $form_action === '' ) {
-            throw new \RuntimeException( 'Could not resolve lihi passthrough form action URL.' );
+        $nonce        = Lihi_Singletons::lihi_service()->create_passthrough_nonce( $url, $challenge );
+        $redirect_url = lihi_passthrough_redirect_url();
+        if ( $redirect_url === '' ) {
+            throw new \RuntimeException( 'Could not resolve lihi passthrough redirect URL.' );
         }
 
         update_post_meta( $item_id, 'lihi_already', '1' );
         wp_send_json_success( [
-            'nonce'       => $nonce,
-            'form_action' => $form_action,
-            'target'      => $url,
+            'nonce'        => $nonce,
+            'redirect_url' => $redirect_url,
         ] );
     } catch ( \Exception $e ) {
         handle_lihi_ajax_exception( $e, [
@@ -350,6 +372,46 @@ function ajax_edit_url(): void {
 }
 
 add_action( 'wp_ajax_lihi_edit_url', __NAMESPACE__ . '\\ajax_edit_url' );
+
+/**
+ * AJAX handler: create a passthrough nonce for a frontend-selected lihi-admin
+ * target.
+ */
+function ajax_passthrough_nonce(): void {
+    check_ajax_referer( 'lihi_short_url', 'nonce' );
+
+    if ( ! validate_lihi_edit_permission() ) {
+        return;
+    }
+
+    list( $item_id ) = validate_lihi_item_request();
+    if ( ! $item_id ) {
+        return;
+    }
+
+    try {
+        $challenge = parse_passthrough_challenge_field();
+        $target    = parse_passthrough_target_field();
+
+        $nonce        = Lihi_Singletons::lihi_service()->create_passthrough_nonce( $target, $challenge );
+        $redirect_url = lihi_passthrough_redirect_url();
+        if ( $redirect_url === '' ) {
+            throw new \RuntimeException( 'Could not resolve lihi passthrough redirect URL.' );
+        }
+
+        wp_send_json_success( [
+            'nonce'        => $nonce,
+            'redirect_url' => $redirect_url,
+        ] );
+    } catch ( \Exception $e ) {
+        handle_lihi_ajax_exception( $e, [
+            'fallback_message' => __( 'Failed to open lihi dashboard. Please try again later.', 'lihi-short-url' ),
+            'log_prefix'       => 'passthrough nonce failed',
+        ] );
+    }
+}
+
+add_action( 'wp_ajax_lihi_passthrough_nonce', __NAMESPACE__ . '\\ajax_passthrough_nonce' );
 
 /**
  * AJAX handler: create (or fetch-and-create) a lihi short URL for a post using

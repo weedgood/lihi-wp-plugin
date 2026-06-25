@@ -180,7 +180,7 @@ class Lihi_Service {
         $domain = isset( $options['domain'] ) && is_string( $options['domain'] )
             ? $options['domain']
             : '';
-        $tags = $this->build_tags( $host, $type, $options['tags'] ?? [] );
+        $tags = $this->build_tags( $options['tags'] ?? [] );
         $utm  = $this->normalize_utm( $options['utm'] ?? [] );
         $url  = $this->apply_utm_to_url( lihi_resolve_url( $item_id, $type ), $utm );
 
@@ -232,8 +232,8 @@ class Lihi_Service {
         return is_string( $site ) ? trim( $site ) : '';
     }
 
-    private function build_tags( string $host, string $type, array $custom_tags ): array {
-        $tags = [ 'wordpress', $host, $type ];
+    private function build_tags( array $custom_tags ): array {
+        $tags = [];
 
         foreach ( $custom_tags as $tag ) {
             if ( ! is_scalar( $tag ) ) {

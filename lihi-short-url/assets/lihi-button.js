@@ -1,7 +1,7 @@
 const {
 	copyShortUrl: copyShortUrlFromApi,
+	createPassthroughNonce: createPassthroughNonceFromApi,
 	createShortUrl,
-	editShortUrl,
 	errorMessage,
 	exceptionMessage,
 } = window.LihiButtonApi;
@@ -132,9 +132,10 @@ function base64UrlEncode( bytes ) {
 		.replace( /=+$/g, '' );
 }
 
-async function createPassthroughProof() {
+async function createPassthroughProof( unavailableMessage = '' ) {
 	if ( ! window.crypto?.getRandomValues || ! window.crypto?.subtle || ! window.TextEncoder ) {
 		throw new Error(
+			unavailableMessage ||
 			lihiButton.edit?.proofUnavailable ||
 			'Your browser does not support secure lihi edit verification.'
 		);
@@ -155,49 +156,11 @@ async function createPassthroughProof() {
 	};
 }
 
-function appendHiddenInput( form, name, value ) {
-	const input = document.createElement( 'input' );
-
-	input.type = 'hidden';
-	input.name = name;
-	input.value = value;
-	form.appendChild( input );
-}
-
-function submitPassthroughForm( redirectUrl, nonce, verifier, target = '' ) {
-	const form = document.createElement( 'form' );
-
-	form.method = 'POST';
-	form.action = redirectUrl;
-	form.hidden = true;
-	if ( target ) {
-		form.target = target;
-	}
-
-	appendHiddenInput( form, 'nonce', nonce );
-	appendHiddenInput( form, 'verifier', verifier );
-	document.body.appendChild( form );
-	form.submit();
-}
-
-function passthroughTargetName( container ) {
-	return 'lihi_edit_' + ( container.dataset.id || Date.now() ) + '_' + Date.now();
-}
-
-function openPassthroughWindow( targetName ) {
-	const popup = window.open( '', targetName );
-	if ( popup ) {
-		popup.opener = null;
-	}
-	return popup;
-}
-
-function closePassthroughWindow( popup ) {
-	try {
-		popup?.close();
-	} catch {
-		// Some browsers deny closing a tab once navigation has started.
-	}
+function buildPassthroughRedirectUrl( redirectUrl, nonce, verifier ) {
+	const separator = redirectUrl.includes( '?' ) ? '&' : '?';
+	return redirectUrl + separator +
+		'nonce=' + encodeURIComponent( nonce ) +
+		'&verifier=' + encodeURIComponent( verifier );
 }
 
 async function withLihiBusy( container, btn, callback ) {
@@ -267,6 +230,40 @@ async function createLihi( container, btn, options = {} ) {
 	} );
 }
 
+async function openDashboardTarget( container, config = {} ) {
+	const target = config.target || '';
+	if ( ! target ) {
+		throw new Error( 'Invalid lihi dashboard target.' );
+	}
+
+	const proof = await createPassthroughProof(
+		config.proofUnavailable ||
+		'Your browser does not support secure lihi dashboard login.'
+	);
+	const data = await createPassthroughNonceFromApi(
+		container,
+		target,
+		proof.challenge,
+		config
+	);
+
+	if ( ! data.success ) {
+		throw new Error( errorMessage( data ) );
+	}
+
+	const nonce = data.data?.nonce;
+	const redirectUrl = data.data?.redirect_url || lihiButton.passthroughRedirectUrl;
+	if ( ! nonce || ! redirectUrl ) {
+		throw new Error( errorMessage( data ) );
+	}
+
+	const link = document.createElement( 'a' );
+	link.href = buildPassthroughRedirectUrl( redirectUrl, nonce, proof.verifier );
+	link.target = '_blank';
+	link.rel = 'noopener noreferrer';
+	link.click();
+}
+
 async function openCreateOrNoticeExisting( container, btn ) {
 	await withLihiBusy( container, btn, async () => {
 		let data;
@@ -284,7 +281,7 @@ async function openCreateOrNoticeExisting( container, btn ) {
 
 		if ( isMissingShortUrl( data ) ) {
 			setButtonAlready( container, btn, false );
-			await openCreateModal( container, btn, createLihi );
+			await openCreateModal( container, btn, createLihi, openDashboardTarget );
 			return;
 		}
 
@@ -306,7 +303,7 @@ async function tryCopyLihi( container, btn ) {
 			if ( isMissingShortUrl( data ) ) {
 				setButtonAlready( container, btn, false );
 				await showNotice( errorMessage( data ), async () => {
-					await openCreateModal( container, btn, createLihi );
+					await openCreateModal( container, btn, createLihi, openDashboardTarget );
 				} );
 				return;
 			}
@@ -320,61 +317,66 @@ async function tryCopyLihi( container, btn ) {
 }
 
 async function editLihi( container, btn ) {
-	const targetName = passthroughTargetName( container );
-	let popup = null;
-	let popupAttempted = false;
-	const confirmed = await showConfirm(
-		lihiButton.edit?.confirmMessage || 'Go to the lihi dashboard to edit this short URL?',
-		{
-			closeOnConfirm: false,
-			onConfirm: () => {
-				popupAttempted = true;
-				popup = openPassthroughWindow( targetName );
-				return Boolean( popup );
-			},
-		}
-	);
-	if ( ! confirmed && popupAttempted ) {
-		await showNotice( lihiButton.edit?.popupBlocked || 'Your browser blocked the lihi edit tab. Please allow pop-ups and try again.' );
-		return;
-	}
-	if ( ! confirmed ) return;
+	try {
+		await showConfirm(
+			lihiButton.edit?.confirmMessage || 'Go to the lihi dashboard to edit this short URL?',
+			{
+				onConfirm: async () => {
+					await withLihiBusy( container, btn, async () => {
+						let data;
+						let proof;
+						try {
+							proof = await createPassthroughProof();
+							const existing = await copyShortUrlFromApi( container );
+							if ( ! existing.success ) {
+								data = existing;
+							} else if ( ! existing.data?.url ) {
+								throw new Error( errorMessage( existing ) );
+							} else {
+								data = await createPassthroughNonceFromApi(
+									container,
+									existing.data.url,
+									proof.challenge,
+									lihiButton.edit || {}
+								);
+							}
+						} catch ( error ) {
+							closeConfirmModal();
+							await showNotice( exceptionMessage( error ) );
+							return;
+						}
 
-	await withLihiBusy( container, btn, async () => {
-		let data;
-		let proof;
-		try {
-			proof = await createPassthroughProof();
-			data = await editShortUrl( container, proof.challenge );
-		} catch ( error ) {
-			closePassthroughWindow( popup );
-			closeConfirmModal();
-			await showNotice( exceptionMessage( error ) );
-			return;
-		}
+						if ( ! data.success ) {
+							closeConfirmModal();
+							if ( isMissingShortUrl( data ) ) {
+								setButtonAlready( container, container.querySelector( 'button[data-lihi]' ) || btn, false );
+							}
+							await showNotice( errorMessage( data ) );
+							return;
+						}
 
-		if ( ! data.success ) {
-			closePassthroughWindow( popup );
-			closeConfirmModal();
-			if ( isMissingShortUrl( data ) ) {
-				setButtonAlready( container, container.querySelector( 'button[data-lihi]' ) || btn, false );
+						const nonce = data.data?.nonce;
+						const redirectUrl = data.data?.redirect_url || lihiButton.passthroughRedirectUrl;
+						if ( ! nonce || ! redirectUrl ) {
+							closeConfirmModal();
+							await showNotice( errorMessage( data ) );
+							return;
+						}
+
+						const link = document.createElement( 'a' );
+						link.href = buildPassthroughRedirectUrl( redirectUrl, nonce, proof.verifier );
+						link.target = '_blank';
+						link.rel = 'noopener noreferrer';
+						link.click();
+					} );
+
+					return true;
+				},
 			}
-			await showNotice( errorMessage( data ) );
-			return;
-		}
-
-		const nonce = data.data?.nonce;
-		const formAction = data.data?.form_action || lihiButton.passthroughFormAction;
-		if ( ! nonce || ! formAction ) {
-			closePassthroughWindow( popup );
-			closeConfirmModal();
-			await showNotice( errorMessage( data ) );
-			return;
-		}
-
-		submitPassthroughForm( formAction, nonce, proof.verifier, targetName );
-		closeConfirmModal();
-	} );
+		);
+	} catch ( error ) {
+		await showNotice( exceptionMessage( error ) );
+	}
 }
 
 document.addEventListener( 'click', async ( e ) => {

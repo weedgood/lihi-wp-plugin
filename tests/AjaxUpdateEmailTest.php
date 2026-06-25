@@ -423,7 +423,7 @@ class AjaxUpdateEmailTest extends TestCase
         $this->assertIsArray($captured);
         $this->assertSame('email_or_password_invalid', $captured['code']);
         $this->assertStringContainsString('Email or password invalid', $captured['message']);
-        $this->assertSame('https://app.lihidev.com/admin/password/reset', $captured['password_reset_url']);
+        $this->assertSame('https://app.lihi.com/admin/password/reset', $captured['password_reset_url']);
         $this->assertSame(403, $statusCode);
     }
 
@@ -433,7 +433,7 @@ class AjaxUpdateEmailTest extends TestCase
         $_POST['challenge'] = str_repeat('A', 43);
 
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('alice@example.com');
-        Functions\when('Lihi\ShortUrl\lihi_passthrough_form_action')->justReturn('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect');
+        Functions\when('Lihi\ShortUrl\lihi_passthrough_redirect_url')->justReturn('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect');
 
         $this->mockTokenStore()
             ->shouldReceive('get')
@@ -457,7 +457,7 @@ class AjaxUpdateEmailTest extends TestCase
 
         $this->assertTrue($sent['passthrough']);
         $this->assertSame('nonce-token', $sent['nonce']);
-        $this->assertSame('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect', $sent['form_action']);
+        $this->assertSame('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect', $sent['redirect_url']);
     }
 
     /** @test */

@@ -12,27 +12,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/lihi-singletons.php';
 
 /**
- * Return a configuration value loaded from includes/config.php.
- *
- * The config file is required once and cached for the request lifetime.
- *
- * @param string $key Configuration key (e.g. "api_host").
- * @return mixed Value for the key, or null if the key is unknown.
- */
-function lihi_config( string $key ) {
-    static $cfg = null;
-    if ( $cfg === null ) {
-        $cfg = require __DIR__ . '/config.php';
-    }
-    return $cfg[ $key ] ?? null;
-}
-
-/**
  * Return the configured lihi API / app host.
  */
 function lihi_api_host(): string {
-    $api_host = lihi_config( 'api_host' );
-    return is_string( $api_host ) ? rtrim( $api_host, '/' ) : '';
+    return 'https://app.lihi.com';
 }
 
 /**
@@ -64,9 +47,9 @@ function lihi_site_host(): string {
 }
 
 /**
- * Return the browser-facing passthrough form action URL.
+ * Return the browser-facing passthrough redirect URL.
  */
-function lihi_passthrough_form_action(): string {
+function lihi_passthrough_redirect_url(): string {
     $api_host = lihi_api_host();
     if ( $api_host === '' ) {
         return '';

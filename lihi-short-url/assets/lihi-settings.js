@@ -182,53 +182,11 @@ async function createPassthroughProof() {
 	};
 }
 
-function appendHiddenInput( form, name, value ) {
-	const input = document.createElement( 'input' );
-
-	input.type = 'hidden';
-	input.name = name;
-	input.value = value;
-	form.appendChild( input );
-}
-
-function submitPassthroughForm( redirectUrl, nonce, verifier, target ) {
-	const form = document.createElement( 'form' );
-
-	form.method = 'POST';
-	form.action = redirectUrl;
-	form.target = target;
-	form.hidden = true;
-
-	appendHiddenInput( form, 'nonce', nonce );
-	appendHiddenInput( form, 'verifier', verifier );
-	document.body.appendChild( form );
-	form.submit();
-	setTimeout( () => form.remove(), 0 );
-}
-
-function openDashboardWindow( targetName, url = '' ) {
-	const popup = window.open( url, targetName );
-	if ( popup ) {
-		popup.opener = null;
-	}
-
-	return popup;
-}
-
-function navigateDashboardWindow( popup, url ) {
-	try {
-		popup.location.href = url;
-	} catch {
-		throw new Error( fallbackMessage() );
-	}
-}
-
-function closeDashboardWindow( popup ) {
-	try {
-		popup?.close();
-	} catch {
-		// Some browsers can block close() across browsing contexts.
-	}
+function buildPassthroughRedirectUrl( redirectUrl, nonce, verifier ) {
+	const separator = redirectUrl.includes( '?' ) ? '&' : '?';
+	return redirectUrl + separator +
+		'nonce=' + encodeURIComponent( nonce ) +
+		'&verifier=' + encodeURIComponent( verifier );
 }
 
 function bindDashboardPassthrough() {
@@ -237,24 +195,12 @@ function bindDashboardPassthrough() {
 	if ( ! button || ! status ) return;
 
 	button.addEventListener( 'click', async () => {
-		const targetName = 'lihi_dashboard_' + Date.now();
 		const homeUrl = lihiSettings.homeUrl || '';
 		status.className = '';
 		status.replaceChildren();
 
-		if ( ! homeUrl && ! lihiSettings.passthroughFormAction ) {
+		if ( ! homeUrl && ! lihiSettings.passthroughRedirectUrl ) {
 			renderStatus( status, 'error', fallbackMessage() );
-			return;
-		}
-
-		const popup = openDashboardWindow( targetName );
-		if ( ! popup ) {
-			renderStatus(
-				status,
-				'error',
-				lihiSettings.dashboard?.popupBlocked ||
-				'Your browser blocked the lihi dashboard tab. Please allow pop-ups and try again.'
-			);
 			return;
 		}
 
@@ -289,7 +235,11 @@ function bindDashboardPassthrough() {
 					throw new Error( errorMessage( data ) );
 				}
 
-				navigateDashboardWindow( popup, fallbackUrl );
+				const link = document.createElement( 'a' );
+				link.href = fallbackUrl;
+				link.target = '_blank';
+				link.rel = 'noopener noreferrer';
+				link.click();
 				return;
 			}
 
@@ -298,14 +248,17 @@ function bindDashboardPassthrough() {
 			}
 
 			const passthroughNonce = data.data?.nonce;
-			const formAction = data.data?.form_action || lihiSettings.passthroughFormAction;
-			if ( ! passthroughNonce || ! formAction ) {
+			const redirectUrl = data.data?.redirect_url || lihiSettings.passthroughRedirectUrl;
+			if ( ! passthroughNonce || ! redirectUrl ) {
 				throw new Error( errorMessage( data ) );
 			}
 
-			submitPassthroughForm( formAction, passthroughNonce, proof.verifier, targetName );
+			const link = document.createElement( 'a' );
+			link.href = buildPassthroughRedirectUrl( redirectUrl, passthroughNonce, proof.verifier );
+			link.target = '_blank';
+			link.rel = 'noopener noreferrer';
+			link.click();
 		} catch ( error ) {
-			closeDashboardWindow( popup );
 			renderStatus( status, 'error', exceptionMessage( error ) );
 		} finally {
 			button.disabled = false;

@@ -4,7 +4,7 @@ namespace Lihi\ShortUrl;
 /**
  * lihi Wordpress API client contract.
  *
- * Base URL: injected by the caller, typically lihi_config( 'api_host' ).
+ * Base URL: injected by the caller, typically lihi_api_host().
  * Mirrors the endpoints wired in lihi-admin's `wordpress/v1` group
  * (`routes/api.php`). Auth now lives under the same API namespace and keeps
  * the `/auth` route prefix.
@@ -117,13 +117,13 @@ interface Lihi_Client_Interface {
     // -------------------------------------------------------------------------
 
     /**
-     * Create a short-lived nonce that the browser can POST to the SaaS
+     * Create a short-lived nonce that the browser can send to the SaaS GET
      * passthrough redirect endpoint.
      *
      * POST /api/wordpress/v1/passthrough/nonce (PassthroughController@nonce)
      *
      * @param string $token     JWT bearer token.
-     * @param string $target    Optional URL / search target for the SaaS site list.
+     * @param string $target    Optional admin-relative path or absolute URL search target.
      * @param string $challenge Browser-generated base64url(SHA-256(verifier)) challenge.
      *
      * @return array{

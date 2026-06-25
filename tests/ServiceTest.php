@@ -12,10 +12,6 @@ use PHPUnit\Framework\TestCase;
 
 class ServiceTest extends TestCase
 {
-    private array $configDefaults = [
-        'api_host' => 'https://app.lihidev.com',
-    ];
-
     protected function setUp(): void
     {
         parent::setUp();
@@ -34,16 +30,6 @@ class ServiceTest extends TestCase
         });
         Functions\when('esc_html__')->returnArg(1);
         Functions\when('Lihi\ShortUrl\lihi_email')->justReturn('user@example.com');
-        $this->mockConfig();
-    }
-
-    /**
-     * Stub lihi_config() to return values merged over $configDefaults.
-     */
-    private function mockConfig(array $overrides = []): void
-    {
-        $cfg = array_merge($this->configDefaults, $overrides);
-        Functions\when('Lihi\ShortUrl\lihi_config')->alias(fn($k) => $cfg[$k] ?? null);
     }
 
     protected function tearDown(): void
@@ -681,9 +667,9 @@ class ServiceTest extends TestCase
         // The create AJAX flow supplies the modal domain; lower-level callers
         // that omit it still pass an empty string through to the API.
         $this->assertSame('', $capturedBody['domain']);
-        // tags keeps the bare $type, not the host-namespaced form, and is sent
-        // to the SaaS API as a comma-separated string.
-        $this->assertSame('wordpress,example.com,post', $capturedBody['tags']);
+        // tags are sent to the SaaS API as a comma-separated string only
+        // when the modal supplies selected tags.
+        $this->assertSame('', $capturedBody['tags']);
         $this->assertArrayNotHasKey('utm', $capturedBody);
     }
 
@@ -713,7 +699,7 @@ class ServiceTest extends TestCase
         ]);
 
         $this->assertSame('go.example.com', $capturedBody['domain']);
-        $this->assertSame('wordpress,example.com,post,campaign', $capturedBody['tags']);
+        $this->assertSame('campaign,wordpress', $capturedBody['tags']);
         $this->assertSame(['https://example.com/post?utm_source=newsletter&utm_medium=email'], $capturedBody['urls']);
         $this->assertArrayNotHasKey('utm', $capturedBody);
     }
@@ -772,7 +758,7 @@ class ServiceTest extends TestCase
     }
 
     /** @test */
-    public function get_or_create_sends_namespaced_type_but_bare_type_in_tags(): void
+    public function get_or_create_does_not_add_default_tags_to_namespaced_type(): void
     {
         Functions\when('get_transient')->justReturn($this->makeJwt(time() + 3600));
 
@@ -793,7 +779,7 @@ class ServiceTest extends TestCase
         $this->makeService($client)->get_or_create_short_url(7, 'attachment');
 
         $this->assertSame('attachment:example.com', $capturedBody['type']);
-        $this->assertSame('wordpress,example.com,attachment', $capturedBody['tags']);
+        $this->assertSame('', $capturedBody['tags']);
     }
 
     /** @test */

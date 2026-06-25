@@ -86,7 +86,7 @@ function enqueue_settings_assets(): void {
         'dashboardAction'               => 'lihi_dashboard_passthrough',
         'dashboardNonce'                => wp_create_nonce( 'lihi_dashboard_passthrough' ),
         'homeUrl'                       => lihi_home_url(),
-        'passthroughFormAction'         => lihi_passthrough_form_action(),
+        'passthroughRedirectUrl'        => lihi_passthrough_redirect_url(),
         'passwordResetUrl'              => lihi_password_reset_url(),
         'requestFailed'                 => __( 'Request failed. Please try again later.', 'lihi-short-url' ),
         'emailPasswordRequired'         => __( 'Please enter the lihi account password.', 'lihi-short-url' ),
@@ -95,7 +95,6 @@ function enqueue_settings_assets(): void {
         'hidePassword'                  => __( 'Hide password', 'lihi-short-url' ),
         'forgotPassword'                => __( 'Forgot password?', 'lihi-short-url' ),
         'dashboard'                     => [
-            'popupBlocked'     => __( 'Your browser blocked the lihi dashboard tab. Please allow pop-ups and try again.', 'lihi-short-url' ),
             'proofUnavailable' => __( 'Your browser does not support secure lihi dashboard login.', 'lihi-short-url' ),
         ],
     ] );
@@ -462,16 +461,16 @@ function ajax_dashboard_passthrough(): void {
             return;
         }
 
-        $nonce       = Lihi_Singletons::lihi_service()->create_passthrough_nonce( '', $challenge );
-        $form_action = lihi_passthrough_form_action();
-        if ( $form_action === '' ) {
-            throw new \RuntimeException( 'Could not resolve lihi passthrough form action URL.' );
+        $nonce        = Lihi_Singletons::lihi_service()->create_passthrough_nonce( '', $challenge );
+        $redirect_url = lihi_passthrough_redirect_url();
+        if ( $redirect_url === '' ) {
+            throw new \RuntimeException( 'Could not resolve lihi passthrough redirect URL.' );
         }
 
         wp_send_json_success( [
-            'passthrough' => true,
-            'nonce'       => $nonce,
-            'form_action' => $form_action,
+            'passthrough'  => true,
+            'nonce'        => $nonce,
+            'redirect_url' => $redirect_url,
         ] );
     } catch ( \Exception $e ) {
         send_dashboard_passthrough_exception( $e );

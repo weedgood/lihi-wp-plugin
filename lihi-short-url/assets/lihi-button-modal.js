@@ -7,6 +7,8 @@
 		domain: 'lihi-modal-domain',
 		tagInput: 'lihi-modal-tag-input',
 		tagAdd: 'lihi-modal-tag-add',
+		tagRecommendations: 'lihi-modal-tag-recommendations',
+		tagSuggestions: 'lihi-modal-tag-suggestions',
 		tags: 'lihi-modal-tags',
 		submit: 'lihi-modal-submit',
 		notice: 'lihi-notice-modal',
@@ -29,6 +31,7 @@
 	const modalHideTimers = new WeakMap();
 	let activeModalTarget = null;
 	let createHandler = null;
+	let dashboardTargetHandler = null;
 
 	function idSelector( id ) {
 		return '#' + id;
@@ -76,6 +79,22 @@
 		wrapper.className = 'lihi-field';
 		span.textContent = labelText;
 		wrapper.append( span, block );
+
+		return wrapper;
+	}
+
+	function labelledControlWithAction( labelText, control, action ) {
+		const wrapper = document.createElement( 'div' );
+		const header = document.createElement( 'div' );
+		const label = document.createElement( 'label' );
+
+		wrapper.className = 'lihi-field';
+		header.className = 'lihi-field__header';
+		label.className = 'lihi-field__label';
+		label.setAttribute( 'for', control.id );
+		label.textContent = labelText;
+		header.append( label, action );
+		wrapper.append( header, control );
 
 		return wrapper;
 	}
@@ -137,8 +156,23 @@
 		} );
 	}
 
-	function defaultTagsForContainer( container ) {
-		return [ 'wordpress', lihiButton.siteHost, container.dataset.type ].filter( Boolean );
+	function normalizeTag( tag ) {
+		return String( tag ?? '' ).trim();
+	}
+
+	function uniqueTags( tags ) {
+		const seen = new Set();
+		return tags
+			.map( normalizeTag )
+			.filter( ( tag ) => {
+				if ( ! tag || seen.has( tag ) ) return false;
+				seen.add( tag );
+				return true;
+			} );
+	}
+
+	function recommendedTagsForContainer( container ) {
+		return uniqueTags( [ 'wordpress', lihiButton.siteHost, container.dataset.type ] );
 	}
 
 	function ensureNoticeModal() {
@@ -281,47 +315,50 @@
 		const modal = ensureConfirmModal();
 		const cancel = modal.querySelector( idSelector( MODAL_IDS.confirmCancel ) );
 		const confirm = modal.querySelector( idSelector( MODAL_IDS.confirmConfirm ) );
-		const closeOnConfirm = options?.closeOnConfirm ?? true;
 		const onConfirm = options?.onConfirm;
+		const close = () => {
+			hideModalElement( modal );
+		};
+		const resetConfirmControls = () => {
+			cancel.disabled = false;
+			cancel.hidden = false;
+			confirm.disabled = false;
+			confirm.classList.remove( 'lihi-btn-loading' );
+		};
 		modal.querySelector( idSelector( MODAL_IDS.confirmMessage ) ).textContent = message;
-		cancel.disabled = false;
-		cancel.hidden = false;
+		resetConfirmControls();
 		cancel.textContent = lihiButton.notice?.cancel || 'Cancel';
-		confirm.disabled = false;
-		confirm.classList.remove( 'lihi-btn-loading' );
 		confirm.textContent = lihiButton.notice?.confirm || 'OK';
 		showModalElement( modal );
 		cancel.focus();
 
-		return new Promise( ( resolve ) => {
+		// Resolves only when the modal closes; returning false from onConfirm keeps it open.
+		return new Promise( ( resolve, reject ) => {
 			cancel.onclick = () => {
-				hideModalElement( modal );
-				resolve( false );
+				close();
+				resolve();
 			};
-			confirm.onclick = () => {
+			confirm.onclick = async () => {
+				cancel.disabled = true;
+				cancel.hidden = true;
+				confirm.disabled = true;
+				confirm.classList.add( 'lihi-btn-loading' );
+
 				if ( typeof onConfirm === 'function' ) {
 					try {
-						if ( onConfirm() === false ) {
-							hideModalElement( modal );
-							resolve( false );
+						if ( await onConfirm() === false ) {
+							resetConfirmControls();
 							return;
 						}
-					} catch {
-						hideModalElement( modal );
-						resolve( false );
+					} catch ( error ) {
+						close();
+						reject( error );
 						return;
 					}
 				}
 
-				if ( closeOnConfirm ) {
-					hideModalElement( modal );
-				} else {
-					cancel.disabled = true;
-					cancel.hidden = true;
-					confirm.disabled = true;
-					confirm.classList.add( 'lihi-btn-loading' );
-				}
-				resolve( true );
+				close();
+				resolve();
 			};
 		} );
 	}
@@ -373,6 +410,22 @@
 		const domain = document.createElement( 'select' );
 		domain.id = MODAL_IDS.domain;
 
+		const canOpenDashboard = lihiButton.canEditShortUrl === '1' ||
+			lihiButton.canEditShortUrl === true;
+
+		const domainDashboardConfig = lihiButton.domainDashboard || {};
+		const domainDashboard = document.createElement( canOpenDashboard ? 'button' : 'a' );
+		domainDashboard.className = 'button-link lihi-dashboard-link';
+		domainDashboard.textContent = labels.customDomain || 'Custom domain?';
+		if ( canOpenDashboard ) {
+			domainDashboard.type = 'button';
+			domainDashboard.dataset.lihiDashboardTarget = 'domainDashboard';
+		} else {
+			domainDashboard.href = domainDashboardConfig.externalUrl || 'https://lihidomain.com';
+			domainDashboard.target = '_blank';
+			domainDashboard.rel = 'noopener noreferrer';
+		}
+
 		const tagInput = textInput( MODAL_IDS.tagInput );
 		const tagAdd = document.createElement( 'button' );
 		tagAdd.id = MODAL_IDS.tagAdd;
@@ -380,32 +433,62 @@
 		tagAdd.className = 'button';
 		tagAdd.textContent = labels.tagsAdd || 'Add';
 
-		const tagEntry = document.createElement( 'div' );
-		tagEntry.className = 'lihi-tag-entry';
-		tagEntry.append( tagInput, tagAdd );
-
 		const tags = document.createElement( 'div' );
 		tags.id = MODAL_IDS.tags;
-		tags.className = 'lihi-tag-list lihi-tag-list--modal';
+		tags.className = 'lihi-tag-list lihi-tag-list--input';
+
+		const tagInputShell = document.createElement( 'div' );
+		tagInputShell.className = 'lihi-tag-input';
+		tagInputShell.append( tags, tagInput );
+
+		const tagEntry = document.createElement( 'div' );
+		tagEntry.className = 'lihi-tag-entry';
+		tagEntry.append( tagInputShell, tagAdd );
+
+		const tagSuggestions = document.createElement( 'div' );
+		tagSuggestions.id = MODAL_IDS.tagSuggestions;
+		tagSuggestions.className = 'lihi-tag-suggestions';
+
+		const tagRecommendations = document.createElement( 'div' );
+		tagRecommendations.id = MODAL_IDS.tagRecommendations;
+		tagRecommendations.className = 'lihi-tag-recommendations';
+		tagRecommendations.hidden = true;
+
+		const tagRecommendationLabel = document.createElement( 'span' );
+		tagRecommendationLabel.className = 'lihi-tag-recommendations__label';
+		tagRecommendationLabel.textContent = labels.tagRecommendations || 'Recommended tags';
+		tagRecommendations.append( tagRecommendationLabel, tagSuggestions );
 
 		const tagControl = document.createElement( 'div' );
 		tagControl.className = 'lihi-tag-control';
-		tagControl.append( tagEntry, tags );
+		tagControl.append( tagEntry, tagRecommendations );
 
 		const tagField = labelledBlock( labels.tags, tagControl );
+
+		const utmDashboard = document.createElement( 'button' );
+		utmDashboard.type = 'button';
+		utmDashboard.className = 'button-link lihi-dashboard-link';
+		utmDashboard.dataset.lihiDashboardTarget = 'utmDashboard';
+		utmDashboard.textContent = labels.manageOptions || 'Manage options?';
+		utmDashboard.hidden = ! canOpenDashboard;
+
+		const utmDashboardRow = document.createElement( 'div' );
+		utmDashboardRow.className = 'lihi-utm-dashboard-row';
+		utmDashboardRow.append( utmDashboard );
 
 		const utmGrid = document.createElement( 'div' );
 		utmGrid.className = 'lihi-utm-grid';
 		utmGrid.append(
 			labelledControl( labels.utmSource, selectInput( UTM_INPUT_IDS.source ) ),
 			labelledControl( labels.utmMedium, selectInput( UTM_INPUT_IDS.medium ) ),
+			utmDashboardRow,
 			labelledControl( labels.utmCampaign, textInput( UTM_INPUT_IDS.campaign ) ),
 			labelledControl( labels.utmTerm, textInput( UTM_INPUT_IDS.term ) ),
 			labelledControl( labels.utmContent, textInput( UTM_INPUT_IDS.content ) )
 		);
 
 		body.append(
-			labelledControl( labels.domain, domain ),
+			labelledControlWithAction( labels.domain, domain, domainDashboard ),
 			tagField,
 			utmGrid
 		);
@@ -434,6 +517,32 @@
 			closeCreateModal();
 			createHandler( container, btn, payload );
 		} );
+		modal.querySelectorAll( '[data-lihi-dashboard-target]' ).forEach( ( button ) => {
+			button.addEventListener( 'click', async ( event ) => {
+				if ( ! activeModalTarget || typeof dashboardTargetHandler !== 'function' ) return;
+				event.preventDefault();
+				const config = lihiButton[ event.currentTarget.dataset.lihiDashboardTarget ] || {};
+				if ( ! config.confirmMessage ) return;
+				const { container } = activeModalTarget;
+
+				try {
+					await showConfirm( config.confirmMessage, {
+						onConfirm: async () => {
+							try {
+								await dashboardTargetHandler( container, config );
+							} catch ( error ) {
+								closeConfirmModal();
+								await showNotice( exceptionMessage( error ) );
+							}
+
+							return true;
+						},
+					} );
+				} catch ( error ) {
+					await showNotice( exceptionMessage( error ) );
+				}
+			} );
+		} );
 		modal.querySelector( idSelector( MODAL_IDS.tagAdd ) ).addEventListener( 'click', () => {
 			addTagFromInput( modal.querySelector( idSelector( MODAL_IDS.tagInput ) ) );
 		} );
@@ -442,12 +551,25 @@
 			event.preventDefault();
 			addTagFromInput( event.currentTarget );
 		} );
+		modal.querySelector( '.lihi-tag-input' ).addEventListener( 'click', ( event ) => {
+			if ( event.target instanceof Element && event.target.closest( '[data-lihi-remove-tag]' ) ) return;
+			modal.querySelector( idSelector( MODAL_IDS.tagInput ) ).focus();
+		} );
+		modal.querySelector( idSelector( MODAL_IDS.tagSuggestions ) ).addEventListener( 'click', ( event ) => {
+			if ( ! ( event.target instanceof Element ) ) return;
+			const button = event.target.closest( '[data-lihi-recommended-tag]' );
+			if ( ! button ) return;
+			addTag( button.dataset.tag );
+		} );
 		modal.querySelector( idSelector( MODAL_IDS.tags ) ).addEventListener( 'click', ( event ) => {
 			if ( ! ( event.target instanceof Element ) ) return;
 			const remove = event.target.closest( '[data-lihi-remove-tag]' );
 			if ( ! remove ) return;
 			const chip = remove.closest( '[data-lihi-user-tag]' );
-			if ( chip ) chip.remove();
+			if ( chip ) {
+				chip.remove();
+				syncRecommendedTags( modal );
+			}
 		} );
 
 		return modal;
@@ -457,6 +579,7 @@
 		const modal = document.getElementById( MODAL_IDS.create );
 		if ( modal ) hideModalElement( modal );
 		activeModalTarget = null;
+		dashboardTargetHandler = null;
 	}
 
 	function renderDomainOptions( domains ) {
@@ -483,26 +606,30 @@
 		renderSelectOptions( document.getElementById( UTM_INPUT_IDS.medium ), [], { loading: true } );
 	}
 
-	function renderDefaultTags( tags ) {
-		const container = document.getElementById( MODAL_IDS.tags );
-		tags.forEach( ( tag ) => {
-			const chip = document.createElement( 'span' );
-			chip.className = 'lihi-tag';
-			chip.dataset.lihiDefaultTag = '';
-			chip.dataset.tag = tag;
-			chip.textContent = tag;
-			container.appendChild( chip );
-		} );
+	function renderRecommendedTags( tags ) {
+		const modal = ensureCreateModal();
+		const wrapper = modal.querySelector( idSelector( MODAL_IDS.tagRecommendations ) );
+		const container = modal.querySelector( idSelector( MODAL_IDS.tagSuggestions ) );
+		const normalizedTags = uniqueTags( tags );
+
+		wrapper.hidden = normalizedTags.length === 0;
+		container.replaceChildren( ...normalizedTags.map( ( tag ) => {
+			const button = document.createElement( 'button' );
+			button.type = 'button';
+			button.className = 'lihi-tag-suggestion';
+			button.dataset.lihiRecommendedTag = '';
+			button.dataset.tag = tag;
+			button.setAttribute( 'aria-label', ( lihiButton.modal?.addRecommendedTag || 'Add recommended tag' ) + ': ' + tag );
+			button.setAttribute( 'aria-pressed', 'false' );
+			button.textContent = tag;
+			return button;
+		} ) );
+
+		syncRecommendedTags( modal );
 	}
 
 	function collectUserTags( modal ) {
 		return Array.from( modal.querySelectorAll( '[data-lihi-user-tag]' ) )
-			.map( ( chip ) => chip.dataset.tag )
-			.filter( Boolean );
-	}
-
-	function collectDefaultTags( modal ) {
-		return Array.from( modal.querySelectorAll( '[data-lihi-default-tag]' ) )
 			.map( ( chip ) => chip.dataset.tag )
 			.filter( Boolean );
 	}
@@ -527,15 +654,33 @@
 		return chip;
 	}
 
-	function addTagFromInput( input ) {
-		const tag = input.value.trim();
-		if ( ! tag ) return;
+	function syncRecommendedTags( modal ) {
+		const selectedTags = new Set( collectUserTags( modal ) );
+		modal.querySelectorAll( '[data-lihi-recommended-tag]' ).forEach( ( button ) => {
+			const selected = selectedTags.has( button.dataset.tag );
+			button.classList.toggle( 'is-selected', selected );
+			button.setAttribute( 'aria-pressed', selected ? 'true' : 'false' );
+			button.disabled = selected;
+		} );
+	}
+
+	function addTag( tag ) {
+		const normalizedTag = normalizeTag( tag );
+		if ( ! normalizedTag ) return false;
 
 		const modal = ensureCreateModal();
-		const existingTags = [ ...collectDefaultTags( modal ), ...collectUserTags( modal ) ];
-		if ( ! existingTags.includes( tag ) ) {
-			modal.querySelector( idSelector( MODAL_IDS.tags ) ).appendChild( renderUserTag( tag ) );
+		if ( collectUserTags( modal ).includes( normalizedTag ) ) {
+			syncRecommendedTags( modal );
+			return false;
 		}
+
+		modal.querySelector( idSelector( MODAL_IDS.tags ) ).appendChild( renderUserTag( normalizedTag ) );
+		syncRecommendedTags( modal );
+		return true;
+	}
+
+	function addTagFromInput( input ) {
+		addTag( input.value );
 		input.value = '';
 		input.focus();
 	}
@@ -555,20 +700,19 @@
 		};
 	}
 
-	async function openCreateModal( container, btn, onSubmit ) {
+	async function openCreateModal( container, btn, onSubmit, onDashboardTarget = null ) {
 		const modal = ensureCreateModal();
 		const submit = modal.querySelector( idSelector( MODAL_IDS.submit ) );
 
-		if ( typeof onSubmit === 'function' ) {
-			createHandler = onSubmit;
-		}
+		createHandler = typeof onSubmit === 'function' ? onSubmit : null;
+		dashboardTargetHandler = typeof onDashboardTarget === 'function' ? onDashboardTarget : null;
 		activeModalTarget = { container, btn };
 		modal.querySelector( idSelector( MODAL_IDS.tagInput ) ).value = '';
 		modal.querySelector( idSelector( MODAL_IDS.tags ) ).replaceChildren();
 		UTM_KEYS.forEach( ( key ) => {
 			modal.querySelector( idSelector( UTM_INPUT_IDS[ key ] ) ).value = '';
 		} );
-		renderDefaultTags( defaultTagsForContainer( container ) );
+		renderRecommendedTags( recommendedTagsForContainer( container ) );
 		renderOptionLoadingState();
 		submit.disabled = true;
 		showModalElement( modal );
@@ -589,14 +733,13 @@
 		}
 
 		const domains = data.data.domains || [];
+		renderDomainOptions( domains );
+		renderUtmOptions( data.data.utm_options || {} );
 		if ( domains.length === 0 ) {
-			closeCreateModal();
 			await showNotice( lihiButton.modal.noDomains );
 			return;
 		}
 
-		renderDomainOptions( domains );
-		renderUtmOptions( data.data.utm_options || {} );
 		submit.disabled = false;
 	}
 

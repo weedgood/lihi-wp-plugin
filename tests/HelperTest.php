@@ -87,7 +87,7 @@ class HelperTest extends \WP_UnitTestCase
         $uuid = $ref->getProperty( 'uuid' );
         $uuid->setAccessible( true );
 
-        $this->assertSame( 'https://app.lihidev.com', $baseUrl->getValue( $client ) );
+        $this->assertSame( 'https://app.lihi.com', $baseUrl->getValue( $client ) );
         $this->assertSame( $stored, $uuid->getValue( $client ) );
     }
 

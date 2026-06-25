@@ -22,6 +22,12 @@
 		return typeof challenge === 'string' && /^[A-Za-z0-9_-]{43}$/.test( challenge );
 	}
 
+	function isValidPassthroughTarget( target ) {
+		return typeof target === 'string' &&
+			target.length <= 2048 &&
+			( target === '' || /^(?:\/(?!\/)|https?:\/\/[^\s/?#]+)[^\s\x00-\x1F\x7F]*$/.test( target ) );
+	}
+
 	async function parseAjaxResponse( res ) {
 		const text = await res.text();
 
@@ -100,24 +106,32 @@
 		return await postAjax( itemPayload( container, lihiButton.copyAction ) );
 	}
 
-	async function editShortUrl( container, challenge ) {
+	async function createPassthroughNonce( container, target, challenge, messages = {} ) {
 		if ( ! isValidPassthroughChallenge( challenge ) ) {
 			throw new Error(
-				lihiButton.edit?.invalidProof ||
+				messages.invalidProof ||
 				'Could not verify browser session. Please refresh the page and try again.'
 			);
 		}
 
+		if ( ! isValidPassthroughTarget( target ) ) {
+			throw new Error(
+				messages.invalidTarget ||
+				'Invalid lihi dashboard target.'
+			);
+		}
+
 		return await postAjax( {
-			...itemPayload( container, lihiButton.editAction ),
+			...itemPayload( container, lihiButton.passthroughAction ),
 			challenge,
+			target,
 		} );
 	}
 
 	window.LihiButtonApi = Object.freeze( {
 		copyShortUrl,
 		createShortUrl,
-		editShortUrl,
+		createPassthroughNonce,
 		errorMessage,
 		exceptionMessage,
 		loadUrlOptions,

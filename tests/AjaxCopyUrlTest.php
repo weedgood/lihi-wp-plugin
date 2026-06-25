@@ -413,7 +413,7 @@ class AjaxCopyUrlTest extends TestCase
             ->andReturn('nonce-token');
         \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
 
-        Functions\when('Lihi\ShortUrl\lihi_passthrough_form_action')->justReturn('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect');
+        Functions\when('Lihi\ShortUrl\lihi_passthrough_redirect_url')->justReturn('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect');
         Functions\expect('update_post_meta')
             ->once()
             ->with(42, 'lihi_already', '1');
@@ -428,8 +428,8 @@ class AjaxCopyUrlTest extends TestCase
         \Lihi\ShortUrl\ajax_edit_url();
 
         $this->assertSame('nonce-token', $sent['nonce']);
-        $this->assertSame('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect', $sent['form_action']);
-        $this->assertSame('https://lihi.io/existing', $sent['target']);
+        $this->assertSame('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect', $sent['redirect_url']);
+        $this->assertArrayNotHasKey('target', $sent);
     }
 
     /** @test */
@@ -513,6 +513,162 @@ class AjaxCopyUrlTest extends TestCase
         $this->assertSame('lihi_missing', $captured['code']);
         $this->assertStringContainsString('removed', $captured['message']);
         $this->assertSame(410, $statusCode);
+    }
+
+    /** @test */
+    public function passthrough_nonce_returns_nonce_for_frontend_selected_target(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['challenge'] = str_repeat('A', 43);
+        $_POST['target'] = '/myDomain';
+
+        $service = $this->mockService();
+        $service->shouldReceive('create_passthrough_nonce')
+            ->with('/myDomain', str_repeat('A', 43))
+            ->once()
+            ->andReturn('nonce-token');
+        $service->shouldNotReceive('get_existing_short_url');
+        $service->shouldNotReceive('get_or_create_short_url');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        Functions\when('Lihi\ShortUrl\lihi_passthrough_redirect_url')->justReturn('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect');
+
+        $sent = null;
+        Functions\expect('wp_send_json_success')
+            ->once()
+            ->andReturnUsing(function ($data) use (&$sent) {
+                $sent = $data;
+            });
+
+        \Lihi\ShortUrl\ajax_passthrough_nonce();
+
+        $this->assertSame('nonce-token', $sent['nonce']);
+        $this->assertSame('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect', $sent['redirect_url']);
+        $this->assertArrayNotHasKey('target', $sent);
+    }
+
+    /** @test */
+    public function passthrough_nonce_accepts_utm_settings_target(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['challenge'] = str_repeat('A', 43);
+        $_POST['target'] = '/profile#utm-setting';
+
+        $service = $this->mockService();
+        $service->shouldReceive('create_passthrough_nonce')
+            ->with('/profile#utm-setting', str_repeat('A', 43))
+            ->once()
+            ->andReturn('nonce-token');
+        $service->shouldNotReceive('get_existing_short_url');
+        $service->shouldNotReceive('get_or_create_short_url');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        Functions\when('Lihi\ShortUrl\lihi_passthrough_redirect_url')->justReturn('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect');
+
+        $sent = null;
+        Functions\expect('wp_send_json_success')
+            ->once()
+            ->andReturnUsing(function ($data) use (&$sent) {
+                $sent = $data;
+            });
+
+        \Lihi\ShortUrl\ajax_passthrough_nonce();
+
+        $this->assertSame('nonce-token', $sent['nonce']);
+        $this->assertSame('https://app.lihidev.com/api/wordpress/v1/passthrough/redirect', $sent['redirect_url']);
+        $this->assertArrayNotHasKey('target', $sent);
+    }
+
+    /** @test */
+    public function passthrough_nonce_requires_browser_challenge(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['target'] = '/myDomain';
+
+        $service = $this->mockService();
+        $service->shouldNotReceive('create_passthrough_nonce');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        $errorMsg   = null;
+        $statusCode = null;
+        $this->expectJsonError($errorMsg, $statusCode);
+
+        \Lihi\ShortUrl\ajax_passthrough_nonce();
+
+        $this->assertStringContainsString('verify browser session', $errorMsg);
+        $this->assertStringNotContainsString('lihi API rejected', $errorMsg);
+        $this->assertSame(400, $statusCode);
+    }
+
+    /** @test */
+    public function passthrough_nonce_rejects_invalid_frontend_target(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['challenge'] = str_repeat('A', 43);
+        $_POST['target'] = '?tag=https%3A%2F%2Fexample.com%2Fdemo';
+
+        $service = $this->mockService();
+        $service->shouldNotReceive('create_passthrough_nonce');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        $errorMsg   = null;
+        $statusCode = null;
+        $this->expectJsonError($errorMsg, $statusCode);
+
+        \Lihi\ShortUrl\ajax_passthrough_nonce();
+
+        $this->assertStringContainsString('Invalid lihi dashboard target', $errorMsg);
+        $this->assertSame(400, $statusCode);
+    }
+
+    /** @test */
+    public function passthrough_nonce_rejects_array_frontend_target(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['challenge'] = str_repeat('A', 43);
+        $_POST['target'] = ['https://lihi.io/existing'];
+
+        $service = $this->mockService();
+        $service->shouldNotReceive('create_passthrough_nonce');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        $errorMsg   = null;
+        $statusCode = null;
+        $this->expectJsonError($errorMsg, $statusCode);
+
+        \Lihi\ShortUrl\ajax_passthrough_nonce();
+
+        $this->assertStringContainsString('Invalid lihi dashboard target', $errorMsg);
+        $this->assertSame(400, $statusCode);
+    }
+
+    /** @test */
+    public function passthrough_nonce_requires_manage_options(): void
+    {
+        $_POST['item_id'] = '42';
+        $_POST['challenge'] = str_repeat('A', 43);
+        $_POST['target'] = '/myDomain';
+
+        $service = $this->mockService();
+        $service->shouldNotReceive('create_passthrough_nonce');
+        \Lihi\ShortUrl\Lihi_Singletons::lihi_service_set($service);
+
+        $checkedCaps = [];
+        Functions\when('current_user_can')->alias(function ($capability, $postId = null) use (&$checkedCaps) {
+            $checkedCaps[] = [$capability, $postId];
+            return $capability !== 'manage_options';
+        });
+
+        $errorMsg   = null;
+        $statusCode = null;
+        $this->expectJsonError($errorMsg, $statusCode);
+
+        \Lihi\ShortUrl\ajax_passthrough_nonce();
+
+        $this->assertContains(['manage_options', null], $checkedCaps);
+        $this->assertNotContains(['read_post', 42], $checkedCaps);
+        $this->assertStringContainsString('permission', $errorMsg);
+        $this->assertSame(403, $statusCode);
     }
 
     /** @test */

@@ -30,8 +30,7 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] `lihi_uuid()` — option 已設定 → 回傳 option 值
 - [x] `lihi_uuid()` — option 未設定 → 產生 UUID v4 並保存到 `lihi_uuid`
 - [x] `lihi_uuid()` — option 格式無效 → 重新產生 UUID v4 並替換 `lihi_uuid`
-- [x] `lihi_config( $key )` — 載入 `includes/config.php` 並回傳對應 key 的值（由 `Lihi_Singletons::lihi_client()` 組裝 `Lihi_Client` 時驗證）
-- [x] `lihi_config( $key )` — 未知 key 回傳 null（透過 `mockConfig()` 預設邏輯涵蓋）
+- [x] `lihi_api_host()` — 直接回傳 lihi app/API host（由 `Lihi_Singletons::lihi_client()` 組裝 `Lihi_Client` 時驗證）
 - [x] `lihi_site_host()` — 取 `home_url()` host，供 auth payload 與 short-link type namespace 使用
 - [x] `lihi_resolve_url()` — type=post/page → 使用 `get_permalink()`
 - [x] `lihi_resolve_url()` — type=attachment → 使用 `wp_get_attachment_url()`
@@ -102,11 +101,11 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] get_short_links 單一 find response → 使用 `data.site` 作為既有短網址
 - [x] create_site 的 body 包含正確的 permalink、type、type_id
 - [x] create_site body 的 `domain` 來自 modal 選擇；create AJAX 只要求非空值，最終 domain 有效性由 lihi API 判斷
-- [x] create_site body 的 `tags` 是 comma-separated string：固定 `wordpress` / host / type，並與使用者輸入 tags 合併去重後用逗號串接
+- [x] create_site body 的 `tags` 是 comma-separated string：只包含建立 modal 送出的已選 tags，去重後用逗號串接；未選 tag 時送空字串
 - [x] create_site body 有 UTM 時，目的 URL 加上 `utm_*` query string，且不另外傳 `utm` object
 - [x] type 為 `attachment` → 使用 `wp_get_attachment_url()` 而非 `get_permalink()`
 - [x] get_short_links 的 type 參數為 `"{type}:{host}"`（host 取自 `home_url()`）
-- [x] create_site 的 body `type` 為 `"{type}:{host}"`，固定 tags 仍使用原始 `type`
+- [x] create_site 的 body `type` 為 `"{type}:{host}"`，不會因 host-namespaced type 自動補任何 tags
 
 ### get_existing_short_url()
 - [x] `data.site` 非空字串 → 回傳短網址，不呼叫 create_site
@@ -175,9 +174,9 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 
 ---
 
-## AJAX Handlers: lihi_create_url / lihi_copy_url / lihi_edit_url
+## AJAX Handlers: lihi_create_url / lihi_copy_url / lihi_passthrough_nonce
 
-> 政策：建立、複製、編輯短網址都需要通過 nonce，且使用者必須對目標文章 / 媒體具備 `read_post` 權限；編輯短網址還需要 `manage_options`，因為它會產生 lihi-admin passthrough nonce。未登入請求仍由 `wp_ajax_lihi_create_url` / `wp_ajax_lihi_copy_url` / `wp_ajax_lihi_edit_url` action（未註冊 `wp_ajax_nopriv_*` 變體）擋下，無法抵達 handler。
+> 政策：建立、複製短網址與產生 lihi-admin passthrough nonce 都需要通過 nonce，且使用者必須對目標文章 / 媒體具備 `read_post` 權限；passthrough nonce endpoint 另外必須具備 `manage_options`。未登入請求仍由 `wp_ajax_lihi_create_url` / `wp_ajax_lihi_copy_url` / `wp_ajax_lihi_passthrough_nonce` action（未註冊 `wp_ajax_nopriv_*` 變體）擋下，無法抵達 handler。`wp_ajax_lihi_edit_url` 仍保留為舊版前端快取的相容入口。
 
 - [x] AJAX parsing / validation / exception mapping / action registration 拆在 `includes/shorturl-column-ajax.php`，`includes/add-shorturl-column.php` 只保留 column UI hooks
 - [x] email 為空 → wp_send_json_error「lihi email is not configured…」，HTTP 409
@@ -190,18 +189,24 @@ Release metadata：目前發版版本為 `1.0.3`；`lihi-short-url.php` header�
 - [x] `lihi_copy_url` → 呼叫 `get_existing_short_url()`，不呼叫 create flow；成功時仍回傳 url 並維持 `lihi_already = 1`
 - [x] `lihi_copy_url` 且 upstream 短網址不存在 → `update_post_meta($item_id, 'lihi_already', '0')`，HTTP 410，payload code 為 `lihi_missing`
 - [x] `lihi_edit_url` 無 `manage_options` 權限 → HTTP 403，不呼叫 service、不產生 passthrough nonce
-- [x] `lihi_edit_url` → 先驗證 browser challenge、呼叫 `get_existing_short_url()`，再以短網址 target + challenge 呼叫 `create_passthrough_nonce()`，回傳 `nonce` / `form_action` / `target`
+- [x] `lihi_edit_url` legacy handler → 先驗證 browser challenge、呼叫 `get_existing_short_url()`，再以短網址作為 absolute-URL target + challenge 呼叫 `create_passthrough_nonce()`，回傳 `nonce` / `redirect_url`，不回傳 `target`
 - [x] `lihi_edit_url` 缺少或傳入無效 browser challenge → HTTP 400，不呼叫 service
 - [x] `lihi_edit_url` 且 upstream 短網址不存在 → `update_post_meta($item_id, 'lihi_already', '0')`，HTTP 410，payload code 為 `lihi_missing`
+- [x] `lihi_passthrough_nonce` → 先驗證 browser challenge 與 frontend-selected `target`，再以 `target + challenge` 呼叫 `create_passthrough_nonce()`，回傳 `nonce` / `redirect_url`，不回傳 `target`
+- [x] `lihi_passthrough_nonce` 無 `manage_options` 權限 → HTTP 403，不驗證 item、不呼叫 service
+- [x] `lihi_passthrough_nonce` 缺少或傳入無效 browser challenge → HTTP 400，不呼叫 service
+- [x] `lihi_passthrough_nonce` 傳入非 scalar 或不符合 lihi-admin 格式的 target → HTTP 400，不呼叫 service
+- [x] `lihi_passthrough_nonce` 可接受 `/profile#utm-setting` 這類帶 hash 的 admin-relative UTM settings target
 - [n/a] 前端 Copy 失敗只有 `code = lihi_missing` 才重設按鈕並開啟建立 modal；其他錯誤只顯示訊息、不改狀態（由程式碼審查 / JS 語法檢查保證）
-- [n/a] 前端 Copy 狀態只在 `canEditShortUrl` 為 true 時渲染相鄰 Edit button；點擊 Edit 先顯示確認 modal，OK 後產生 verifier / challenge，取得 passthrough nonce，並用 hidden form POST `nonce` + `verifier` 到 lihi-admin redirect endpoint（由程式碼審查 / JS 語法檢查保證）
+- [n/a] 前端 Copy 狀態只在 `canEditShortUrl` 為 true 時渲染相鄰 Edit button；點擊 Edit 先顯示確認 modal，OK 後先呼叫 `lihi_copy_url` 取得目前短網址，再把該 URL 作為 `target` 呼叫 `lihi_passthrough_nonce`，並以帶有 GET query `nonce` + `verifier` 的 URL 開啟新分頁（由程式碼審查 / JS 語法檢查保證）
 - [x] 建立 modal options → `wp_ajax_lihi_url_options` 從 options endpoint 回傳 domain `{ value, label }` options 與 UTM source / medium options
 - [n/a] 前端建立 modal 的 Domain / UTM source / UTM medium 使用同一組 60 秒快取資料與 select loading / option rendering UI（由程式碼審查 / JS 語法檢查保證）
+- [n/a] 前端 Domain label row 對所有使用者顯示「Custom domain?」；管理員點擊後先顯示 confirm，再以 localized `/myDomain` target 呼叫 `lihi_passthrough_nonce` 並開新分頁，非管理員則直接開 `https://lihidomain.com`。UTM source / medium 下方的「Manage options?」只對管理員顯示，點擊後以 `/profile#utm-setting` target 走同一個 passthrough flow（由程式碼審查 / JS 語法檢查保證）
 - [x] AJAX exception mapping 集中於 `handle_lihi_ajax_exception()`，create / copy / options handler 不重複維護相同 catch mapping
 - [n/a] 前端 clipboard 被瀏覽器拒絕 → 已成功回傳的短網址直接以 prompt 顯示供手動複製，且按鈕狀態已先切為 `Copy`（由程式碼審查 / JS 語法檢查保證）
 - [n/a] 前端 showNotice 使用可確認的共用 modal，支援 OK 後執行 callback；Copy missing 會先顯示錯誤，再由 callback 開啟建立 modal（由程式碼審查 / JS 語法檢查保證）
 - [n/a] 前端 modal options 載入失敗 → 關閉 create modal 並顯示錯誤 modal，不會卡在 loading disabled 狀態（由程式碼審查 / JS 語法檢查保證）
-- [n/a] 前端 Tags 欄位使用同一個 chip list：預設 tags 是不可移除 chip，input + Add 新增的使用者 tags 是可移除 chip（由程式碼審查 / JS 語法檢查保證）
+- [n/a] 前端 Tags 欄位沒有預設已選 tags；推薦 tags 以 button 顯示，點擊後才加入 tag input 內的可移除 chip 並送出（由程式碼審查 / JS 語法檢查保證）
 - [x] service 拋出一般例外 → wp_send_json_error 友善訊息（不暴露內部細節），HTTP 500
 - [x] service 拋出 `Lihi_Auth_Exception` → wp_send_json_error「email has not been verified」訊息（lihi API 回 403，表示 email 尚未驗證），HTTP 403
 - [x] service 拋出 `Lihi_User_Invalid_Exception` → wp_send_json_error account unavailable 訊息（lihi API 回 `User Invalid` 或 `user_not_found ,please login again`，表示帳號不可使用），HTTP 403
