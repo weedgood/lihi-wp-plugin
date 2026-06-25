@@ -9,143 +9,94 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+require_once __DIR__ . '/lihi-singletons.php';
+
 /**
- * Return a configuration value loaded from includes/config.php.
- *
- * The config file is required once and cached for the request lifetime.
- *
- * @param string $key Configuration key (e.g. "api_domain", "auth_domain").
- * @return mixed Value for the key, or null if the key is unknown.
+ * Return the configured lihi API / app host.
  */
-function lihi_config( string $key ) {
-    static $cfg = null;
-    if ( $cfg === null ) {
-        $cfg = require __DIR__ . '/config.php';
-    }
-    return $cfg[ $key ] ?? null;
+function lihi_api_host(): string {
+    return 'https://app.lihi.com';
 }
 
 /**
  * Return the email address used to authenticate with the lihi API.
- *
- * Reads the value stored in the plugin settings (Options API).
- *
- * @return string Email address.
  */
 function lihi_email(): string {
     return (string) get_option( 'lihi_email', '' );
 }
 
 /**
- * Return the redirect domain selected for new lihi short URLs.
+ * Return the site-scoped lihi UUID, creating it when missing.
+ */
+function lihi_uuid(): string {
+    return Lihi_Singletons::lihi_uuid_store()->get();
+}
+
+/**
+ * Return the current WordPress site's host.
  *
- * Reads the value stored in the plugin settings (Options API). Cleared
- * automatically whenever lihi_email changes (see settings.php), so the
- * domain always belongs to the currently-configured account.
+ * @throws \RuntimeException When home_url() has no usable host.
+ */
+function lihi_site_host(): string {
+    $host = wp_parse_url( home_url(), PHP_URL_HOST );
+    if ( ! is_string( $host ) || $host === '' ) {
+        throw new \RuntimeException( esc_html__( 'Could not resolve WordPress site host.', 'lihi-short-url' ) );
+    }
+
+    return $host;
+}
+
+/**
+ * Return the browser-facing passthrough redirect URL.
+ */
+function lihi_passthrough_redirect_url(): string {
+    $api_host = lihi_api_host();
+    if ( $api_host === '' ) {
+        return '';
+    }
+
+    return $api_host . '/api/wordpress/v1/passthrough/redirect';
+}
+
+/**
+ * Return the public lihi entry URL used when no WordPress JWT is available.
+ */
+function lihi_home_url(): string {
+    return 'https://lihi.io';
+}
+
+/**
+ * Return the browser-facing lihi password reset URL.
+ */
+function lihi_password_reset_url(): string {
+    $api_host = lihi_api_host();
+    if ( $api_host === '' ) {
+        return '';
+    }
+
+    return $api_host . '/admin/password/reset';
+}
+
+/**
+ * Resolve the permalink / file URL for a given item.
  *
- * @return string Redirect domain (empty when unset).
+ * @throws \RuntimeException When the item does not exist or has no URL.
  */
-function lihi_domain(): string {
-    return (string) get_option( 'lihi_domain', '' );
-}
+function lihi_resolve_url( int $item_id, string $type ): string {
+    $url = $type === 'attachment'
+        ? wp_get_attachment_url( $item_id )
+        : get_permalink( $item_id );
 
-/**
- * Internal singleton store. Keyed by class/interface name.
- *
- * @param string      $key     Store key.
- * @param object|null $replace If provided (even as null), replaces the stored value.
- * @param bool        $has_arg Whether a replacement was provided (to distinguish "set to null" from "read").
- */
-function _lihi_singleton( string $key, ?object $replace = null, bool $has_arg = false ): ?object {
-    static $store = [];
-
-    if ( $has_arg ) {
-        $store[ $key ] = $replace;
+    if ( ! is_string( $url ) || $url === '' ) {
+        throw new \RuntimeException(
+            sprintf(
+                /* translators: 1: item type, 2: item ID */
+                esc_html__( 'Could not resolve URL for %1$s %2$d.', 'lihi-short-url' ),
+                esc_html( $type ),
+                absint( $item_id )
+            )
+        );
     }
 
-    return $store[ $key ] ?? null;
-}
-
-/**
- * Return the shared Lihi_Client_Interface singleton, creating it on first call.
- */
-function lihi_client(): Lihi_Client_Interface {
-    $instance = _lihi_singleton( Lihi_Client_Interface::class );
-
-    if ( ! $instance instanceof Lihi_Client_Interface ) {
-        $instance = new Lihi_Client();
-        _lihi_singleton( Lihi_Client_Interface::class, $instance, true );
-    }
-
-    return $instance;
-}
-
-/**
- * Replace (or reset, by passing null) the Lihi_Client_Interface singleton. Test helper.
- */
-function lihi_client_set( ?Lihi_Client_Interface $client ): void {
-    _lihi_singleton( Lihi_Client_Interface::class, $client, true );
-}
-
-/**
- * Return the shared Lihi_Auth_Client_Interface singleton, creating it on first call.
- */
-function lihi_auth_client(): Lihi_Auth_Client_Interface {
-    $instance = _lihi_singleton( Lihi_Auth_Client_Interface::class );
-
-    if ( ! $instance instanceof Lihi_Auth_Client_Interface ) {
-        $instance = new Lihi_Auth_Client();
-        _lihi_singleton( Lihi_Auth_Client_Interface::class, $instance, true );
-    }
-
-    return $instance;
-}
-
-/**
- * Replace (or reset, by passing null) the Lihi_Auth_Client_Interface singleton. Test helper.
- */
-function lihi_auth_client_set( ?Lihi_Auth_Client_Interface $client ): void {
-    _lihi_singleton( Lihi_Auth_Client_Interface::class, $client, true );
-}
-
-/**
- * Return the shared Lihi_Token_Store singleton, creating it on first call.
- */
-function lihi_token_store(): Lihi_Token_Store {
-    $instance = _lihi_singleton( Lihi_Token_Store::class );
-
-    if ( ! $instance instanceof Lihi_Token_Store ) {
-        $instance = new Lihi_Token_Store();
-        _lihi_singleton( Lihi_Token_Store::class, $instance, true );
-    }
-
-    return $instance;
-}
-
-/**
- * Replace (or reset, by passing null) the Lihi_Token_Store singleton. Test helper.
- */
-function lihi_token_store_set( ?Lihi_Token_Store $store ): void {
-    _lihi_singleton( Lihi_Token_Store::class, $store, true );
-}
-
-/**
- * Return the shared Lihi_Service singleton, creating it on first call.
- */
-function lihi_service(): Lihi_Service {
-    $instance = _lihi_singleton( Lihi_Service::class );
-
-    if ( ! $instance instanceof Lihi_Service ) {
-        $instance = new Lihi_Service( lihi_client(), lihi_auth_client(), lihi_token_store() );
-        _lihi_singleton( Lihi_Service::class, $instance, true );
-    }
-
-    return $instance;
-}
-
-/**
- * Replace (or reset, by passing null) the Lihi_Service singleton. Test helper.
- */
-function lihi_service_set( ?Lihi_Service $service ): void {
-    _lihi_singleton( Lihi_Service::class, $service, true );
+    return $url;
 }

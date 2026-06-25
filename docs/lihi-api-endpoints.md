@@ -1,44 +1,137 @@
-# lihi API Endpoints
+# lihi Wordpress API Endpoints
 
-本外掛對接兩個獨立服務：
-- **lihi short-URL API** — 建立、查詢短網址與讀取帳號 profile
-- **lihi auth 服務** — email 驗證與登入取得 bearer token
+本外掛目前對接**單一 lihi Wordpress API**。Auth 已合併到 Short-URL API 的 `wordpress/v1` namespace；email 驗證、登入取得 bearer token、profile、建立選項、passthrough nonce、短網址查詢 / 建立都走同一個 base URL。Auth routes 仍保留 `/auth` 子路徑。
 
-外掛目前發版 metadata 為 `1.0.1`，WordPress.org slug / text domain / 發佈資料夾名稱為 `lihi-short-url`，WordPress.org readme 也標示本外掛維護於 `weedgood/lihi-wp-plugin`。本次版本同步不改變 API contract；以下 endpoint、request / response shape、error mapping 仍為現行契約。
-
----
-
-# lihi Short-URL API
+外掛目前發版 metadata 為 `1.0.4`，WordPress.org slug / text domain / 發佈資料夾名稱為 `lihi-short-url`，WordPress.org readme 也標示本外掛維護於 `weedgood/lihi-wp-plugin`。本版使用 `GET /user/options` 取得建立 modal 的 domain / UTM options，使用單一 `type_id` 的 `GET /site/find` 查詢既有短網址，並以 passthrough nonce 讓瀏覽器開啟 lihi 後台；停用或刪除外掛時會清除本機保存的 lihi email、legacy redirect domain、site UUID / UUID lock 與 JWT transient。以下 endpoint、request / response shape、error mapping 為現行契約。
 
 Base URL:
-- Production: `https://app.lihi.com/api/wordpress/v1`
+- Plugin default / Production: `https://app.lihi.com/api/wordpress/v1`
 - Dev: `https://app.lihidev.com/api/wordpress/v1`
 
-Auth header（所有端點都需要，token 由 Auth API `POST /auth/login` 取得）:
+Auth / non-auth contract:
+
+| Endpoint | Auth | 契約 |
+|---|---|---|
+| `POST /auth/login` | none | ✅ 以已驗證 email 換取 bearer token |
+| `POST /auth/update-email` | none | ✅ 以密碼完成既有帳號綁定，或建立 / 更新 email 驗證 token |
+| `GET /auth/verify-email` | none | 瀏覽器 HTML flow；外掛不直接呼叫 |
+| `GET /user/profile` | bearer token | ✅ |
+| `GET /user/options` | bearer token | ✅ 建立 modal 的 domains / UTM options |
+| `POST /passthrough/nonce` | bearer token | ✅ 產生短效 nonce，供瀏覽器 GET 到 passthrough redirect |
+| `GET /passthrough/redirect` | nonce query | 瀏覽器 HTML/session flow；不是 `Lihi_Client` method |
+| `GET /site/find` / `POST /site/store` | bearer token | ✅ |
+
+JWT endpoints（`/user/profile`、`/user/options`、`/passthrough/nonce`、`/site/find`、`/site/store`）需要 header:
 ```
 Authorization: Bearer <token>
 Accept: application/json
 Content-Type: application/json
 ```
 
-> Short-URL API 的 `wordpress/v1` contract 只涵蓋**非 auth 的 JWT endpoints**；
-> auth 流程全部走 lihi Auth API：
->
-> | Endpoint | Auth | 契約 |
-> |---|---|---|
-> | `POST /auth/login` | legacy api_key | ❌（token 由 lihi Auth API 取得） |
-> | `POST /auth/mail` | legacy api_key | ❌（外掛無用途） |
-> | `GET /profile` | jwt | ✅ |
-> | `GET /sites` / `POST /sites` | jwt | ✅ |
->
-> 註：short-URL API contract 不包含 `POST /login`、`POST /mail`、`PUT/PATCH/DELETE /sites`、
-> `/posts` 或 `/site-urls` 系列 endpoints。
+Auth endpoints（`/auth/login`、`/auth/update-email`）不需要 Bearer token；它們以 JSON payload 的 `hostname` + `uuid` + `email` 識別 WP 站台與 email 驗證關係。
+
+> 本 contract 不包含 `POST /mail`、site update/delete、`/posts` 或 `/site-urls` 系列 endpoints。
 
 ---
 
-## GET `/profile`
+## POST `/auth/update-email`
+
+送出 email / password 驗證請求。成功回應代表既有帳號密碼已驗證，或新帳號驗證信已送出。
+
+伺服器行為：
+- 每次請求會先清除同一個 `domain` 的其他 WordPress email 驗證紀錄。
+- 若 email 對應既有 lihi 使用者且密碼正確、帳號可用 → 標記 `(domain, email, uuid)` 已驗證並回 `{ verified: true }`，不寄信。
+- 若 email 對應既有 lihi 使用者但密碼錯誤 → 回 `password invalid`。
+- 若 email 不存在 → 簽發新 verification token、保存密碼雜湊並寄出驗證信；驗證連結走 `GET /auth/verify-email?token=...` 的瀏覽器 HTML flow，回 `{ verified: false }`。
+
+Body:
+```json
+{ "email": "alice@example.com", "hostname": "example.com", "uuid": "2df6f4f1-2a75-4d0e-9ce0-7c70e8d7bb9e", "password": "account-password" }
+```
+
+Response 200:
+```json
+{ "result": true, "data": { "verified": true } }
+```
+```json
+{ "result": true, "data": { "verified": false } }
+```
+
+**錯誤：HTTP 400** → `Lihi_Validation_Exception`
+- Laravel validation error：`{ "result": false, "msg": { ... } }`
+- `hostname` 正規化後為空：`{ "result": false, "msg": "bad request" }`
+
+**錯誤：HTTP 403 `password invalid`** → `Lihi_Email_Or_Password_Invalid_Exception`
+既有 lihi 帳號密碼錯誤；外掛會統一顯示友善的帳密錯誤訊息，且不保存 `lihi_email`。
+
+**錯誤：HTTP 403 / 200 `User Invalid`** → `Lihi_User_Invalid_Exception`
+帳號被刪除、停用或不可使用時，外掛顯示帳號不可使用。
+
+**錯誤：HTTP 429** → `Lihi_Rate_Limit_Exception`
+由 route middleware `throttle:10,1` 控制：每分鐘 10 次。
+
+**錯誤：HTTP 500** → `Lihi_Server_Exception`
+寄信、token 產生或 DB 寫入失敗時可能回 server error；真正錯誤只記在 server log，不應回給 client。
+
+---
+
+## POST `/auth/login`
+
+以已驗證 email 換取 bearer token。登入請求會額外帶 `is_mobile`，值來自 WordPress `wp_is_mobile()`，表示當下 request 是否被 WordPress 判斷為 mobile browser。
+
+Body:
+```json
+{ "email": "alice@example.com", "hostname": "example.com", "uuid": "2df6f4f1-2a75-4d0e-9ce0-7c70e8d7bb9e", "is_mobile": false }
+```
+
+Response 200:
+```json
+{ "result": true, "msg": "", "data": { "token": "eyJhbGci..." } }
+```
+
+- `data.token` — 後續呼叫 `/user/profile`、`/user/options`、`/site/find`、`/site/store` 使用的 bearer token。
+
+**錯誤：HTTP 400** → `Lihi_Validation_Exception`
+- Laravel validation error：`{ "result": false, "msg": { ... } }`
+- `hostname` 正規化後為空：`{ "result": false, "msg": "bad request" }`
+- request IP 無效：`{ "result": false, "msg": "bad request" }`
+
+**錯誤：HTTP 403 `email not verified`** → `Lihi_Auth_Exception`
+```json
+{ "result": false, "msg": "email not verified" }
+```
+row 不存在、email 未驗證、或 `(domain, email, uuid)` 不符合時刻意回同一訊息，避免 caller 透過此端點試探 email / tenant 狀態。
+
+**錯誤：HTTP 403 `User Invalid`** → `Lihi_User_Invalid_Exception`
+```json
+{ "result": false, "msg": "User Invalid" }
+```
+lihi 帳號不可使用（例如主帳號停用子帳號、或帳號被封鎖）時回傳；外掛端會顯示 account unavailable 訊息，而不是 email 未驗證訊息。
+
+**錯誤：HTTP 200，`result: false`**
+```json
+{ "result": false, "msg": "Location Invalid" }
+```
+目前 controller 對 geoip 擋下的新 user 註冊可能回 HTTP 200 + `result: false`；plugin client 應視為 server failure，而不是成功 token。
+
+---
+
+## GET `/auth/verify-email`
+
+使用者從驗證信點擊的 HTML flow；外掛不直接呼叫。
+
+Query params:
+- `token`
+
+成功回 HTML view `wordpress.verify_success`；失敗回 404 HTML view `wordpress.verify_not_found`。
+
+---
+
+## GET `/user/profile`
 
 讀取目前 JWT 對應帳號的 profile。
+
+Auth: bearer token required.
 
 Response 200:
 ```json
@@ -46,76 +139,233 @@ Response 200:
   "result": true,
   "data": {
     "user_role": "admin",
-    "end_date": "2026-12-31",
-    "domains": ["redirect.lihidev.com", "redirect2.lihidev.com"]
+    "end_date": "2026-12-31"
   }
 }
 ```
 
 - `user_role` / `end_date` 可能為 `null`（user 無 role 或 plan）
-- `domains` 為可用 redirect domain 名稱陣列
-
-**錯誤：token 缺少或無效（HTTP 500，HTML）** → `Lihi_Token_Invalid_Exception`。
 
 ---
 
-## GET `/sites`
+## GET `/user/options`
 
-查詢既有短網址 site records。
+讀取建立短網址 modal 需要的選項。
 
-Query params: `type`, `type_id`, `per_page`, `page`, `keyword`
+Auth: bearer token required.
 
-- `type` + `type_id` 合起來是唯一 key；不帶 `type` 時回傳所有 type 的結果
-- `type_id` 需傳字串
-- 本外掛在呼叫時會將 `type` 串上網站本身的 host（格式 `"{type}:{host}"`，例如 `post:example.com`），以便同一 lihi 帳號下多個 WordPress 站台共用相同 `type_id` 時仍可區分
-
-Response:
+Response 200:
 ```json
 {
   "result": true,
+  "msg": "",
   "data": {
-    "domains": [ { "id": "redirect.lihidev.com", "name": "redirect.lihidev.com" } ],
-    "total_sites": "0",
-    "limit_sites": 300,
-    "sites": {
-      "current_page": 1,
-      "total": 0,
-      "per_page": 5,
-      "data": [
-        {
-          "id": 123,
-          "domain_name": "redirect.lihidev.com",
-          "short_url": "https://redirect.lihidev.com/abc",
-          "site_urls": [ { "id": 1, "url": "https://example.com" } ],
-          "wordpress_link": { "type": "post", "type_id": "42" }
-        }
-      ]
-    }
+    "domains": [
+      { "id": 123, "name": "wp-domain.example" },
+      { "id": "redirect.lihidev.com", "name": "redirect.lihidev.com" }
+    ],
+    "utm_sources": ["facebook", "newsletter"],
+    "utm_mediums": ["social", "email"]
   }
 }
 ```
 
-**錯誤：token 缺少或無效（HTTP 500，HTML）**
-`<title>` 固定為「網站升級中...」。
+- `domains` 為建立 modal 的 redirect-domain options；外掛會正規化成 `{ value, label }`，送出時使用 `value`
+- `utm_sources` / `utm_mediums` 是建立 modal 中 `utm_source` / `utm_medium` 下拉選單的 options；其他 UTM 欄位仍由使用者輸入
+- 前端透過 `lihi_url_options` AJAX 一次取得 domains 與 UTM options，並快取 60 秒
+
+以下為 JWT endpoints（`/user/profile`、`/user/options`、`/site/find`、`/site/store`）共用錯誤映射。
+
+**錯誤：帳號不可使用** → `Lihi_User_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "user_not_found ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "User Invalid" }
+```
+JWT middleware 判斷 bearer token 對應 user 不存在或不可使用時回傳；外掛端會清掉本機 JWT transient，直接顯示 account unavailable 訊息，不在同一個 request 自動 login 重試。
+
+**錯誤：token 缺少或無效** → `Lihi_Token_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "Token invalid ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Token expired ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Something wrong ,please login again" }
+```
+JWT middleware 判斷 token invalid / expired / unexpected auth error 時回傳；外掛端會清掉本機 JWT transient 並自動 login 重試一次。若重試後仍失敗，設定頁 / Short URL AJAX 顯示 login session expired 訊息。
+
+**其他 JSON failure / HTTP 5xx** → `Lihi_Server_Exception`
+- 若 JWT endpoint 回傳 JSON envelope 但 `result !== true`，且不屬於 user invalid / token invalid / validation error，外掛端會視為 lihi 服務錯誤，不會把 options 當空陣列或把短網址查詢當作不存在。
 
 ---
 
-## POST `/sites`
+## POST `/passthrough/nonce`
 
-建立新的短網址 site record。伺服器端要求 `domain`、`urls`、`type` 必填；`type_id` 可選但傳字串。
+建立 30 秒內有效且只能使用一次的 passthrough nonce，供瀏覽器 GET 到 `/passthrough/redirect`，讓 lihi-admin 建立 web session 後導向指定後台頁面或短網址查詢結果。這是 server-to-server JSON endpoint，已加入 `Lihi_Client` contract；真正建立 session 的 redirect endpoint 需由瀏覽器導向，不屬於 HTTP client method。
+
+Auth: bearer token required.
+
+Body:
+```json
+{
+  "challenge": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "target": "https://example.com/demo-path?foo=bar"
+}
+```
+
+- `challenge` 為瀏覽器產生 verifier 後計算的 `base64url(sha256(verifier))`，長度 43，供 redirect GET 時用 verifier 驗證。
+- `target` 可省略或為空字串；也可為 admin-relative path（例如 `/myDomain`、`/profile#utm-setting`）或完整 `http(s)` URL。外掛 Edit button 會先查目前短網址，並把該短網址作為完整 URL `target`；Custom domain 入口會以 `/myDomain` 作為 `target`，UTM 管理入口會以 `/profile#utm-setting` 作為 `target`。
+- `target` 最大長度 2048；`challenge` 必填。
+
+Response 200:
+```json
+{
+  "result": true,
+  "msg": "",
+  "data": {
+    "nonce": "eyJhbGci..."
+  }
+}
+```
+
+**錯誤：欄位驗證失敗（HTTP 400）** → `Lihi_Validation_Exception`
+```json
+{ "result": false, "msg": { "target": ["The target may not be greater than 2048 characters."] } }
+```
+
+**錯誤：rate limited（HTTP 429）** → `Lihi_Rate_Limit_Exception`
+由 route middleware `throttle:10,1` 控制：每分鐘 10 次。
+
+**錯誤：帳號不可使用** → `Lihi_User_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "User Invalid" }
+```
+JWT middleware 判斷 bearer token 對應 user 不可使用時回傳。
+
+**錯誤：token 缺少或無效** → `Lihi_Token_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "Token invalid ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Token expired ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Something wrong ,please login again" }
+```
+
+---
+
+## GET `/passthrough/redirect`
+
+瀏覽器 HTML/session flow。外掛 Edit button 先向 `POST /passthrough/nonce` 取得 nonce，再用瀏覽器導向此 endpoint 並帶上 query；成功時 lihi-admin 會消耗一次性 nonce、建立 web session cookie 並 redirect。
+
+Query:
+```json
+{
+  "nonce": "eyJhbGci...",
+  "verifier": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+}
+```
+
+- `verifier` 為瀏覽器在 Edit flow 開始時產生的 base64url random string；lihi-admin 會驗證 `base64url(sha256(verifier))` 是否等於 nonce payload 中的 `challenge`。
+
+成功：
+- `target` 空 → redirect `/admin`
+- `target` 為 `/myDomain`、`/profile#utm-setting` 等 admin-relative path → redirect `/admin/myDomain`、`/admin/profile#utm-setting`
+- `target` 為完整 URL → redirect `/admin?tag={target}`
+
+此 endpoint 不是 `Lihi_Client` method，因為它的副作用是瀏覽器 web session。
+
+---
+
+## GET `/site/find`
+
+查詢單一既有短網址。
+
+Auth: bearer token required.
+
+Query params: `type`, `type_id`
+
+- `type` + `type_id` 合起來是 WordPress link 查詢條件，兩者皆必填
+- `type_id` 需傳單一字串，不支援多筆 ID 或 comma-separated list
+- 本外掛在呼叫時會將 `type` 串上網站本身的 host（格式 `"{type}:{host}"`，例如 `post:example.com`），以便同一 lihi 帳號下多個 WordPress 站台共用相同 `type_id` 時仍可區分
+
+Response 200，有既有短網址:
+```json
+{
+  "result": true,
+  "msg": "",
+  "data": {
+    "site": "https://redirect.lihidev.com/abc"
+  }
+}
+```
+
+Response 200，無既有短網址:
+```json
+{
+  "result": true,
+  "msg": "",
+  "data": {
+    "site": ""
+  }
+}
+```
+
+- `site` 是短網址字串；空字串表示沒有既有短網址
+- 此 endpoint 不回傳 domains 或 UTM options；建立 modal 選項請使用 `GET /user/options`
+
+**錯誤：欄位驗證失敗（HTTP 400）** → `Lihi_Validation_Exception`
+```json
+{ "result": false, "msg": { "type": ["The type field is required."], "type_id": ["The type id field is required."] } }
+```
+
+**錯誤：帳號不可使用** → `Lihi_User_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "user_not_found ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "User Invalid" }
+```
+JWT middleware 判斷 bearer token 對應 user 不存在或不可使用時回傳；外掛端會清掉本機 JWT transient，直接顯示 account unavailable 訊息，不在同一個 request 自動 login 重試。
+
+**錯誤：token 缺少或無效** → `Lihi_Token_Invalid_Exception`
+```json
+{ "result": "failed", "msg": "Token invalid ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Token expired ,please login again" }
+```
+```json
+{ "result": "failed", "msg": "Something wrong ,please login again" }
+```
+JWT middleware 判斷 token invalid / expired / unexpected auth error 時回傳；外掛端會清掉本機 JWT transient 並自動 login 重試一次。若重試後仍失敗，設定頁 / Short URL AJAX 顯示 login session expired 訊息。
+
+---
+
+## POST `/site/store`
+
+建立新的短網址 site record。
+
+Auth: bearer token required.
+
+伺服器端要求 `domain`、`urls`、`type` 必填；`type_id` 可選但傳字串。
 
 Body:
 ```json
 {
   "domain": "redirect.lihidev.com",
-  "urls": ["https://example.com/?p=42"],
+  "urls": ["https://example.com/?p=42&utm_source=newsletter&utm_medium=email&utm_campaign=spring-sale"],
   "type": "post:example.com",
   "type_id": "42",
-  "tags": "wordpress,example.com,post"
+  "tags": "campaign,wordpress"
 }
 ```
 
-本外掛送出的 `type` 會帶上 WP 站台 host（格式 `"{type}:{host}"`），與 `GET /sites` 的查詢條件一致；`tags` 仍使用未串接的原始 `type`。因 API 要求 `domain` 必填，外掛會在 redirect domain 未設定時停用短網址建立流程並提早回傳友善錯誤；任何到達此端點的呼叫都已保證 `domain` 非空。
+本外掛送出的 `type` 會帶上 WP 站台 host（格式 `"{type}:{host}"`），與 `GET /site/find` 的查詢條件一致；建立 modal 沒有預設已選 tags，只會把使用者實際加入的 tags 去重後，以逗號分隔字串送到 lihi API。前端會把 `wordpress`、WP 站台 host、未串接的原始 `type` 顯示為推薦 tag 按鈕，點擊後才會加入送出的 tags 清單。建立 modal 會從 `lihi_url_options` 透過 `GET /user/options` 載入 domains 與 `utm_sources` / `utm_mediums`，前端會將整包 options 快取 60 秒；Domain、UTM source、UTM medium 使用同一套 select loading / option rendering UI，沒有 account-default fallback option。`data-type="attachment"` 的媒體建立 modal 會隱藏 UTM 區塊，但送出 payload 仍包含 source / medium / campaign / term / content 空白值；後端會在正規化時忽略空白 UTM。管理員的 Domain label row 另有「Custom domain?」入口，UTM source / medium 下方另有「Manage options?」入口；點擊後前端先顯示管理自訂網域或 UTM 選項的 confirm，確認後才產生 verifier 與 `base64url(sha256(verifier))` challenge，再呼叫 WP AJAX action `lihi_passthrough_nonce`，並以 localized `/myDomain` 或 `/profile#utm-setting` 作為 passthrough `target` 取得 nonce；前端會把 `nonce` + `verifier` 組成 GET query 並開啟新分頁到 `/passthrough/redirect`，由 lihi-admin 導向對應的後台頁面。送出建立請求時，外掛只要求 `domain` 為非空值，不會為了檢查 membership 再打一次 options API，最終 domain 是否有效交由 lihi API 判斷。UTM 欄位只會附加到目的 URL query string，不會以獨立 `utm` object 送到 lihi API；lihi-admin 端會由 `site_urls.url` 的 `utm_*` query params 解析 UTM。缺少本機 `lihi_domain` option 不會阻擋 lihi button 顯示或短網址建立流程。PHP 只輸出空的 `data-lihi-container` 掛載容器，前端會把實際 button 放入 container；建立流程使用 WP AJAX action `lihi_create_url`，Copy 檢查流程使用 `lihi_copy_url`。當 `GET /site/find` 找到既有短網址或 `POST /site/store` 成功建立短網址後，外掛會在該 WP post / attachment 寫入 post meta `lihi_already = 1`，之後前端依 `data-lihi-already` 將按鈕文案渲染為 `Copy`；只有目前 WP 使用者具備 `manage_options` 時，才會在旁邊顯示 `Edit`。若瀏覽器阻擋 clipboard 寫入，前端會直接彈出短網址讓使用者手動複製。`Copy` 狀態點擊時仍會呼叫 `GET /site/find` 確認短網址存在；若不存在，外掛會寫入 `lihi_already = 0`，回傳 HTTP 410 / `code = lihi_missing`，前端在確認 modal 顯示「Short URL has been removed. Please create it again.」，使用者按 OK 後才開啟建立 modal；其他 Copy API 錯誤只顯示錯誤訊息，不會重設按鈕狀態。管理者點擊 `Edit` 時會先顯示「Go to the lihi dashboard to edit this short URL?」，確認後前端會產生 verifier 與 `base64url(sha256(verifier))` challenge，再使用 WP AJAX action `lihi_copy_url` 查一次既有短網址；若存在，前端以該短網址作為完整 URL passthrough `target` 呼叫 `lihi_passthrough_nonce` 取得 nonce，再把 `nonce` + `verifier` 組成 GET query 並開啟新分頁到 `/passthrough/redirect`，由 lihi-admin 導向後台列表並以 `tag` 查詢該短網址。若短網址已不存在，Copy API 會回傳同一組 HTTP 410 / `lihi_missing`，前端改回 `lihi` 並顯示短網址已遭移除訊息。
 
 Response:
 ```json
@@ -126,7 +376,7 @@ Response:
     "domain_name": "redirect.lihidev.com",
     "short_url": "https://redirect.lihidev.com/xyz",
     "site_urls": [],
-    "wordpress_link": { "type": "post", "type_id": "42" }
+    "wordpress_link": { "type": "post:example.com", "type_id": "42" }
   }
 }
 ```
@@ -143,69 +393,28 @@ Response:
 }
 ```
 
-**注意：無效 domain 不報錯**
-傳入不屬於帳號的 domain 時 API 不報錯，自動換成帳號下的有效 domain 建立。
-
-**錯誤：token 缺少或無效（HTTP 500，HTML）**
-`<title>` 固定為「網站升級中...」。
-
-# lihi Auth API
-
-Base URL: `lihi_config( 'auth_domain' )`（例：`https://w.lihidev.com`）。**不同服務**，不要與 `api_domain`（short-URL API）混淆。
-
-每次呼叫都必須帶 HTTP `Host` header，值為 WP 站台本身的 host；auth 服務靠這個 header 判斷 tenant（`Host` 會 lowercase 並去掉 `:port`），而非 URL 中的 host。
-
-Response 一律使用 envelope `{ result: bool, data: {...} }`；失敗時 `data.message` 為錯誤字串。
-
-## POST `/auth/update-email`
-
-送出 email 驗證請求。成功回應代表 email 已驗證，或驗證信已送出。
-
-伺服器行為：
-- 若 `(domain, email)` 已 `verified = true` → 直接回 `{ verified: true }`，不寫 DB、不發 token。
-- 若 row 不存在或未驗證 → 一律簽發新 JWT 並 upsert（會使先前的 token 失效）。該 JWT 由 auth 服務以 email 等方式 out-of-band 寄出，**不會**在回應中回傳。
-
-Body:
+**錯誤：建立失敗（HTTP 400）**
 ```json
-{ "email": "alice@example.com" }
+{ "result": false, "msg": "error" }
 ```
 
-Response 200:
+**錯誤：帳號不可使用** → `Lihi_User_Invalid_Exception`
 ```json
-{ "result": true, "data": { "verified": true } }
+{ "result": "failed", "msg": "user_not_found ,please login again" }
 ```
 ```json
-{ "result": true, "data": { "verified": false } }
+{ "result": "failed", "msg": "User Invalid" }
 ```
+JWT middleware 判斷 bearer token 對應 user 不存在或不可使用時回傳；外掛端會清掉本機 JWT transient，直接顯示 account unavailable 訊息，不在同一個 request 自動 login 重試。
 
-**錯誤：HTTP 400** → `Lihi_Validation_Exception`
-`data.message` 可能為：`invalid json body`、`email is required`、`invalid email`（RFC 5322 parse 失敗）、`bad request`（Host header 缺失；刻意回通用訊息以作防偽閘道）。
-
-**錯誤：HTTP 429** → `Lihi_Rate_Limit_Exception`
-每 host 10 req/min（`Host` 經 lowercase / 去 `:port` 正規化後計數）；空 Host 共用同一 fallback bucket。fixed-window、per-process。`data.message`：`too many requests`。
-
-**錯誤：HTTP 500** → `Lihi_Server_Exception`
-`data.message` ∈ `load verification`、`issue token`、`persist verification`。真正的錯誤只記在 server log，不回給 client。
-
----
-
-## POST `/auth/login`
-
-Body:
+**錯誤：token 缺少或無效** → `Lihi_Token_Invalid_Exception`
 ```json
-{ "email": "alice@example.com" }
+{ "result": "failed", "msg": "Token invalid ,please login again" }
 ```
-
-Response 200:
 ```json
-{ "result": true, "data": { "token": "eyJhbGci..." } }
+{ "result": "failed", "msg": "Token expired ,please login again" }
 ```
-
-- `data.token` — lihi 上游 bearer token（上游 TTL 約 168 天）。
-
-**錯誤：HTTP 400** → `Lihi_Validation_Exception`（觸發條件同 `/auth/update-email`）
-**錯誤：HTTP 403** → `Lihi_Auth_Exception`。`data.message`：`email not verified`。row 不存在與 row 未驗證刻意回傳同一訊息，避免 caller 透過這個端點試探 email 是否存在。
-**錯誤：HTTP 500** → `Lihi_Server_Exception`。`data.message` ∈ `load verification`、`issue token`；`issue token` 把所有上游失敗模式（validation、bad api_key、upstream 維護頁、network error）收斂到同一個訊息，避免 caller fingerprint 上游狀態。
-
-> 不實作 `GET /healthz`、`GET /readyz`（監控用）、`GET /auth/verify-email`（使用者在
-> 瀏覽器點信件中連結的 HTML flow）— 外掛不會呼叫這些 endpoint。
+```json
+{ "result": "failed", "msg": "Something wrong ,please login again" }
+```
+JWT middleware 判斷 token invalid / expired / unexpected auth error 時回傳；外掛端會清掉本機 JWT transient 並自動 login 重試一次。若重試後仍失敗，設定頁 / Short URL AJAX 顯示 login session expired 訊息。

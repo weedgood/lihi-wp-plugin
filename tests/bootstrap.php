@@ -26,12 +26,11 @@ require_once $_tests_dir . '/includes/functions.php';
 
 function _manually_load_plugin(): void
 {
-    // Both options must be set before plugin load so the conditional UI-hook
+    // Email must be set before plugin load so the conditional UI-hook
     // registration in add-shorturl-column.php fires; PluginHooksTest depends
-    // on this. AdminNoticeTest re-runs bootstrap.php with the options
-    // selectively cleared to exercise the empty-state branches.
+    // on this. AdminNoticeTest re-runs bootstrap.php with the option cleared
+    // to exercise the empty-state branch.
     update_option( 'lihi_email', 'test@example.com' );
-    update_option( 'lihi_domain', 'redirect.lihidev.com' );
     require_once dirname(__DIR__) . '/lihi-short-url/lihi-short-url.php';
 }
 

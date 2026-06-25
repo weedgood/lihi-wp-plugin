@@ -8,7 +8,6 @@ class AdminNoticeTest extends \WP_UnitTestCase
     {
         parent::setUp();
         delete_option( 'lihi_email' );
-        delete_option( 'lihi_domain' );
         remove_all_actions( 'admin_notices' );
     }
 
@@ -16,12 +15,11 @@ class AdminNoticeTest extends \WP_UnitTestCase
     {
         remove_all_actions( 'admin_notices' );
         update_option( 'lihi_email', 'test@example.com' );
-        update_option( 'lihi_domain', 'redirect.lihidev.com' );
         parent::tearDown();
     }
 
     /**
-     * Re-execute bootstrap.php so the email/domain guards run against the
+     * Re-execute bootstrap.php so the email guard runs against the
      * option state set up in the test. `include` (not require_once) lets the
      * file run again on each call.
      */
@@ -44,7 +42,7 @@ class AdminNoticeTest extends \WP_UnitTestCase
         $this->assertSame( '', $output );
     }
 
-    public function test_no_global_admin_notice_when_domain_empty(): void
+    public function test_no_global_admin_notice_when_email_configured(): void
     {
         update_option( 'lihi_email', 'admin@example.com' );
         $this->loadBootstrap();
@@ -60,20 +58,4 @@ class AdminNoticeTest extends \WP_UnitTestCase
         $this->assertSame( '', $output );
     }
 
-    public function test_no_global_admin_notice_when_fully_configured(): void
-    {
-        update_option( 'lihi_email', 'admin@example.com' );
-        update_option( 'lihi_domain', 'redirect.lihidev.com' );
-        $this->loadBootstrap();
-
-        $admin = self::factory()->user->create( [ 'role' => 'administrator' ] );
-        wp_set_current_user( $admin );
-
-        ob_start();
-        do_action( 'admin_notices' );
-        $output = ob_get_clean();
-
-        $this->assertFalse( has_action( 'admin_notices' ) );
-        $this->assertSame( '', $output );
-    }
 }

@@ -43,9 +43,19 @@ class PluginHooksTest extends \WP_UnitTestCase
         $this->assertNotFalse(has_action('wp_ajax_lihi_copy_url'));
     }
 
+    public function test_wp_ajax_lihi_create_url_handler_is_registered(): void
+    {
+        $this->assertNotFalse(has_action('wp_ajax_lihi_create_url'));
+    }
+
     public function test_wp_ajax_lihi_update_email_handler_is_registered(): void
     {
         $this->assertNotFalse(has_action('wp_ajax_lihi_update_email'));
+    }
+
+    public function test_wp_ajax_lihi_url_options_handler_is_registered(): void
+    {
+        $this->assertNotFalse(has_action('wp_ajax_lihi_url_options'));
     }
 
     // -------------------------------------------------------------------------
@@ -56,6 +66,18 @@ class PluginHooksTest extends \WP_UnitTestCase
     {
         do_action('admin_enqueue_scripts', 'edit.php');
         $this->assertTrue(wp_script_is('lihi-button', 'enqueued'));
+    }
+
+    public function test_lihi_admin_script_helpers_are_enqueued_before_main_script(): void
+    {
+        do_action('admin_enqueue_scripts', 'edit.php');
+
+        $this->assertTrue(wp_script_is('lihi-button-api', 'enqueued'));
+        $this->assertTrue(wp_script_is('lihi-button-modal', 'enqueued'));
+
+        $scripts = wp_scripts();
+        $this->assertSame(['lihi-button-api'], $scripts->registered['lihi-button-modal']->deps);
+        $this->assertSame(['lihi-button-api', 'lihi-button-modal'], $scripts->registered['lihi-button']->deps);
     }
 
     public function test_lihi_admin_script_enqueued_on_upload_screen(): void
@@ -102,7 +124,7 @@ class PluginHooksTest extends \WP_UnitTestCase
         $this->assertArrayHasKey('lihi', $columns);
     }
 
-    public function test_post_column_renders_lihi_button(): void
+    public function test_post_column_renders_lihi_button_container(): void
     {
         $this->runAdminInit();
         $post_id = self::factory()->post->create();
@@ -111,10 +133,27 @@ class PluginHooksTest extends \WP_UnitTestCase
         do_action('manage_post_posts_custom_column', 'lihi', $post_id);
         $html = ob_get_clean();
 
-        $this->assertStringContainsString('data-lihi', $html);
-        $this->assertStringContainsString('type="button"', $html);
+        $this->assertStringContainsString('data-lihi-container', $html);
+        $this->assertStringContainsString('class="lihi-button-container"', $html);
+        $this->assertStringNotContainsString('hidden', $html);
+        $this->assertStringNotContainsString('type="button"', $html);
         $this->assertStringContainsString('data-id="' . $post_id . '"', $html);
         $this->assertStringContainsString('data-type="post"', $html);
+        $this->assertStringContainsString('data-lihi-already="0"', $html);
+    }
+
+    public function test_post_column_marks_button_when_lihi_already_meta_is_set(): void
+    {
+        $this->runAdminInit();
+        $post_id = self::factory()->post->create();
+        update_post_meta($post_id, 'lihi_already', '1');
+
+        ob_start();
+        do_action('manage_post_posts_custom_column', 'lihi', $post_id);
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('data-lihi-container', $html);
+        $this->assertStringContainsString('data-lihi-already="1"', $html);
     }
 
     public function test_media_library_has_short_url_column(): void
@@ -124,7 +163,7 @@ class PluginHooksTest extends \WP_UnitTestCase
         $this->assertArrayHasKey('lihi', $columns);
     }
 
-    public function test_media_column_renders_attachment_button(): void
+    public function test_media_column_renders_attachment_container(): void
     {
         $this->runAdminInit();
         $att_id = self::factory()->attachment->create_object('photo.jpg', 0, [
@@ -136,8 +175,9 @@ class PluginHooksTest extends \WP_UnitTestCase
         do_action('manage_media_custom_column', 'lihi', $att_id);
         $html = ob_get_clean();
 
+        $this->assertStringContainsString('data-lihi-container', $html);
         $this->assertStringContainsString('data-type="attachment"', $html);
-        $this->assertStringContainsString('type="button"', $html);
+        $this->assertStringNotContainsString('type="button"', $html);
     }
 
     public function test_attachment_edit_panel_has_lihi_field(): void
@@ -150,8 +190,23 @@ class PluginHooksTest extends \WP_UnitTestCase
         $fields = apply_filters('attachment_fields_to_edit', [], $post);
 
         $this->assertArrayHasKey('lihi', $fields);
-        $this->assertStringContainsString('data-lihi', $fields['lihi']['html']);
-        $this->assertStringContainsString('type="button"', $fields['lihi']['html']);
+        $this->assertStringContainsString('data-lihi-container', $fields['lihi']['html']);
+        $this->assertStringNotContainsString('type="button"', $fields['lihi']['html']);
+    }
+
+    public function test_attachment_edit_panel_marks_button_when_lihi_already_meta_is_set(): void
+    {
+        $att_id = self::factory()->attachment->create_object('photo.jpg', 0, [
+            'post_mime_type' => 'image/jpeg',
+            'post_type'      => 'attachment',
+        ]);
+        update_post_meta($att_id, 'lihi_already', '1');
+
+        $post   = get_post($att_id);
+        $fields = apply_filters('attachment_fields_to_edit', [], $post);
+
+        $this->assertArrayHasKey('lihi', $fields);
+        $this->assertStringContainsString('data-lihi-already="1"', $fields['lihi']['html']);
     }
 
     // -------------------------------------------------------------------------
@@ -177,20 +232,5 @@ class PluginHooksTest extends \WP_UnitTestCase
         set_transient('lihi_token', 'stale-jwt', HOUR_IN_SECONDS);
         update_option('lihi_email', 'new@example.com');
         $this->assertFalse(get_transient('lihi_token'));
-    }
-
-    public function test_email_change_clears_lihi_domain_option(): void
-    {
-        update_option('lihi_domain', 'redirect.lihidev.com');
-        update_option('lihi_email', 'new@example.com');
-        $this->assertFalse(get_option('lihi_domain'));
-    }
-
-    public function test_email_delete_clears_lihi_domain_option(): void
-    {
-        update_option('lihi_email', 'old@example.com');
-        update_option('lihi_domain', 'redirect.lihidev.com');
-        delete_option('lihi_email');
-        $this->assertFalse(get_option('lihi_domain'));
     }
 }
