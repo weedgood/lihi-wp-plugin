@@ -42,26 +42,39 @@ Translation files live in `lihi-short-url/languages/`.
 
 ## Testing
 
-Tests use PHPUnit with Brain\Monkey to mock WordPress functions. A dedicated Docker profile spins up the test database plus separate PHP 7.4 and PHP 8.2 PHPUnit containers built from official `php:*-cli` images. Composer is run only inside those containers. The containers mount only `lihi-short-url/`, `tests/`, `patchwork.json`, and `phpunit.xml` read-only under `/app/code`; each service exposes its version-specific Composer file and lock as `/app/composer.json` and `/app/composer.lock`, while vendor dependencies and WordPress core installs live in that service's Docker-managed `/app` volume.
+Tests use PHPUnit with Brain\Monkey to mock WordPress functions. A dedicated Docker profile provides the test database plus separate PHP 7.4 and PHP 8.2 PHPUnit containers built from official `php:*-cli` images. Composer is run only inside those containers. The containers mount only `lihi-short-url/`, `tests/`, `patchwork.json`, and `phpunit.xml` read-only under `/app/code`; each service exposes its version-specific Composer file and lock as `/app/composer.json` and `/app/composer.lock`, while vendor dependencies and WordPress core installs live in that service's Docker-managed `/app` volume.
 
 ```bash
-docker compose --profile test up -d --build --force-recreate --remove-orphans db_test phpunit74 phpunit82
+make test
+```
+
+`make test` stops the local WordPress / MySQL development services, runs PHP 7.4 and PHP 8.2 one at a time against `db_test`, then stops the PHPUnit service after each run so Docker does not keep both PHP containers alive at once.
+
+To run one version manually:
+
+```bash
+docker compose stop wordpress db
+docker compose --profile test stop phpunit82
+docker compose --profile test up -d --build db_test phpunit74
 
 docker compose --profile test exec phpunit74 composer install --working-dir=/app
 docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
+docker compose --profile test stop phpunit74
 
+docker compose --profile test up -d --build db_test phpunit82
 docker compose --profile test exec phpunit82 composer install --working-dir=/app
 docker compose --profile test exec phpunit82 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
+docker compose --profile test stop phpunit82 db_test
 ```
 
 The PHP 7.4 container covers the plugin's minimum supported PHP version. The PHP 8.2 container catches compatibility issues on a modern runtime.
 
-After the test profile is running, `make test` runs both suites. `make coverage` runs both coverage jobs and writes reports under `/app/coverage` inside each matching container workspace.
+`make coverage` follows the same one-version-at-a-time container pattern and writes reports under `/app/coverage` inside each matching container workspace.
 
 For a single-version run, execute the matching service only:
 
 ```bash
-docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
+make test74
 ```
 
 ## Packaging
@@ -90,9 +103,9 @@ lihi-short-url/
 └── includes/
     ├── helper.php             Option/context helpers only: lihi_api_host(), lihi_email(), lihi_uuid(), lihi_site_host(), lihi_passthrough_redirect_url(), lihi_home_url(), lihi_password_reset_url(), lihi_resolve_url()
     ├── lihi-singletons.php    Lihi_Singletons registry/composition class; static lihi_client(), lihi_uuid_store(), lihi_token_store(), lihi_service(), plus *_set() test helpers
-    ├── settings.php           Settings page under Settings → lihi Short URL; "Save & Verify" triggers wp_ajax_lihi_update_email which calls Lihi_Client::update_email() first and only persists the option on success; flushes the cached token on add/update/delete of lihi_email
-    ├── shorturl-column-ajax.php AJAX handlers for the Short URL column buttons: wp_ajax_lihi_url_options, wp_ajax_lihi_create_url, wp_ajax_lihi_copy_url, wp_ajax_lihi_edit_url, and wp_ajax_lihi_passthrough_nonce; validates nonce/read_post/email, requires manage_options for passthrough nonce endpoints, parses modal options, maps exceptions, writes lihi_already state
-    ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email()), empty data-lihi-container mount points for frontend-rendered buttons, localized button config, and attachment detail panel field
+    ├── settings.php           Settings page under Settings → lihi Short URL; "Save & Verify" triggers wp_ajax_lihi_update_email which calls Lihi_Client::update_email() first and only persists the option on success; nonce-verified request helpers sanitize text fields while preserving passwords unchanged; flushes the cached token on add/update/delete of lihi_email
+    ├── shorturl-column-ajax.php AJAX handlers for the Short URL column buttons: wp_ajax_lihi_url_options, wp_ajax_lihi_create_url, wp_ajax_lihi_copy_url, wp_ajax_lihi_edit_url, and wp_ajax_lihi_passthrough_nonce; validates nonce/read_post/email, requires manage_options for passthrough nonce endpoints, parses and sanitizes modal options through request helpers, maps exceptions, writes lihi_already state
+    ├── add-shorturl-column.php Column registration (UI hooks self-guarded on lihi_email()), empty wp_kses-escaped data-lihi-container mount points for frontend-rendered buttons, localized button config, and attachment detail panel field
     ├── client/
     │   ├── lihi-client-interface.php       Unified lihi Wordpress API contract; covers auth (update_email, login) plus JWT endpoints (get_profile, get_options, create_passthrough_nonce, get_short_link, create_site)
     │   ├── lihi-client.php                 Production HTTP client; base_url and site-scoped uuid are injected by helper; auth requests send home_url() host as JSON `hostname` plus injected `uuid`; login also sends `is_mobile`; bearer token is passed per JWT call, not stored on instance; maps lihi user-unavailable responses to Lihi_User_Invalid_Exception; can create passthrough nonces for a later browser redirect flow using a browser-generated challenge

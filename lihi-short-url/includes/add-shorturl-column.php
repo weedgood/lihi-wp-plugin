@@ -22,7 +22,7 @@ function lihi_button_asset_version( string $asset ): string {
     $path     = plugin_dir_path( __FILE__ ) . '../assets/' . ltrim( $asset, '/' );
     $modified = file_exists( $path ) ? filemtime( $path ) : false;
 
-    return $modified ? '1.0.4-' . $modified : '1.0.4';
+    return $modified ? '1.0.5-' . $modified : '1.0.5';
 }
 
 // UI hooks (column, container, enqueue) only register when the auth email is set.
@@ -138,7 +138,18 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 // pair (manage_media_columns / manage_media_custom_column), handled separately.
 add_action( 'admin_init', function () {
     $render_container = function ( $post_id, $post_type ) {
-        echo render_lihi_button_container( (int) $post_id, (string) $post_type );
+        echo wp_kses(
+            render_lihi_button_container( (int) $post_id, (string) $post_type ),
+            [
+                'div' => [
+                    'class'              => true,
+                    'data-lihi-container' => true,
+                    'data-id'            => true,
+                    'data-type'          => true,
+                    'data-lihi-already'  => true,
+                ],
+            ]
+        );
     };
 
     foreach ( get_post_types( [ 'public' => true ], 'names' ) as $post_type ) {
