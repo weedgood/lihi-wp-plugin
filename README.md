@@ -42,26 +42,39 @@ Translation files live in `lihi-short-url/languages/`.
 
 ## Testing
 
-Tests use PHPUnit with Brain\Monkey to mock WordPress functions. A dedicated Docker profile spins up the test database plus separate PHP 7.4 and PHP 8.2 PHPUnit containers built from official `php:*-cli` images. Composer is run only inside those containers. The containers mount only `lihi-short-url/`, `tests/`, `patchwork.json`, and `phpunit.xml` read-only under `/app/code`; each service exposes its version-specific Composer file and lock as `/app/composer.json` and `/app/composer.lock`, while vendor dependencies and WordPress core installs live in that service's Docker-managed `/app` volume.
+Tests use PHPUnit with Brain\Monkey to mock WordPress functions. A dedicated Docker profile provides the test database plus separate PHP 7.4 and PHP 8.2 PHPUnit containers built from official `php:*-cli` images. Composer is run only inside those containers. The containers mount only `lihi-short-url/`, `tests/`, `patchwork.json`, and `phpunit.xml` read-only under `/app/code`; each service exposes its version-specific Composer file and lock as `/app/composer.json` and `/app/composer.lock`, while vendor dependencies and WordPress core installs live in that service's Docker-managed `/app` volume.
 
 ```bash
-docker compose --profile test up -d --build --force-recreate --remove-orphans db_test phpunit74 phpunit82
+make test
+```
+
+`make test` stops the local WordPress / MySQL development services, runs PHP 7.4 and PHP 8.2 one at a time against `db_test`, then stops the PHPUnit service after each run so Docker does not keep both PHP containers alive at once.
+
+To run one version manually:
+
+```bash
+docker compose stop wordpress db
+docker compose --profile test stop phpunit82
+docker compose --profile test up -d --build db_test phpunit74
 
 docker compose --profile test exec phpunit74 composer install --working-dir=/app
 docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
+docker compose --profile test stop phpunit74
 
+docker compose --profile test up -d --build db_test phpunit82
 docker compose --profile test exec phpunit82 composer install --working-dir=/app
 docker compose --profile test exec phpunit82 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
+docker compose --profile test stop phpunit82 db_test
 ```
 
 The PHP 7.4 container covers the plugin's minimum supported PHP version. The PHP 8.2 container catches compatibility issues on a modern runtime.
 
-After the test profile is running, `make test` runs both suites. `make coverage` runs both coverage jobs and writes reports under `/app/coverage` inside each matching container workspace.
+`make coverage` follows the same one-version-at-a-time container pattern and writes reports under `/app/coverage` inside each matching container workspace.
 
 For a single-version run, execute the matching service only:
 
 ```bash
-docker compose --profile test exec phpunit74 sh -lc 'cd /app/code && /app/vendor/bin/phpunit -c phpunit.xml'
+make test74
 ```
 
 ## Packaging

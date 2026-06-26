@@ -2,6 +2,7 @@
 
 測試框架：PHP 7.4 / PHP 8.2 PHPUnit containers + PHPUnit 9 + Brain\Monkey（mock WordPress 函式）+ WP_UnitTestCase（整合測試，需要 DB）
 Composer 僅在官方 `php:*-cli` 測試 container 內執行；PHP 7.4 與 PHP 8.2 分別使用獨立 Composer file / lock file，只有 `lihi-short-url/`、`tests/`、`patchwork.json`、`phpunit.xml` 以唯讀方式掛到 `/app/code`，版本專屬 Composer file / lock 在 container 內映射成 `/app/composer.json` / `/app/composer.lock`，vendor directory 與 WordPress core install 存在 Docker named volumes，不寫入 repo 工作樹。
+本機測試採逐版執行：`make test` 會先停掉開發用 `wordpress` / `db` services，再用 `db_test` 依序跑 `phpunit74`、`phpunit82`，每個 PHPUnit container 跑完即停止，避免 Docker 同時保留兩個 PHP 測試 container 造成記憶體壓力。單版測試使用 `make test74` 或 `make test82`；coverage target 也採同樣逐版模式。
 測試位置：`tests/`
 
 CI / packaging：`.github/workflows/package-plugin.yml` 只在 tag push 時執行。Package job 會打包 `lihi-short-url/` 成 `build/lihi-short-url.zip`，驗證 ZIP 內含 `lihi-short-url/lihi-short-url.php` 與 `lihi-short-url/readme.txt`，並上傳 artifact `lihi-short-url-plugin`；release job 會下載同一個 artifact 建立或更新該 tag 的 GitHub Release，若 release 已存在則以 `--clobber` 替換 ZIP asset。
