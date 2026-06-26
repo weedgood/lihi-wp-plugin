@@ -4,7 +4,7 @@ Tags: short url, url shortener, lihi, admin, media
 Requires at least: 5.5
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,9 @@ Yes — two active options (`lihi_email`, `lihi_uuid`), one transient (`lihi_tok
 
 == Changelog ==
 
+= 1.0.5 =
+* Fixes Plugin Check security findings around admin AJAX request parsing and escaped output.
+
 = 1.0.4 =
 * Adds JavaScript-rendered Create, Copy, and administrator-only Edit controls for the lihi Short URL column.
 * Adds a creation modal with redirect-domain selection, click-to-add recommended tags, custom tags, UTM source / medium options, and free-text UTM fields for non-media items.
@@ -123,6 +126,9 @@ Yes — two active options (`lihi_email`, `lihi_uuid`), one transient (`lihi_tok
 * Traditional Chinese (`zh_TW`) translation included.
 
 == Upgrade Notice ==
+
+= 1.0.5 =
+Fixes Plugin Check security findings for admin AJAX parsing and output escaping; no action required.
 
 = 1.0.4 =
 Adds modal short-URL creation options, JS-rendered Copy/Edit states, lihi dashboard passthrough, password-based account verification, and current lihi API option handling; no action required.

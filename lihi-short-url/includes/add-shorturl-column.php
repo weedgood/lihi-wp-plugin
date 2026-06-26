@@ -22,7 +22,7 @@ function lihi_button_asset_version( string $asset ): string {
     $path     = plugin_dir_path( __FILE__ ) . '../assets/' . ltrim( $asset, '/' );
     $modified = file_exists( $path ) ? filemtime( $path ) : false;
 
-    return $modified ? '1.0.4-' . $modified : '1.0.4';
+    return $modified ? '1.0.5-' . $modified : '1.0.5';
 }
 
 // UI hooks (column, container, enqueue) only register when the auth email is set.
